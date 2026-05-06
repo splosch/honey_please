@@ -2,78 +2,100 @@
 
 Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestützten Deployment.
 
+> **Legende:** ✅ Erledigt · ☐ Offen · 🔄 In Arbeit · ❓ Offene Frage · 💡 Option
+
+---
+
 ## Milestone 1: Die professionelle Werkbank (VS Code + PlatformIO)
 
 **Ziel:** Ein stabiles System, das USB-Kommunikation und Debugging erlaubt.
 
-1. **Installation:**
+- ✅ VS Code + PlatformIO IDE installiert
+- ✅ PlatformIO Projekt erstellt (`platformio.ini` vorhanden)
+- ✅ Board `esp32dev` und Framework `Arduino` konfiguriert
+- ✅ `monitor_speed = 115200` gesetzt
+- ☐ Hello World auf Hardware geflasht und Serial Output im Monitor bestätigt
+  - **Check:** Erscheint `[HEARTBEAT] ESP32 läuft stabil...` alle 5 Sekunden?
 
-   * VS Code öffnen -> Extensions -> Suche nach **"PlatformIO IDE"** -> Installieren.
+### ❓ Offene Fragen – Milestone 1
 
-   * PlatformIO Home öffnen -> "New Project".
+- ❓ Welches genaue Board-Modell hast du? (`esp32dev` ist generisch – stimmt das mit deiner Hardware überein?)
+- ❓ Über welchen COM-Port verbindet sich der ESP32 (Windows Device Manager)?
 
-   * **Board:** Wähle dein spezifisches Board (z.B. `Espressif ESP32 Dev Module`).
-
-   * **Framework:** `Arduino`.
-
-2. **USB-Handshake:**
-
-   * ESP32 per USB anschließen.
-
-   * In der `platformio.ini` die `monitor_speed = 115200` setzen.
-
-   * **Hello World:** Erstelle ein Programm, das alle 2 Sekunden "ESP32 bereit für Befehle" über `Serial.println()` ausgibt.
-
-   * **Check:** Erscheint der Output im PlatformIO Serial Monitor?
+---
 
 ## Milestone 2: Das Fundament für Copilot (Agentic Feedback Loop)
 
 **Ziel:** Den Copilot Agent so instruieren, dass er den Terminal-Output zur Fehlerbehebung nutzen kann.
 
-1. **Log-Struktur:** Nutze strukturierte Log-Ausgaben (z.B. `[STATUS]`, `[ERROR]`, `[MOTOR]`), damit die KI Muster erkennt.
+- ✅ Log-Struktur mit `[STATUS]`, `[ERROR]`, `[HEARTBEAT]`, `[OTA]` definiert (in `example_ota_helloworld.cpp`)
+- ☐ Ersten echten Fehler per Copy-Paste an Copilot übergeben und debuggt
+- ☐ Workflow etabliert: Serial Output → Copilot Chat → Lösung → Upload
 
-2. **Copilot Workflow:**
+### 💡 Optionen – Log-Ausgabe
 
-   * Kopiere Fehlermeldungen aus dem Terminal direkt in den Copilot Chat.
+- 💡 **Option A (einfach):** `Serial.println("[ERROR] ...")` direkt im Code – kein Overhead
+- 💡 **Option B (strukturiert):** Makro `#define LOG_ERROR(msg) Serial.println("[ERROR] " + String(msg))` für sauberere Aufrufe
+- ☐ Entscheidung treffen und konsistent umsetzen
 
-   * Instruktion: *"Analysiere diesen ESP32 Serial Output. Warum schlägt die Initialisierung fehl?"*
+---
 
 ## Milestone 3: Drahtlose Freiheit (OTA Deployment)
 
 **Ziel:** Code-Updates über WLAN ohne USB-Kabel.
 
-1. **ArduinoOTA Integration:**
+- ✅ `ArduinoOTA.h` in `example_ota_helloworld.cpp` integriert
+- ✅ `ArduinoOTA.handle()` im `loop()` vorhanden
+- ✅ OTA-Konfiguration in `platformio.ini` vorbereitet (auskommentiert)
+- ☐ **WLAN-Credentials in `example_ota_helloworld.cpp` eintragen** (`ssid` / `password`)
+- ☐ Code erstmalig per USB flashen und IP-Adresse im Serial Monitor notieren
+- ☐ IP-Adresse in `platformio.ini` unter `upload_port` eintragen
+- ☐ OTA-Zeilen in `platformio.ini` einkommentieren (`upload_protocol`, `upload_port`)
+- ☐ Test: Kleine Änderung deployen und per WLAN übertragen
 
-   * Integriere die `ArduinoOTA.h` Library.
+### ❓ Offene Fragen – Milestone 3
 
-   * Initialisiere WLAN im `setup()`.
+- ❓ Wie sollen WLAN-Credentials sicher gespeichert werden? Hardcoded im Code ist unsicher.
+- ❓ Ist dein WLAN 2.4 GHz? (ESP32 unterstützt **kein** 5 GHz)
 
-   * Wichtig: `ArduinoOTA.handle();` muss im `loop()` stehen.
+### 💡 Optionen – Credentials-Handling
 
-2. **Konfiguration:**
+- 💡 **Option A (schnell):** Direkt im Code – nur für lokale Entwicklung, nie ins Git!
+- 💡 **Option B (sicher):** `secrets.h` Datei anlegen und in `.gitignore` eintragen
+- 💡 **Option C (flexibel):** WiFiManager-Library → ESP32 öffnet eigenen Hotspot zur Konfiguration
 
-   * Ergänze die `platformio.ini` um:
-
-     ```
-     upload_protocol = espota
-     upload_port = [IP-ADRESSE_DEINES_ESP]
-     ```
-
-3. **Check:** Ändere die LED-Blinkfrequenz und deploye per WLAN.
+---
 
 ## Milestone 4: Web-Terminal für Remote-Feedback
 
 **Ziel:** Den Monitor-Output im Browser sehen (wichtig, wenn man nicht mehr am USB hängt).
 
-1. **WebSerial:** Nutze Bibliotheken wie `WebSerial`, um den `Serial.print` Output auf einer kleinen Webseite zu spiegeln, die der ESP32 hostet.
+- ☐ WebSerial-Library in `lib_deps` der `platformio.ini` hinzufügen
+- ☐ WebSerial in `setup()` initialisieren und im `loop()` pollen
+- ☐ Test: Browser öffnen und `[HEARTBEAT]` Output live sehen
+- ☐ Copilot-gestützte UI-Verbesserung für Motorsteuerungs-Interface
 
-2. **Copilot Integration:** Du kannst den HTML-Source des Web-Terminals an Copilot geben, um UI-Verbesserungen für deine Motorsteuerung vorzuschlagen.
+### ❓ Offene Fragen – Milestone 4
 
-## Zusammenfassung der nächsten Schritte
+- ❓ Soll das Web-Terminal nur lesen oder auch Befehle senden können (bidirektional)?
+- ❓ Authentifizierung gewünscht? (HTTP Basic Auth oder komplett offen im lokalen Netz?)
 
-| Schritt | Aktion | Tool | 
-| ----- | ----- | ----- | 
-| **1** | PlatformIO Projekt erstellen | VS Code | 
-| **2** | USB-Blinken & Serial Output | main.cpp | 
-| **3** | WLAN Credentials hinterlegen | Secrets | 
-| **4** | OTA Upload testen | WiFi | 
+---
+
+## Nächste Schritte (priorisiert)
+
+| # | Status | Aktion | Hinweis |
+|---|--------|--------|---------|
+| 1 | ☐ | Hello World per USB flashen & Serial bestätigen | Milestone 1 abschließen |
+| 2 | ☐ | Credentials-Strategie wählen (Option A/B/C oben) | Vor OTA entscheiden |
+| 3 | ☐ | WLAN-Daten eintragen, IP notieren | Milestone 3 starten |
+| 4 | ☐ | OTA-Zeilen in `platformio.ini` aktivieren und testen | Milestone 3 abschließen |
+| 5 | ☐ | Board-Typ und COM-Port klären | Offene Frage M1 |
+
+---
+
+## Architektur-Notizen
+
+- **Dateistruktur:** `example_ota_helloworld.cpp` ist eine Referenzimplementierung – für das finale Projekt bitte als `main.cpp` anlegen.
+- **Log-Tags:** `[START]`, `[ERROR]`, `[OTA]`, `[READY]`, `[INFO]`, `[HEARTBEAT]` – konsistent halten.
+- **OTA Hostname:** `esp32-motor-control` (konfiguriert in `ArduinoOTA.setHostname()`) 
