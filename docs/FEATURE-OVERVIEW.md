@@ -2,7 +2,7 @@
 
 **Project:** ESP32-based Honigschleuder Motor Control  
 **Board:** ESP32-D0WDQ6 @ `192.168.178.64`  
-**Firmware:** v1.0.0 | Framework: Arduino / PlatformIO
+**Firmware:** v1.3.0 | Framework: Arduino / PlatformIO
 
 ---
 
@@ -106,27 +106,27 @@ ESP32 (192.168.178.64)
 
 ---
 
-### 🔲 Phase 3 – Web UI Schematic  ← NEXT
+### ✅ Phase 3 – Web UI Schematic  (DONE)
 
 **Goal:** Browser shows the live system schematic driven by sim data. Full UI is developed and verified without hardware.
 
-| ID | Milestone | Feature Docs |
-|---|---|---|
-| M3.1 | LittleFS partition configured, `index.html` served from `/` | F07 |
-| M3.2 | WebSocket `/ws` endpoint, JSON state frames at 10 Hz | F01, F07 |
-| M3.3 | Three component boxes (ESP32, Motor Ctrl, Motor) rendered | F07 |
-| M3.4 | GPIO / internal state live in ESP32 box (duty bar, direction badges) | F07 |
-| M3.5 | Ramp progress bar + ETA countdown in Motor box | F03, F07 |
-| M3.6 | Direction indicator + basket SVG animation | F04, F07 |
-| M3.7 | RPM gauge arc + 30 s sparkline | F02, F07 |
-| M3.8 | Control bar: LEFT, RIGHT, PAUSE, STOP, E-STOP | F04, F07 |
-| M3.9 | Error overlays (WARNING / ERROR / CRITICAL) with fault injection test | F05, F07, F08 |
-| M3.10 | Parameters panel with sliders + live preview | F06, F07 |
-| M3.11 | SIM mode indicator banner always visible | F08 |
+| ID | Milestone | Feature Docs | Status |
+|---|---|---|---|
+| ✅ M3.1 | LittleFS partition configured; `index.html`, `style.css`, `app.js` served from `/` | F07 | Done |
+| ✅ M3.2 | WebSocket `/ws` endpoint, JSON state frames at 10 Hz | F01, F07 | Done |
+| ✅ M3.3 | Three component boxes (ESP32, Motor Ctrl, Honigschleuder) rendered | F07 | Done |
+| ✅ M3.4 | GPIO / internal state live in ESP32 box (duty bar, HIGH/LOW badges) | F07 | Done |
+| ✅ M3.5 | Ramp progress bar + ETA countdown in Honigschleuder box | F03, F07 | Done |
+| ✅ M3.6 | Direction indicator + basket SVG animation (speed ∝ RPM, freezes on DIR_CHANGE_PAUSE) | F04, F07 | Done |
+| ✅ M3.7 | Large RPM display + 30 s sparkline (Canvas 2D, 500 ms resolution) | F02, F07 | Done – arc gauge replaced by numerical display |
+| ⚠️ M3.8 | Control bar: LEFT, RIGHT, **PAUSE**, STOP, E-STOP | F04, F07 | Optional – PAUSE not yet added |
+| ⚠️ M3.9 | Error overlays: CRITICAL ✅ / WARNING + ERROR banners | F05, F07, F08 | Optional – WARNING/ERROR banners not yet shown |
+| ⚠️ M3.10 | Parameters panel with sliders + live preview | F06, F07 | Optional – `set_param` WS command wired; UI panel deferred |
+| ✅ M3.11 | SIM mode indicator banner always visible | F08 | Done |
 
 ---
 
-### 🔲 Phase 4 – Multi-Step Program & Session Protocol
+### 🔲 Phase 4 – Multi-Step Program & Session Protocol  ← NEXT
 
 **Goal:** Full extraction workflow runs end-to-end in simulation. Session log is exported and verified.
 

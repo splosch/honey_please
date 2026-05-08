@@ -1,6 +1,6 @@
 # F07 – Web UI Schematic View
 
-**Status:** Planning  
+**Status:** Done – M3.1–7, M3.11 complete ┃ M3.8 / M3.9 / M3.10 optional (deferred)  
 **Depends on:** [F01](./F01-motor-control-architecture.md), [F02](./F02-rpm-monitoring.md), [F03](./F03-acceleration-deceleration-ramps.md), [F04](./F04-direction-control.md), [F05](./F05-error-states.md), [F06](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
@@ -182,11 +182,25 @@ Fixed at bottom, always visible:
 
 ## 8. Acceptance Criteria
 
-- [ ] All three component boxes visible on 1024×768 and mobile portrait
-- [ ] GPIO states update within 200 ms of pin change
-- [ ] Basket SVG animation speed proportional to current RPM
-- [ ] RPM gauge arc updates at ≥ 10 Hz
-- [ ] CRITICAL error triggers red full-screen overlay within 500 ms
-- [ ] UI works offline (served from ESP32 LittleFS, no CDN)
-- [ ] WebSocket reconnect is automatic and transparent (< 3 s)
-- [ ] E-STOP button always interactive (not disabled by any state)
+- [x] All three component boxes visible on 1024×768 and mobile portrait
+- [x] GPIO states update within 200 ms of pin change
+- [x] Basket SVG animation speed proportional to current RPM
+- [x] RPM gauge arc updates at ≥ 10 Hz *(replaced by large numerical RPM display + sparkline)*
+- [x] CRITICAL error triggers red full-screen overlay within 500 ms
+- [x] UI works offline (served from ESP32 LittleFS, no CDN)
+- [x] WebSocket reconnect is automatic and transparent (< 3 s)
+- [x] E-STOP button always interactive (not disabled by any state)
+- [ ] *(optional)* PAUSE / RESUME buttons in control bar (M3.8)
+- [ ] *(optional)* WARNING (yellow banner) and ERROR (orange banner) overlays differentiated from CRITICAL (M3.9)
+- [ ] *(optional)* Parameters panel: sliders for max\_rpm, accel, decel, dir\_pause with live WS `set_param` dispatch (M3.10)
+
+---
+
+## 9. Implementation Notes (v1.3.0)
+
+- UI split into three LittleFS files: `index.html` (structure), `style.css` (theme + layout), `app.js` (WebSocket + render loop).
+- `app.js` connects to `ws://<host>/ws`, auto-reconnects every 2 s on close.
+- Basket SVG uses `requestAnimationFrame`; angle advances by `rpm × dt / 60 000 × 360°` per frame.
+- Sparkline uses Canvas 2D, 30 s rolling buffer at 500 ms resolution (60 samples).
+- Fault injection panel is hidden when `state.sim === false`; buttons toggle `inject_fault` WS commands.
+- `set_param` WS command is implemented in `web_api.cpp` (key/value dispatch + NVS save). UI panel pending.
