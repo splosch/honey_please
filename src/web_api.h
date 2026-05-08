@@ -35,6 +35,7 @@
 // { "cmd": "prog_abort"                                    }
 // { "cmd": "session_start"                                 }
 // { "cmd": "session_stop"                                  }
+// { "cmd": "params_save"                                   }
 #pragma once
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -66,6 +67,12 @@ class WebApi {
     SessionLogger&     _session;
 
     unsigned long _lastBroadcast = 0;
+
+    // P2-B: per-client rate-limit timestamps (max 50 ms between commands)
+    // P2-F: per-client frame accumulation buffer for fragmented WS frames
+    static constexpr uint8_t WS_RATE_SLOTS = 8;
+    uint32_t _lastCmdMs[WS_RATE_SLOTS] = {};
+    String   _frameBuf[WS_RATE_SLOTS];
 
     void handleCommand(AsyncWebSocketClient* client, const String& json);
     void broadcastState();

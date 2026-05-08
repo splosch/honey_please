@@ -236,7 +236,9 @@ void SessionLogger::tick(float currentRpm, const char* dir, const char* state) {
 // ─── listSessions ─────────────────────────────────────────────────────────────
 String SessionLogger::listSessions() {
     // Build a JSON array of {id, path, size} for each session file
+    // P2-D: reserve upfront to avoid repeated heap reallocation during concatenation
     String out = "[";
+    out.reserve(SESSION_MAX_FILES * 70);
     bool first = true;
     File dir = LittleFS.open(SESSION_DIR);
     if (dir) {

@@ -46,13 +46,14 @@ void WebApi::begin() {
             broadcastState();
         } else if (type == WS_EVT_DISCONNECT) {
             LOG("[WS] Client disconnected: " + String(client->id()));
+            _frameBuf[client->id() % WS_RATE_SLOTS] = "";
         } else if (type == WS_EVT_DATA) {
             AwsFrameInfo* info = (AwsFrameInfo*)arg;
-            if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-                String msg;
-                msg.reserve(len + 1);
-                for (size_t i = 0; i < len; i++) msg += (char)data[i];
-                handleCommand(client, msg);
+            if (info->opcode == WS_TEXT) {
+                uint8_t slot = client->id() % WS_RATE_SLOTS;
+                if (info->index == 0) _frameBuf[slot] = "";
+                _frameBuf[slot].concat((const char*)data, len);
+                if (info->final) handleCommand(client, _frameBuf[slot]);
             }
         }
     });
@@ -138,13 +139,20 @@ void WebApi::broadcastState() {
     sess["active"]     = _session.isActive();
     sess["id"]         = _session.sessionId();
 
-    String json;
-    serializeJson(doc, json);
-    _ws.textAll(json);
+    // P2-C: static buffer avoids a heap String allocation on every broadcast
+    static char jsonBuf[1024];
+    serializeJson(doc, jsonBuf, sizeof(jsonBuf));
+    _ws.textAll(jsonBuf);
 }
 
 // ─── handleCommand ────────────────────────────────────────────────────────────
 void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
+    // P2-B: rate-limit – drop commands arriving faster than 50 ms per client slot
+    uint8_t slot = client->id() % WS_RATE_SLOTS;
+    uint32_t now_ms = millis();
+    if (now_ms - _lastCmdMs[slot] < 50) return;
+    _lastCmdMs[slot] = now_ms;
+
     JsonDocument doc;
     if (deserializeJson(doc, json) != DeserializationError::Ok) {
         LOG("[WS] Bad JSON from client " + String(client->id()));
@@ -198,8 +206,13 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
         if (validateParams(next)) {
             _session.logParamChange(key, val);
             _params = next;
-            saveParams(_params);
+            // P2-E: do NOT write NVS here; use params_save to persist explicitly
         }
+
+    } else if (strcmp(cmd, "params_save") == 0) {
+        // P2-E: explicit NVS persist – decoupled from live set_param updates
+        saveParams(_params);
+        LOG("[WS] Params saved to NVS");
 
     } else if (strcmp(cmd, "inject_fault") == 0) {
         const char* type = doc["type"] | "";
