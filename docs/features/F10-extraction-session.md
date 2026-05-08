@@ -1,6 +1,6 @@
 # F10 – Honey Extraction Session
 
-**Status:** Planning  
+**Status:** ✅ Implemented (v1.4.0)  
 **Depends on:** [F02 – RPM Monitoring](./F02-rpm-monitoring.md), [F04 – Direction Control](./F04-direction-control.md), [F05 – Error States](./F05-error-states.md), [F09 – Multi-Step Program](./F09-multistep-program.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
@@ -42,49 +42,45 @@ A session is identified by:
 
 ## 3. Session Protocol – Event Types
 
-| Event | Logged when |
-|---|---|
-| `SESSION_START` | Operator starts session |
-| `SESSION_STOP` | Operator stops or program completes |
-| `SESSION_PAUSE` | Operator pauses |
-| `SESSION_RESUME` | Operator resumes |
-| `RPM_SAMPLE` | Every 5 seconds (configurable) during RUNNING |
-| `RPM_TARGET_SET` | Any time target RPM changes |
-| `DIRECTION_CHANGE` | Direction change initiated |
-| `DIRECTION_APPLIED` | GPIO flip applied (after pause) |
-| `RAMP_START` | Ramp begins (up or down) |
-| `RAMP_COMPLETE` | Target RPM reached |
-| `STEP_START` | Multi-step program step begins |
-| `STEP_COMPLETE` | Multi-step program step ends |
-| `PROGRAM_START` | Multi-step program started |
-| `PROGRAM_COMPLETE` | Multi-step program finished |
-| `PROGRAM_ABORT` | Operator aborted program mid-run |
-| `PARAM_CHANGE` | Any parameter change applied |
-| `ERROR` | Any error condition triggered |
-| `ERROR_CLEARED` | Error resolved/reset |
-| `EMERGENCY_STOP` | E-Stop triggered |
+| Event | Logged when | Implemented |
+|---|---|---|
+| `SESSION_START` | Operator starts session | ✅ |
+| `SESSION_SUMMARY` | Operator stops or program completes | ✅ |
+| `PAUSE` | Operator pauses program | ✅ |
+| `RESUME` | Operator resumes program | ✅ |
+| `SKIP` | Operator skips a step | ✅ |
+| `RPM_SAMPLE` | Every 5 seconds (configurable) during active session | ✅ |
+| `DIRECTION_CHANGE` | Direction change initiated (before it occurs) | ✅ |
+| `STEP_START` | Program step begins (after direction is set) | ✅ |
+| `STEP_COMPLETE` | Program step ends (hold timer expired) | ✅ |
+| `PROGRAM_START` | Multi-step program started | ✅ |
+| `PROGRAM_COMPLETE` | All steps finished | ✅ |
+| `PROGRAM_ABORT` | Operator aborted program mid-run | ✅ |
+| `PARAM_CHANGE` | Any parameter change applied | ✅ |
+| `ERROR` | Any error condition triggered (code + message) | ✅ |
+| `ERROR_CLEARED` | Error resolved / operator reset | ✅ |
+| `RPM_TARGET_SET` | Target RPM changed manually | ✘ not implemented |
+| `RAMP_START` | Ramp begins (up or down) | ✘ not implemented |
+| `RAMP_COMPLETE` | Target RPM reached | ✘ not implemented |
+| `DIRECTION_APPLIED` | GPIO flip applied (after pause) | ✘ not implemented |
 
 ---
 
 ## 4. Log Entry Format
 
-```json
-{
-  "ts":    84521,
-  "type":  "RPM_SAMPLE",
-  "rpm":   45.2,
-  "dir":   "CCW",
-  "state": "RUNNING"
-}
-```
+Files are **JSONL** – one JSON object per line. Example entries:
 
-```json
-{
-  "ts":    91204,
-  "type":  "ERROR",
-  "code":  "E06_DRIVER_FAULT",
-  "msg":   "nFAULT pin LOW – driver thermal shutdown"
-}
+```jsonl
+{"ts":0,"type":"SESSION_START","id":3,"fw":"1.4.0","max_rpm":100,"steps":6}
+{"ts":2041,"type":"PROGRAM_START","steps":6,"max_rpm":100}
+{"ts":2041,"type":"STEP_START","step":1,"total":6,"dir":"CCW","target_rpm":30,"dur_s":60}
+{"ts":84521,"type":"RPM_SAMPLE","rpm":30.0,"dir":"CCW","state":"RUNNING"}
+{"ts":91204,"type":"STEP_COMPLETE","step":1,"avg_rpm":29.8}
+{"ts":91204,"type":"DIRECTION_CHANGE","from":"CCW","to":"CW"}
+{"ts":91410,"type":"ERROR","code":"E09","msg":"E-Stop via Web UI"}
+{"ts":95000,"type":"ERROR_CLEARED"}
+{"ts":584000,"type":"PROGRAM_COMPLETE","duration_s":582}
+{"ts":584100,"type":"SESSION_SUMMARY","duration_s":584,"avg_rpm":61.3,"max_rpm":100.0,"steps_done":6}
 ```
 
 All timestamps are milliseconds since session start (`millis()` offset).
@@ -97,122 +93,99 @@ Sessions are stored in **LittleFS** on the ESP32:
 
 ```
 /sessions/
-  session_001.json
-  session_002.json
+  s001.jsonl
+  s002.jsonl
   ...
 ```
 
-Each file is a JSON array of log entries, written incrementally (appended as events occur).
+Format: **JSONL** (newline-delimited JSON – one event object per line). The file is opened for append and immediately closed after every write, ensuring each event survives a power loss.
 
 **Storage limits:**
-- Max entries per session: 10 000
 - Max sessions stored: 50 (oldest deleted when limit reached)
-- Each entry ~80 bytes → 10 000 entries ≈ 800 kB per session
-- Total budget ≈ 40 MB (requires 4 MB flash partition for LittleFS, verify partition table)
+- No fixed per-session entry cap; limited by available LittleFS partition space
+- Typical session entry ~80–120 bytes; a full 6-step program ≈ 50–80 entries ≈ 5–10 KB
+- Partition: `min_spiffs.csv` – ~1.5 MB for LittleFS; sufficient for many sessions
 
-> ⚠️ Verify partition table allocates sufficient LittleFS space.  
-> Default ESP32 4MB split: 1.5 MB app + 1.5 MB SPIFFS = OK for ~10 sessions of typical length.
+> ⚠️ LittleFS partition size limits maximum total stored data.  
+> At ~8 KB/session average, 50 sessions ≈ 400 KB – well within the 1.5 MB budget.
 
 ---
 
 ## 6. Session Summary
 
-On `SESSION_STOP`, the firmware generates a summary block appended to the session file:
+On `SESSION_STOP`, the firmware appends a `SESSION_SUMMARY` block:
 
-```json
-{
-  "type": "SESSION_SUMMARY",
-  "duration_s":  584,
-  "avg_rpm":     61.3,
-  "max_rpm":     100.0,
-  "min_rpm":     0.0,
-  "dir_changes": 5,
-  "errors":      0,
-  "steps_done":  6
-}
+```jsonl
+{"ts":584100,"type":"SESSION_SUMMARY","duration_s":584,"avg_rpm":61.3,"max_rpm":100.0,"steps_done":6}
 ```
+
+**Fields:** `duration_s` (total session length), `avg_rpm` (arithmetic mean of all RPM samples), `max_rpm` (peak sample), `steps_done` (steps in COMPLETE state at stop time).
+
+> `min_rpm` and `dir_changes` counters are not included in the current implementation.
 
 ---
 
-## 7. Web UI – Session Panel
+## 7. Web UI – Session Bar
 
-### Live Log (during session)
-
-A collapsible panel at the bottom of the schematic view:
+A persistent bar at the bottom of the schematic view:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 📋 SESSION #007  ●RECORDING   00:08:41      [STOP]     │
-├─────────────────────────────────────────────────────────┤
-│ T+00:00  SESSION START   max_rpm=100, steps=6           │
-│ T+00:02  PROGRAM START                                  │
-│ T+00:02  STEP 1 START    CCW  30 RPM                    │
-│ T+00:14  RAMP COMPLETE   30 RPM reached                 │
-│ T+01:14  STEP 1 DONE     avg 29.9 RPM                   │
-│ T+01:14  DIR CHANGE      CCW → CW                       │
-│ T+01:20  STEP 2 START    CW   30 RPM                    │
-│  ...                                                    │
-│ T+08:41  [LIVE ●]                                       │
+│ ● Recording – Session #3   [■ Stop]  [⬇ Export]        │
 └─────────────────────────────────────────────────────────┘
 ```
 
-Auto-scrolls to bottom. Operator can scroll up to review history.
-
-### Session History (dedicated page `/sessions`)
-
-Lists all stored sessions as cards:
+After stop, the label changes to `Session #3 – Stopped` and the Export button remains visible:
 
 ```
-Session #007  –  2026-05-08 14:22  –  09:44  –  6 steps  –  0 errors  [VIEW] [EXPORT] [DELETE]
-Session #006  –  2026-05-06 10:05  –  07:12  –  4 steps  –  1 error   [VIEW] [EXPORT] [DELETE]
+┌─────────────────────────────────────────────────────────┐
+│ Session #3 – Stopped   [⏺ Record]  [⬇ Export]          │
+└─────────────────────────────────────────────────────────┘
+```
+
+Planned but not yet implemented:
+- Live scrolling event log during recording
+- Session history browser page (list of all stored sessions)
+- DELETE action per session
+
+### Session List API
+
+`GET /sessions` (no `id` param) returns a JSON array:
+
+```json
+[
+  {"id": 3, "size": 4821, "path": "/sessions/s003.jsonl"},
+  {"id": 2, "size": 6102, "path": "/sessions/s002.jsonl"}
+]
 ```
 
 ---
 
 ## 8. Export Format
 
-### JSON
+### JSONL Download
 
-Full event log as downloaded JSON file: `session_007.json`
-
-### Plain Text
-
-Human-readable summary:
-
+The raw session file is downloaded as-is via:
 ```
-honey_please – Session Report
-Session #007  |  2026-05-08 14:22  |  Duration: 9 min 44 s
-Firmware: v1.0.0  |  Max RPM configured: 100
-
-TIMELINE
---------
-T+00:00  Session start
-T+00:02  Program start (6 steps, max 100 RPM)
-...
-
-SUMMARY
--------
-Average RPM:    61.3
-Max RPM:       100.0
-Direction changes: 5
-Errors:          0
-Steps completed: 6/6
+GET /sessions?id=3
 ```
+Response: `Content-Disposition: attachment; filename="s003.jsonl"` with the full JSONL body.
 
-Export is triggered via:
-- `GET /sessions/007/export?format=json`
-- `GET /sessions/007/export?format=txt`
+> Plain text / human-readable export is not yet implemented.
 
 ---
 
 ## 9. Acceptance Criteria
 
-- [ ] Session starts/stops on operator command or program completion
-- [ ] RPM samples written every 5 seconds during RUNNING
-- [ ] All errors logged with code, message, and timestamp
-- [ ] Session file survives power loss mid-session (LittleFS flush after each append)
-- [ ] Session summary generated on every STOP
-- [ ] Session history accessible at `/sessions`
-- [ ] Export works for both JSON and plain text
-- [ ] Max 50 sessions stored; oldest auto-deleted when exceeded
-- [ ] Live log auto-scrolls in UI; scroll-up pauses auto-scroll
+- [x] Session starts/stops on operator command or program completion
+- [x] RPM samples written every 5 seconds during active session
+- [x] All errors logged with code, message, and timestamp
+- [x] Session file survives power loss mid-session (LittleFS flush after each append)
+- [x] Session summary (`SESSION_SUMMARY`) generated on every STOP
+- [x] Session list accessible via `GET /sessions` (JSON API)
+- [x] JSONL export works via `GET /sessions?id=N`
+- [x] Max 50 sessions stored; oldest auto-deleted when exceeded
+- [ ] Plain text / human-readable export – not yet implemented
+- [ ] Live scrolling event log in UI during recording – not yet implemented
+- [ ] Session history browser page (list + delete) – not yet implemented
+- [ ] Live scroll pauses on manual scroll-up – not yet implemented

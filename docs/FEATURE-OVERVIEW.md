@@ -2,7 +2,7 @@
 
 **Project:** ESP32-based Honigschleuder Motor Control  
 **Board:** ESP32-D0WDQ6 @ `192.168.178.64`  
-**Firmware:** v1.3.0 | Framework: Arduino / PlatformIO
+**Firmware:** v1.4.0 | Framework: Arduino / PlatformIO
 
 ---
 
@@ -31,8 +31,7 @@
 Browser (Web UI)
     │   HTTP  /         → serves index.html from LittleFS
     │   WS    /ws       → real-time bidirectional state sync (10 Hz)
-    │   GET   /sessions → session history
-    │   GET   /sessions/:id/export → JSON/TXT download
+    │   GET   /sessions        → session list (JSON) or download by ?id=N
     ▼
 ESP32 (192.168.178.64)
     │
@@ -126,21 +125,39 @@ ESP32 (192.168.178.64)
 
 ---
 
-### 🔲 Phase 4 – Multi-Step Program & Session Protocol  ← NEXT
+### ✅ Phase 4 – Multi-Step Program & Session Protocol  (DONE)
 
 **Goal:** Full extraction workflow runs end-to-end in simulation. Session log is exported and verified.
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
-| M4.1 | Multi-step program (6 default steps) stored in NVS | F09 |
-| M4.2 | Program runner: step sequencer with direction transitions | F09 |
-| M4.3 | Program UI: step list, active highlight, skip/pause/abort | F09 |
-| M4.4 | LittleFS session directory, append-write on each event | F10 |
-| M4.5 | Session start/stop on operator command | F10 |
-| M4.6 | RPM samples every 5 s + all events logged | F10 |
-| M4.7 | Session summary on stop; `/sessions` list page | F10 |
-| M4.8 | Export JSON + plain text | F10 |
-| M4.9 | Full 6-step program runs in SIM, session export verified | F08, F09, F10 |
+| ✅ M4.1 | Multi-step program (6 default steps) stored in NVS | F09 |
+| ✅ M4.2 | Program runner: step sequencer with direction transitions | F09 |
+| ✅ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort | F09 |
+| ✅ M4.4 | LittleFS session directory, JSONL append-write on each event | F10 |
+| ✅ M4.5 | Session start/stop on operator command | F10 |
+| ✅ M4.6 | RPM samples every 5 s + program/step/error/direction events logged | F10 |
+| ✅ M4.7 | Session summary on stop; `GET /sessions` JSON list | F10 |
+| ✅ M4.8 | JSONL export via `GET /sessions?id=N` | F10 |
+| ✅ M4.9 | Full 6-step program runs in SIM, session export verified | F08, F09, F10 |
+
+---
+
+## Open / Optional Items from Completed Phases
+
+> These items were descoped during Phases 1–4 to keep scope tight. All are non-blocking.  
+> Pick up any of them before or alongside Phase 5.
+
+| ID | Item | Phase | Feature | Priority |
+|---|---|---|---|---|
+| O-3.1 | PAUSE button in motor control bar | 3 | F04, F07 | Low – ramp to 0 already works; purely a UI shortcut |
+| O-3.2 | WARNING / ERROR-level banners in UI (non-critical errors) | 3 | F05, F07 | Medium – CRITICAL overlay done; WARNING/ERROR_LVL banners not shown |
+| O-3.3 | Parameters panel (sliders for max_rpm, accel, decel, dir_pause) | 3 | F06, F07 | Medium – `set_param` WS command fully wired; only the UI panel is missing |
+| O-4.1 | Step editing UI (change RPM%, duration, add/remove steps) | 4 | F09 | Medium – NVS storage + runner fully support it; UI panel not built |
+| O-4.2 | Live event log in session bar (scrolling feed during recording) | 4 | F10 | Low – events already in JSONL; UI panel not built |
+| O-4.3 | Session history browser (list, view, delete stored sessions) | 4 | F10 | Low – `GET /sessions` JSON list exists; no browser UI |
+| O-4.4 | Plain-text session export (human-readable summary) | 4 | F10 | Low – JSONL export works; TXT rendering not implemented |
+| O-4.5 | `RAMP_START` / `RAMP_COMPLETE` / `RPM_TARGET_SET` session events | 4 | F10 | Low – SessionLogger has `logEvent()`; hooks in RampController not wired |
 
 ---
 

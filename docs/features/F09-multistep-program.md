@@ -1,6 +1,6 @@
 # F09 – Multi-Step Extraction Program
 
-**Status:** Planning  
+**Status:** ✅ Implemented (v1.4.0)  
 **Depends on:** [F03 – Ramps](./F03-acceleration-deceleration-ramps.md), [F04 – Direction Control](./F04-direction-control.md), [F06 – Params](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F10 – Extraction Session](./F10-extraction-session.md)
 
@@ -45,11 +45,12 @@ All step parameters are configurable per-step via the UI:
 }
 ```
 
-Steps are stored in NVS under `"program_steps"`. The UI allows:
-- Changing RPM percentage per step
-- Changing duration per step
-- Adding or removing steps (min 1, max 12)
-- Reordering steps via drag-and-drop (UI only, sends full step list on save)
+Steps are stored in NVS under namespace `"prog_steps"` (keys: `count`, `s0_cw`, `s0_pct`, `s0_dur`, …). The UI currently shows steps as read-only bubbles. Planned but not yet implemented:
+- Editing RPM percentage or duration per step in the UI
+- Adding/removing steps in the UI
+- Reordering steps via drag-and-drop
+
+All step configuration changes can be done by modifying NVS directly (or via future UI panel).
 
 ---
 
@@ -143,11 +144,12 @@ Each step transition generates a session log entry:
 
 ## 8. Acceptance Criteria
 
-- [ ] Default 6-step sequence runs end-to-end in SIM mode without manual intervention
-- [ ] Step timer starts only after target RPM is reached
-- [ ] Direction change between steps uses the full F04 safe sequence
-- [ ] PAUSE saves step position + remaining time; RESUME continues correctly
-- [ ] SKIP STEP works from any step including first and last
-- [ ] Custom step configuration persists across power cycles
-- [ ] All step events logged to session protocol with timestamps
-- [ ] Total program duration estimate shown before start and updated live
+- [x] Default 6-step sequence runs end-to-end in SIM mode without manual intervention
+- [x] Step timer starts only after target RPM is reached
+- [x] Direction change between steps uses the full F04 safe sequence
+- [x] PAUSE saves step position + remaining time; RESUME continues correctly
+- [x] SKIP STEP works from any step including first and last
+- [x] Custom step configuration persists across power cycles (NVS)
+- [x] All step events logged to session protocol with timestamps
+- [x] Total program duration estimate shown before start and updated live
+- [ ] Step editing UI (RPM%, duration, add/remove steps) – Phase 4+ deferred
