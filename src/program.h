@@ -14,6 +14,8 @@
 #include "ramp_controller.h"
 #include "params.h"
 
+class SessionLogger;  // forward declaration – full type in program.cpp
+
 // ─── ProgramStep ──────────────────────────────────────────────────────────────
 struct ProgramStep {
     bool     cw;           // true = CW, false = CCW
@@ -60,6 +62,10 @@ public:
     void setStep(uint8_t i, const ProgramStep& s);
     void setStepCount(uint8_t n);
 
+    // ── Session integration ──────────────────────────────────────────────────
+    // Call once after both ProgramRunner and SessionLogger are initialised.
+    void setSession(SessionLogger* s) { _session = s; }
+
     // ── Control ──────────────────────────────────────────────────────────────
     void start();           // begin from step 0
     void skip();            // skip to next step
@@ -92,6 +98,9 @@ private:
     uint32_t _holdRemainS = 0;     // seconds remaining in current step hold
     uint32_t _lastTickMs  = 0;     // for 1 s countdown inside HOLDING
     uint32_t _holdAccumMs = 0;     // sub-second accumulator
+
+    SessionLogger* _session        = nullptr;
+    uint32_t       _programStartMs = 0;  // millis() at start(), for PROGRAM_COMPLETE duration
 
     void _beginStep(uint8_t idx);
     float _targetRpm(uint8_t idx) const;

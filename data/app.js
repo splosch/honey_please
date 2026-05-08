@@ -272,15 +272,22 @@ function renderProgram(s) {
 }
 
 // ─── Session bar ──────────────────────────────────────────────────────────────
+let _lastSessionId = null;
+
 function renderSession(s) {
   const sess   = s.session || {};
   const active = sess.active || false;
+  if (active) _lastSessionId = sess.id;
+
   document.getElementById('sess-rec-dot').className = active ? 'active' : '';
   document.getElementById('sess-label').textContent =
-    active ? `Session #${sess.id} — Recording` : 'No active session';
+    active ? `Session #${sess.id} — Recording` :
+    _lastSessionId !== null ? `Session #${_lastSessionId} — Stopped` : 'No active session';
   document.getElementById('sess-btn-start').disabled = active;
   document.getElementById('sess-btn-stop').disabled  = !active;
+
   const exp = document.getElementById('sess-btn-export');
-  exp.style.display = active ? '' : 'none';
-  if (active) exp.href = `/sessions/${sess.id}`;
+  const showId = active ? sess.id : _lastSessionId;
+  exp.style.display = showId !== null ? '' : 'none';
+  if (showId !== null) exp.href = `/sessions?id=${showId}`;
 }

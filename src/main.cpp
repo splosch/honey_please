@@ -76,6 +76,9 @@ static unsigned long lastHeartbeat = 0;
 static void triggerCritical(ErrorCode code, const char* msg) {
     rampCtrl.emergencyStop();          // zero ramp + PWM before error state set
     errorHandler.trigger(code, msg);   // sets hasCritical() + disables driver again
+    // Log to active session
+    String codeStr = "E0" + String((uint8_t)code);
+    sessionLogger.logError(codeStr.c_str(), msg);
 }
 
 // ─── WebSerial command handler ────────────────────────────────────────────────
@@ -144,6 +147,7 @@ void onWebSerialMessage(uint8_t* data, size_t len) {
         }
         rampCtrl.emergencyStop();   // ensure ramp is zeroed before clearing
         errorHandler.clearAll();
+        sessionLogger.logEvent("ERROR_CLEARED");
 
     // ── dir cw / ccw ──────────────────────────────────────────────────────────
     } else if (cmd == "dir cw") {
@@ -254,6 +258,7 @@ void setup() {
     loadParams(params);
     programRunner.loadSteps();
     sessionLogger.begin();
+    programRunner.setSession(&sessionLogger);  // wire session logging into ProgramRunner
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);

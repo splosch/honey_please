@@ -1,6 +1,7 @@
 // src/program.cpp
 // ProgramRunner implementation (F09)
 #include "program.h"
+#include "session.h"
 #include "log.h"
 #include <Preferences.h>
 
@@ -82,6 +83,16 @@ void ProgramRunner::_beginStep(uint8_t idx) {
     RampState rs = _ramp.getState();
     bool currentCw = _ramp.isCurrentDirectionCw();
 
+    // Session: log direction change before it happens
+    if (_session && _session->isActive() && st.cw != currentCw) {
+        _session->logDirectionChange(currentCw ? "CW" : "CCW", st.cw ? "CW" : "CCW");
+    }
+
+    // Session: log step start
+    if (_session && _session->isActive()) {
+        _session->logStepStart(idx, _count, st.cw, targetRpm, st.duration_s);
+    }
+
     if (st.cw != currentCw && (rs != RampState::IDLE)) {
         _ramp.requestDirectionChange(st.cw, targetRpm);
         _state = ProgramState::DIR_CHANGING;
@@ -100,6 +111,7 @@ void ProgramRunner::start() {
     if (_count == 0) return;
     _stepIdx = 0;
     _state   = ProgramState::IDLE;  // reset before _beginStep
+    _programStartMs = millis();
     LOG("[PROG] Program START – " + String(_count) + " steps");
     _beginStep(0);
 }
@@ -113,6 +125,7 @@ void ProgramRunner::skip() {
         return;
     }
     LOG("[PROG] Skipping step " + String(_stepIdx + 1));
+    if (_session && _session->isActive()) _session->logEvent("SKIP");
     _beginStep(next);
 }
 
@@ -122,11 +135,13 @@ void ProgramRunner::pause() {
         " – remain " + String(_holdRemainS) + " s");
     _ramp.setTarget(0.0f);
     _state = ProgramState::PAUSED;
+    if (_session && _session->isActive()) _session->logEvent("PAUSE");
 }
 
 void ProgramRunner::resume() {
     if (_state != ProgramState::PAUSED) return;
     LOG("[PROG] RESUME step " + String(_stepIdx + 1));
+    if (_session && _session->isActive()) _session->logEvent("RESUME");
     float targetRpm = _targetRpm(_stepIdx);
     bool  targetCw  = _steps[_stepIdx].cw;
 
@@ -143,6 +158,7 @@ void ProgramRunner::abort() {
     LOG("[PROG] ABORT at step " + String(_stepIdx + 1));
     _ramp.setTarget(0.0f);
     _state = ProgramState::ABORTED;
+    if (_session && _session->isActive()) _session->logProgramAbort(_stepIdx);
 }
 
 // ─── tick ─────────────────────────────────────────────────────────────────────
@@ -198,12 +214,18 @@ void ProgramRunner::tick() {
 
             if (_holdRemainS == 0) {
                 LOG("[PROG] Step " + String(_stepIdx + 1) + " DONE");
+                if (_session && _session->isActive())
+                    _session->logStepDone(_stepIdx, _ramp.getCurrent());
                 uint8_t next = _stepIdx + 1;
                 if (next >= _count) {
                     // All steps done
                     _ramp.setTarget(0.0f);
                     _state = ProgramState::COMPLETE;
                     LOG("[PROG] Program COMPLETE");
+                    if (_session && _session->isActive()) {
+                        uint32_t durS = (millis() - _programStartMs) / 1000UL;
+                        _session->logProgramComplete(durS);
+                    }
                 } else {
                     _beginStep(next);
                 }

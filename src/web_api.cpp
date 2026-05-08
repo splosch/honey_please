@@ -53,26 +53,21 @@ void WebApi::begin() {
     });
     _server.addHandler(&_ws);
 
-    // HTTP GET /sessions – JSON list of stored session files
+    // HTTP GET /sessions          – JSON list of stored session files
+    // HTTP GET /sessions?id=<n>   – download session JSONL (no regex needed)
     _server.on("/sessions", HTTP_GET, [this](AsyncWebServerRequest* req) {
-        String body = _session.listSessions();
-        req->send(200, "application/json", body);
-    });
-
-    // HTTP GET /sessions/<id> – download session JSONL file
-    _server.on("^\\/sessions\\/([0-9]+)$", HTTP_GET,
-        [this](AsyncWebServerRequest* req) {
-            String idStr = req->pathArg(0);
-            uint16_t id  = (uint16_t)idStr.toInt();
-            String path  = _session.sessionPath(id);
+        if (req->hasParam("id")) {
+            uint16_t id = (uint16_t)req->getParam("id")->value().toInt();
+            String path = _session.sessionPath(id);
             if (LittleFS.exists(path)) {
-                req->send(LittleFS, path, "application/json",
-                          true);  // true = attachment download
+                req->send(LittleFS, path, "application/json", true);  // attachment
             } else {
-                req->send(404, "application/json",
-                          "{\"error\":\"session not found\"}");
+                req->send(404, "application/json", "{\"error\":\"session not found\"}");
             }
-        });
+        } else {
+            req->send(200, "application/json", _session.listSessions());
+        }
+    });
 
     // Serve static UI files from LittleFS
     _server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
@@ -167,6 +162,7 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
     } else if (strcmp(cmd, "estop") == 0) {
         _ramp.emergencyStop();
         _errors.trigger(ErrorCode::EMERGENCY_STOP, "E-Stop via Web UI");
+        _session.logError("E09", "E-Stop via Web UI");
 
     } else if (strcmp(cmd, "resetfault") == 0) {
         if (_simDriver.isFault() || !_simRpm.isHealthy()) {
@@ -175,11 +171,15 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
         }
         _ramp.emergencyStop();
         _errors.clearAll();
+        _session.logEvent("ERROR_CLEARED");
 
     } else if (strcmp(cmd, "dir") == 0) {
         if (_errors.hasCritical()) return;
         const char* val = doc["value"] | "cw";
-        _ramp.requestDirectionChange(strcmp(val, "cw") == 0);
+        bool targetCw = strcmp(val, "cw") == 0;
+        _session.logDirectionChange(_ramp.isCurrentDirectionCw() ? "CW" : "CCW",
+                                    targetCw ? "CW" : "CCW");
+        _ramp.requestDirectionChange(targetCw);
 
     } else if (strcmp(cmd, "set_param") == 0) {
         const char* key = doc["key"] | "";
@@ -203,14 +203,17 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
             if (active) {
                 _ramp.emergencyStop();
                 _errors.trigger(ErrorCode::DRIVER_FAULT, "[SIM] Injected E06");
+                _session.logError("E06", "[SIM] Injected E06");
             }
         } else if (strcmp(type, "sensor") == 0) {
             _simRpm.injectSensorLoss(active);
             if (active) {
                 _ramp.emergencyStop();
                 _errors.trigger(ErrorCode::RPM_SENSOR_LOST, "[SIM] Injected E03");
+                _session.logError("E03", "[SIM] Injected E03");
             } else {
                 _errors.clear(ErrorCode::RPM_SENSOR_LOST);
+                _session.logErrorCleared("E03");
             }
         }
 
@@ -232,8 +235,7 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
         _program.resume();
 
     } else if (strcmp(cmd, "prog_abort") == 0) {
-        _program.abort();
-        _session.logProgramAbort(_program.currentStep());
+        _program.abort();  // abort() now calls _session.logProgramAbort() internally
 
     // ── Session commands (Phase 4) ────────────────────────────────────────────
     } else if (strcmp(cmd, "session_start") == 0) {

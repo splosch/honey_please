@@ -21,8 +21,10 @@ uint16_t SessionLogger::_nextId() {
     if (dir) {
         File f = dir.openNextFile();
         while (f) {
-            String name = String(f.name());
-            // name format: s001.jsonl
+            // f.name() returns full path e.g. /sessions/s001.jsonl — extract basename
+            String full = String(f.name());
+            int sl = full.lastIndexOf('/');
+            String name = (sl >= 0) ? full.substring(sl + 1) : full;
             if (name.startsWith("s") && name.endsWith(".jsonl")) {
                 uint16_t n = (uint16_t)name.substring(1, name.length() - 6).toInt();
                 if (n > maxId) maxId = n;
@@ -43,7 +45,9 @@ void SessionLogger::_pruneOldest() {
     if (!dir) return;
     File f = dir.openNextFile();
     while (f) {
-        String name = String(f.name());
+        String full = String(f.name());
+        int sl = full.lastIndexOf('/');
+        String name = (sl >= 0) ? full.substring(sl + 1) : full;
         if (name.startsWith("s") && name.endsWith(".jsonl")) {
             count++;
             uint16_t n = (uint16_t)name.substring(1, name.length() - 6).toInt();
@@ -234,7 +238,9 @@ String SessionLogger::listSessions() {
     if (dir) {
         File f = dir.openNextFile();
         while (f) {
-            String name = String(f.name());
+            String full = String(f.name());
+            int sl = full.lastIndexOf('/');
+            String name = (sl >= 0) ? full.substring(sl + 1) : full;
             if (name.startsWith("s") && name.endsWith(".jsonl")) {
                 uint16_t n = (uint16_t)name.substring(1, name.length() - 6).toInt();
                 if (!first) out += ",";
