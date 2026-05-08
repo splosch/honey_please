@@ -122,6 +122,21 @@
     <canvas id="sparkline" height="50"></canvas>
   </div>
 
+  <!-- Program panel -->
+  <div id="prog-panel">
+    <div id="prog-header">
+      <span id="prog-title">⚙ PROGRAM</span>
+      <span id="prog-state-badge" class="state-badge">IDLE</span>
+      <span id="prog-remain"></span>
+      <div class="spacer"></div>
+      <button class="btn btn-sm" id="prog-btn-start" onclick="progCmd('prog_start')">▶ START</button>
+      <button class="btn btn-sm" id="prog-btn-skip"  onclick="progCmd('prog_skip')"   disabled>⏭ SKIP</button>
+      <button class="btn btn-sm" id="prog-btn-pause" onclick="progPauseResume()"       disabled>⏸ PAUSE</button>
+      <button class="btn btn-sm danger" id="prog-btn-abort" onclick="progCmd('prog_abort')" disabled>✕ ABORT</button>
+    </div>
+    <div id="prog-steps"></div>
+  </div>
+
   <!-- Controls -->
   <div id="controls">
     <button class="btn" id="btn-ccw" onclick="dirChange('ccw')">◄ CCW</button>
@@ -140,6 +155,16 @@
       <button class="fault-btn" id="fi-driver" onclick="toggleFault('driver')">E06 Driver Fault</button>
       <button class="fault-btn" id="fi-sensor" onclick="toggleFault('sensor')">E03 RPM Sensor Lost</button>
     </div>
+  </div>
+
+  <!-- Session bar -->
+  <div id="session-bar">
+    <div id="sess-rec-dot"></div>
+    <span id="sess-label">No active session</span>
+    <div class="spacer"></div>
+    <button class="btn btn-sm" id="sess-btn-start"  onclick="sendCmd('session_start')">⏺ Record</button>
+    <button class="btn btn-sm danger" id="sess-btn-stop" onclick="sendCmd('session_stop')" disabled>■ Stop</button>
+    <a class="btn btn-sm" id="sess-btn-export" href="#" target="_blank" style="display:none">⬇ Export</a>
   </div>
 
 </div><!-- /main -->

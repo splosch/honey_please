@@ -57,9 +57,10 @@ public:
     // Advance ramp one tick. Call every 50 ms from loop().
     void tick();
 
-    float     getCurrent()         const { return _current; }
-    float     getTarget()          const { return _target; }
-    RampState getState()           const { return _state; }
-    float     getEtaSeconds()      const;
-    bool      isDirChangePending() const { return _dirChangePending; }
+    float     getCurrent()           const { return _current; }
+    float     getTarget()            const { return _target; }
+    RampState getState()             const { return _state; }
+    float     getEtaSeconds()        const;
+    bool      isDirChangePending()   const { return _dirChangePending; }
+    bool      isCurrentDirectionCw() const { return _driver.getDirection(); }
 };

@@ -27,7 +27,14 @@
 // { "cmd": "estop"                    }
 // { "cmd": "resetfault"               }
 // { "cmd": "dir",       "value": "cw" }
-// { "cmd": "set_param", "key": "accel", "value": 20 }
+// { "cmd": "set_param",       "key": "accel", "value": 20 }
+// { "cmd": "prog_start"                                    }
+// { "cmd": "prog_skip"                                     }
+// { "cmd": "prog_pause"                                    }
+// { "cmd": "prog_resume"                                   }
+// { "cmd": "prog_abort"                                    }
+// { "cmd": "session_start"                                 }
+// { "cmd": "session_stop"                                  }
 #pragma once
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -37,6 +44,8 @@
 #include "ramp_controller.h"
 #include "error_handler.h"
 #include "sim_rpm_source.h"
+#include "program.h"
+#include "session.h"
 
 class WebApi {
     AsyncWebServer&    _server;
@@ -52,6 +61,10 @@ class WebApi {
     SimMotorDriver&    _simDriver;
     SimRpmSource&      _simRpm;
 
+    // Phase 4
+    ProgramRunner&     _program;
+    SessionLogger&     _session;
+
     unsigned long _lastBroadcast = 0;
 
     void handleCommand(AsyncWebSocketClient* client, const String& json);
@@ -61,11 +74,13 @@ public:
     WebApi(AsyncWebServer& server,
            IMotorDriver& driver, IRpmSource& rpm,
            RampController& ramp, ErrorHandler& errors, MotorParams& params,
-           SimMotorDriver& simDriver, SimRpmSource& simRpm)
+           SimMotorDriver& simDriver, SimRpmSource& simRpm,
+           ProgramRunner& program, SessionLogger& session)
         : _server(server), _ws("/ws"),
           _driver(driver), _rpm(rpm), _ramp(ramp),
           _errors(errors), _params(params),
-          _simDriver(simDriver), _simRpm(simRpm) {}
+          _simDriver(simDriver), _simRpm(simRpm),
+          _program(program), _session(session) {}
 
     void begin();
 

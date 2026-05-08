@@ -1,4 +1,7 @@
 // src/web_api.cpp
+// WebApi implementation – Phase 4: adds program & session state to broadcasts,
+// new WS commands (prog_start/skip/pause/resume/abort, session_start/stop),
+// HTTP GET /sessions and /sessions/<id> routes.
 #include "web_api.h"
 #include "sim_rpm_source.h"
 #include "log.h"
@@ -16,14 +19,25 @@ static const char* rampStateStr(RampState s) {
     return "UNKNOWN";
 }
 
+static const char* progStateStr(ProgramState s) {
+    switch (s) {
+        case ProgramState::IDLE:            return "IDLE";
+        case ProgramState::WAITING_FOR_RPM: return "WAITING_FOR_RPM";
+        case ProgramState::HOLDING:         return "HOLDING";
+        case ProgramState::DIR_CHANGING:    return "DIR_CHANGING";
+        case ProgramState::PAUSED:          return "PAUSED";
+        case ProgramState::COMPLETE:        return "COMPLETE";
+        case ProgramState::ABORTED:         return "ABORTED";
+    }
+    return "UNKNOWN";
+}
+
 // ─── begin ────────────────────────────────────────────────────────────────────
 void WebApi::begin() {
-    // WebSocket handler
     _ws.onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client,
                        AwsEventType type, void* arg, uint8_t* data, size_t len) {
         if (type == WS_EVT_CONNECT) {
             LOG("[WS] Client connected: " + String(client->id()));
-            // Send initial full state immediately so UI renders on first connect
             broadcastState();
         } else if (type == WS_EVT_DISCONNECT) {
             LOG("[WS] Client disconnected: " + String(client->id()));
@@ -39,9 +53,30 @@ void WebApi::begin() {
     });
     _server.addHandler(&_ws);
 
-    // Serve index.html from LittleFS
+    // HTTP GET /sessions – JSON list of stored session files
+    _server.on("/sessions", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        String body = _session.listSessions();
+        req->send(200, "application/json", body);
+    });
+
+    // HTTP GET /sessions/<id> – download session JSONL file
+    _server.on("^\\/sessions\\/([0-9]+)$", HTTP_GET,
+        [this](AsyncWebServerRequest* req) {
+            String idStr = req->pathArg(0);
+            uint16_t id  = (uint16_t)idStr.toInt();
+            String path  = _session.sessionPath(id);
+            if (LittleFS.exists(path)) {
+                req->send(LittleFS, path, "application/json",
+                          true);  // true = attachment download
+            } else {
+                req->send(404, "application/json",
+                          "{\"error\":\"session not found\"}");
+            }
+        });
+
+    // Serve static UI files from LittleFS
     _server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
-    LOG("[WS] WebSocket ready at /ws");
+    LOG("[WS] WebSocket /ws + HTTP /sessions ready");
 }
 
 // ─── broadcastState ───────────────────────────────────────────────────────────
@@ -49,6 +84,8 @@ void WebApi::broadcastState() {
     if (_ws.count() == 0) return;
 
     JsonDocument doc;
+
+    // Motor state
     doc["rpm"]      = (float)((int)(_rpm.getRpm() * 10)) / 10.0f;
     doc["target"]   = _ramp.getTarget();
     doc["eta"]      = (float)((int)(_ramp.getEtaSeconds() * 10)) / 10.0f;
@@ -61,6 +98,7 @@ void WebApi::broadcastState() {
     doc["critical"] = _errors.hasCritical();
     doc["uptime"]   = millis();
 
+    // Errors
     JsonArray errors = doc["errors"].to<JsonArray>();
     for (uint8_t i = 0; i < _errors.count(); i++) {
         const ActiveError& e = _errors.errors()[i];
@@ -70,11 +108,35 @@ void WebApi::broadcastState() {
         obj["ts"]   = e.timestamp_ms;
     }
 
-    JsonObject p = doc["params"].to<JsonObject>();
-    p["max_rpm"]   = _params.max_rpm;
-    p["accel"]     = _params.accel_rate;
-    p["decel"]     = _params.decel_rate;
-    p["dir_pause"] = _params.dir_pause_ms;
+    // Params
+    JsonObject p    = doc["params"].to<JsonObject>();
+    p["max_rpm"]    = _params.max_rpm;
+    p["accel"]      = _params.accel_rate;
+    p["decel"]      = _params.decel_rate;
+    p["dir_pause"]  = _params.dir_pause_ms;
+
+    // Program state (Phase 4)
+    JsonObject prog      = doc["prog"].to<JsonObject>();
+    prog["state"]        = progStateStr(_program.state());
+    prog["step"]         = _program.currentStep() + 1;  // 1-based
+    prog["step_total"]   = _program.stepCount();
+    prog["hold_remain"]  = _program.holdRemaining();
+    prog["total_remain"] = _program.totalRemainingSecs();
+    prog["running"]      = _program.isRunning();
+
+    JsonArray steps = prog["steps"].to<JsonArray>();
+    for (uint8_t i = 0; i < _program.stepCount(); i++) {
+        const ProgramStep& ps = _program.step(i);
+        JsonObject st = steps.add<JsonObject>();
+        st["cw"]  = ps.cw;
+        st["pct"] = ps.rpm_pct;
+        st["dur"] = ps.duration_s;
+    }
+
+    // Session state (Phase 4)
+    JsonObject sess    = doc["session"].to<JsonObject>();
+    sess["active"]     = _session.isActive();
+    sess["id"]         = _session.sessionId();
 
     String json;
     serializeJson(doc, json);
@@ -92,6 +154,7 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
     const char* cmd = doc["cmd"] | "";
     LOG("[WS] cmd=" + String(cmd));
 
+    // ── Motor commands ────────────────────────────────────────────────────────
     if (strcmp(cmd, "target") == 0) {
         if (_errors.hasCritical()) return;
         float rpm = doc["value"] | 0.0f;
@@ -127,6 +190,7 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
         else if (strcmp(key, "decel")     == 0) next.decel_rate   = (uint8_t)val;
         else if (strcmp(key, "dir_pause") == 0) next.dir_pause_ms = (uint16_t)val;
         if (validateParams(next)) {
+            _session.logParamChange(key, val);
             _params = next;
             saveParams(_params);
         }
@@ -149,18 +213,51 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
                 _errors.clear(ErrorCode::RPM_SENSOR_LOST);
             }
         }
+
+    // ── Program commands (Phase 4) ────────────────────────────────────────────
+    } else if (strcmp(cmd, "prog_start") == 0) {
+        if (_errors.hasCritical()) return;
+        _driver.enable();
+        _program.start();
+        _session.logProgramStart(_program.stepCount(), _params.max_rpm);
+
+    } else if (strcmp(cmd, "prog_skip") == 0) {
+        _program.skip();
+
+    } else if (strcmp(cmd, "prog_pause") == 0) {
+        _program.pause();
+
+    } else if (strcmp(cmd, "prog_resume") == 0) {
+        if (_errors.hasCritical()) return;
+        _program.resume();
+
+    } else if (strcmp(cmd, "prog_abort") == 0) {
+        _program.abort();
+        _session.logProgramAbort(_program.currentStep());
+
+    // ── Session commands (Phase 4) ────────────────────────────────────────────
+    } else if (strcmp(cmd, "session_start") == 0) {
+        if (!_session.isActive()) {
+            extern const char* FIRMWARE_VERSION_STR;  // defined in main.cpp
+            _session.start(String(FIRMWARE_VERSION_STR),
+                           _params.max_rpm, _program.stepCount());
+        }
+
+    } else if (strcmp(cmd, "session_stop") == 0) {
+        if (_session.isActive()) {
+            _session.stop(0, 0, _program.currentStep());
+        }
     }
 
-    // Broadcast updated state immediately after any command
     broadcastState();
 }
 
 // ─── tick ─────────────────────────────────────────────────────────────────────
 void WebApi::tick() {
     const unsigned long now = millis();
-    if (now - _lastBroadcast >= 100UL) {  // 10 Hz
+    if (now - _lastBroadcast >= 100UL) {
         _lastBroadcast = now;
         broadcastState();
-        _ws.cleanupClients();  // free disconnected client slots
+        _ws.cleanupClients();
     }
 }

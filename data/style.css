@@ -176,3 +176,62 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 }
 #resetfault-bar.visible{display:block}
 #resetfault-bar:hover{background:#8a2020}
+
+/* ── Small button variant ──────────────────────────────────────────────────── */
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* ── Program panel ─────────────────────────────────────────────────────────── */
+#prog-panel{
+  border-top:1px solid var(--border);background:var(--surface);
+  padding:8px 16px
+}
+#prog-header{
+  display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap
+}
+#prog-title{
+  font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted)
+}
+.state-badge{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;
+  background:#2a2a2a;color:var(--muted)
+}
+.state-badge.running{background:#0d3a1a;color:var(--green)}
+.state-badge.waiting{background:#1a2a3a;color:var(--blue)}
+.state-badge.paused {background:#3a2a0d;color:var(--yellow)}
+.state-badge.done   {background:#0d2a3a;color:var(--blue)}
+.state-badge.aborted{background:#3a1a1a;color:var(--red)}
+#prog-remain{font-size:11px;color:var(--muted)}
+#prog-steps{
+  display:flex;gap:6px;overflow-x:auto;padding-bottom:2px
+}
+.prog-step{
+  flex-shrink:0;border:1px solid var(--border);border-radius:5px;
+  padding:5px 8px;min-width:70px;text-align:center;background:var(--bg);
+  color:var(--muted);transition:background .2s,border-color .2s
+}
+.prog-step .step-num {font-size:9px;color:var(--muted);margin-bottom:1px}
+.prog-step .step-dir {font-size:12px;font-weight:700}
+.prog-step .step-rpm {font-size:10px;margin-top:1px}
+.prog-step .step-dur {font-size:10px;color:var(--muted)}
+.prog-step .step-timer{font-size:13px;font-weight:700;color:var(--green);display:none}
+.prog-step.done{opacity:.3}
+.prog-step.active{
+  border-color:var(--blue);background:#0d1f36;color:var(--text)
+}
+.prog-step.active .step-timer{display:block}
+.prog-step.active .step-dur  {display:none}
+.prog-step.complete{border-color:var(--green);opacity:.5}
+
+/* ── Session bar ───────────────────────────────────────────────────────────── */
+#session-bar{
+  display:flex;align-items:center;gap:8px;padding:5px 16px;
+  border-top:1px solid var(--border);background:var(--bg)
+}
+#sess-rec-dot{
+  width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0
+}
+#sess-rec-dot.active{
+  background:var(--red);animation:flash-red .8s infinite
+}
+#sess-label{font-size:12px;color:var(--muted)}

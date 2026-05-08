@@ -27,6 +27,11 @@ function sendCmd(cmd) { send({ cmd }); }
 function goTarget()   { send({ cmd: 'target', value: +document.getElementById('rpm-input').value }); }
 function dirChange(d) { send({ cmd: 'dir', value: d }); }
 
+// ─── Program commands ────────────────────────────────────────────────────────
+function progCmd(cmd) { send({ cmd }); }
+let _progPaused = false;
+function progPauseResume() { progCmd(_progPaused ? 'prog_resume' : 'prog_pause'); }
+
 const faultState = { driver: false, sensor: false };
 function toggleFault(type) {
   faultState[type] = !faultState[type];
@@ -181,6 +186,9 @@ function render(s) {
 
   sparkPush(s.rpm);
   drawSparkline();
+
+  renderProgram(s);
+  renderSession(s);
 }
 
 function setGpio(id, high, invert = false) {
@@ -188,4 +196,91 @@ function setGpio(id, high, invert = false) {
   const isHigh = invert ? !high : high;
   el.textContent = isHigh ? 'HIGH' : 'LOW';
   el.className   = 'gpio-val ' + (isHigh ? 'high' : 'low');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmtTime(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return m > 0 ? `${m}m${String(sec).padStart(2,'0')}s` : `${sec}s`;
+}
+
+// ─── Program panel ────────────────────────────────────────────────────────────
+let _progStepCount = -1;  // track last rendered count to avoid unnecessary DOM rebuild
+
+function renderProgram(s) {
+  const prog   = s.prog   || {};
+  const pstate = prog.state   || 'IDLE';
+  const steps  = prog.steps   || [];
+  const curIdx = (prog.step   || 1) - 1;  // 0-based
+  const running = prog.running || false;
+
+  // ── State badge ──
+  const badge = document.getElementById('prog-state-badge');
+  badge.textContent = pstate.replace(/_/g,' ');
+  badge.className = 'state-badge ' + ({
+    WAITING_FOR_RPM:'waiting', DIR_CHANGING:'waiting',
+    HOLDING:'running', PAUSED:'paused',
+    COMPLETE:'done',   ABORTED:'aborted'
+  }[pstate] || '');
+
+  // ── Total remaining ──
+  const total = prog.total_remain || 0;
+  document.getElementById('prog-remain').textContent =
+    running && total > 0 ? `${fmtTime(total)} remaining` : '';
+
+  // ── Step bubbles (rebuild only when count changes) ──
+  const stepsEl = document.getElementById('prog-steps');
+  if (_progStepCount !== steps.length) {
+    _progStepCount = steps.length;
+    stepsEl.innerHTML = '';
+    steps.forEach((st, i) => {
+      const div = document.createElement('div');
+      div.id = 'pstep-' + i;
+      div.className = 'prog-step';
+      div.innerHTML =
+        `<div class="step-num">Step ${i+1}</div>` +
+        `<div class="step-dir" style="color:${st.cw?'var(--cw-color)':'var(--ccw-color)'}">${st.cw?'↻ CW':'↺ CCW'}</div>` +
+        `<div class="step-rpm">${st.pct}%</div>` +
+        `<div class="step-dur">${fmtTime(st.dur)}</div>` +
+        `<div class="step-timer">—</div>`;
+      stepsEl.appendChild(div);
+    });
+  }
+
+  // ── Update each step state ──
+  steps.forEach((_, i) => {
+    const el = document.getElementById('pstep-' + i);
+    if (!el) return;
+    const isActive = running && i === curIdx;
+    const isDone   = (pstate === 'COMPLETE') || (running && i < curIdx);
+    el.className = 'prog-step' + (isActive ? ' active' : isDone ? ' done' : '');
+    if (isActive) {
+      const t = el.querySelector('.step-timer');
+      if (t) t.textContent = fmtTime(prog.hold_remain || 0);
+    }
+  });
+
+  // ── Button states ──
+  const idle = pstate === 'IDLE' || pstate === 'COMPLETE' || pstate === 'ABORTED';
+  _progPaused = (pstate === 'PAUSED');
+  document.getElementById('prog-btn-start').disabled = !idle || s.critical;
+  document.getElementById('prog-btn-skip').disabled  = !running || _progPaused;
+  const pb = document.getElementById('prog-btn-pause');
+  pb.textContent = _progPaused ? '▶ RESUME' : '⏸ PAUSE';
+  pb.disabled = idle || s.critical;
+  document.getElementById('prog-btn-abort').disabled = idle;
+}
+
+// ─── Session bar ──────────────────────────────────────────────────────────────
+function renderSession(s) {
+  const sess   = s.session || {};
+  const active = sess.active || false;
+  document.getElementById('sess-rec-dot').className = active ? 'active' : '';
+  document.getElementById('sess-label').textContent =
+    active ? `Session #${sess.id} — Recording` : 'No active session';
+  document.getElementById('sess-btn-start').disabled = active;
+  document.getElementById('sess-btn-stop').disabled  = !active;
+  const exp = document.getElementById('sess-btn-export');
+  exp.style.display = active ? '' : 'none';
+  if (active) exp.href = `/sessions/${sess.id}`;
 }

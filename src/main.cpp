@@ -1,11 +1,13 @@
 // src/main.cpp
 // honey_please – ESP32 Honigschleuder Motor Control
-// Firmware v1.3.0 | Phase 3: Web UI + WebSocket
+// Firmware v1.4.0 | Phase 4: Multi-Step Program + Session Logger
 //
 // Architecture:
 //   SimMotorDriver + SimRpmSource are the active implementations.
 //   LittleFS serves data/index.html from ESP32 flash.
 //   WebSocket /ws broadcasts state JSON at 10 Hz.
+//   ProgramRunner: NVS-stored 6-step CW/CCW extraction program (F09).
+//   SessionLogger: JSONL per-session log in /sessions/ on LittleFS (F10).
 //   No GPIO is touched until Phase 5 (REAL_HARDWARE build flag).
 //
 // WebSerial commands: type 'help' in browser terminal
@@ -26,9 +28,12 @@
 #include "sim_rpm_source.h"
 #include <LittleFS.h>
 #include "web_api.h"
+#include "program.h"
+#include "session.h"
 
 // ─── Firmware version ────────────────────────────────────────────────────────
-#define FIRMWARE_VERSION "1.3.0"
+#define FIRMWARE_VERSION "1.4.0"
+const char* FIRMWARE_VERSION_STR = FIRMWARE_VERSION;
 
 // ─── Network ─────────────────────────────────────────────────────────────────
 const char* ssid     = WIFI_SSID;
@@ -56,8 +61,11 @@ RampController rampCtrl(*motorDriver, params);
 
 IRpmSource*    rpmSource = &rpmSourceImpl;
 ErrorHandler   errorHandler(*motorDriver);
+ProgramRunner  programRunner(rampCtrl, params);
+SessionLogger  sessionLogger;
 WebApi         webApi(server, *motorDriver, *rpmSource, rampCtrl,
-                      errorHandler, params, motorDriverImpl, rpmSourceImpl);
+                      errorHandler, params, motorDriverImpl, rpmSourceImpl,
+                      programRunner, sessionLogger);
 
 // ─── Loop timing ─────────────────────────────────────────────────────────────
 static unsigned long lastTick      = 0;
@@ -244,6 +252,8 @@ void setup() {
     }
 
     loadParams(params);
+    programRunner.loadSteps();
+    sessionLogger.begin();
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -306,6 +316,26 @@ void loop() {
                 triggerCritical(ErrorCode::RPM_SENSOR_LOST, "RPM sensor unhealthy (E03)");
             }
         }
+    }
+
+    // Program runner 20 Hz tick (must come after rampCtrl.tick)
+    if (!errorHandler.hasCritical()) {
+        programRunner.tick();
+    }
+
+    // Session data-logger tick (samples every SESSION_SAMPLE_INT ms)
+    {
+        const char* dir = motorDriver->getDirection() ? "CW" : "CCW";
+        const char* stStr;
+        switch (rampCtrl.getState()) {
+            case RampState::IDLE:             stStr = "IDLE"; break;
+            case RampState::RAMPING_UP:       stStr = "RAMPING_UP"; break;
+            case RampState::RUNNING:          stStr = "RUNNING"; break;
+            case RampState::RAMPING_DOWN:     stStr = "RAMPING_DOWN"; break;
+            case RampState::DIR_CHANGE_PAUSE: stStr = "DIR_CHANGE_PAUSE"; break;
+            default:                          stStr = "UNKNOWN"; break;
+        }
+        sessionLogger.tick(rpmSource->getRpm(), dir, stStr);
     }
 
     // WebSocket 10 Hz broadcast
