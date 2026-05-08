@@ -6,3 +6,5 @@
 
 # Secrets – niemals committen!
 src/secrets.h
+
+tests/node_modules

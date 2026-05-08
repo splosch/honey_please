@@ -14,13 +14,27 @@ Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestütz
 - ✅ PlatformIO Projekt erstellt (`platformio.ini` vorhanden)
 - ✅ Board `esp32dev` und Framework `Arduino` konfiguriert
 - ✅ `monitor_speed = 115200` gesetzt
-- ☐ Hello World auf Hardware geflasht und Serial Output im Monitor bestätigt
-  - **Check:** Erscheint `[HEARTBEAT] ESP32 läuft stabil...` alle 5 Sekunden?
+- ✅ CP2102 USB-Treiber installiert (Silicon Labs, COM3)
+- ✅ `src/main.cpp` erstellt (aus `example_ota_helloworld.cpp`)
+- ✅ Firmware erfolgreich kompiliert (RAM 14.9%, Flash 59.9%)
+- ✅ **Erster Flash via USB erfolgreich** – `[HEARTBEAT]` im Serial Monitor bestätigt ✓
 
-### ❓ Offene Fragen – Milestone 1
+### ⚠️ Wichtig: Flash-Prozedur für dieses Board
 
-- ❓ Welches genaue Board-Modell hast du? (`esp32dev` ist generisch – stimmt das mit deiner Hardware überein?)
-- ❓ Über welchen COM-Port verbindet sich der ESP32 (Windows Device Manager)?
+Dieses Board hat keinen Auto-Reset-Transistor für esptool. **Manueller Download-Modus nötig:**
+1. `BOOT`-Taste gedrückt halten
+2. `EN`-Taste kurz drücken und loslassen
+3. Upload-Befehl starten (mit `--before no_reset`)
+4. `BOOT` loslassen sobald `Writing at 0x00010000` erscheint
+
+```
+python esptool.py --chip esp32 --port COM3 --baud 460800 --before no_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 boot_app0.bin 0x10000 firmware.bin
+```
+
+### ✅ Gelöste Fragen – Milestone 1
+
+- ✅ Board: **ESP32-D0WDQ6** Rev 1.0, 240MHz, 4MB Flash, MAC: `24:6f:28:15:7a:54`
+- ✅ COM-Port: **COM3** (Silicon Labs CP210x)
 
 ---
 
@@ -28,15 +42,16 @@ Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestütz
 
 **Ziel:** Den Copilot Agent so instruieren, dass er den Terminal-Output zur Fehlerbehebung nutzen kann.
 
-- ✅ Log-Struktur mit `[STATUS]`, `[ERROR]`, `[HEARTBEAT]`, `[OTA]` definiert (in `example_ota_helloworld.cpp`)
-- ☐ Ersten echten Fehler per Copy-Paste an Copilot übergeben und debuggt
-- ☐ Workflow etabliert: Serial Output → Copilot Chat → Lösung → Upload
+- ✅ Log-Struktur mit `[START]`, `[ERROR]`, `[HEARTBEAT]`, `[OTA]`, `[READY]`, `[INFO]` definiert und live bestätigt
+- ✅ Erster echter Debugging-Loop: CP2102-Treiberfehler (Code 28) → Copilot → gelöst
+- ✅ Workflow etabliert: Serial Output → Copilot Chat → Lösung → Upload
+- ☐ Log-Makro-Entscheidung treffen
 
 ### 💡 Optionen – Log-Ausgabe
 
-- 💡 **Option A (einfach):** `Serial.println("[ERROR] ...")` direkt im Code – kein Overhead
+- 💡 **Option A (einfach):** `Serial.println("[ERROR] ...")` direkt im Code – kein Overhead ← *aktuell genutzt*
 - 💡 **Option B (strukturiert):** Makro `#define LOG_ERROR(msg) Serial.println("[ERROR] " + String(msg))` für sauberere Aufrufe
-- ☐ Entscheidung treffen und konsistent umsetzen
+- ☐ Entscheidung für spätere Motorsteuerungs-Phase treffen
 
 ---
 
@@ -44,25 +59,21 @@ Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestütz
 
 **Ziel:** Code-Updates über WLAN ohne USB-Kabel.
 
-- ✅ `ArduinoOTA.h` in `example_ota_helloworld.cpp` integriert
+- ✅ `ArduinoOTA.h` in `src/main.cpp` integriert
 - ✅ `ArduinoOTA.handle()` im `loop()` vorhanden
 - ✅ OTA-Konfiguration in `platformio.ini` vorbereitet (auskommentiert)
-- ☐ **WLAN-Credentials in `example_ota_helloworld.cpp` eintragen** (`ssid` / `password`)
-- ☐ Code erstmalig per USB flashen und IP-Adresse im Serial Monitor notieren
-- ☐ IP-Adresse in `platformio.ini` unter `upload_port` eintragen
-- ☐ OTA-Zeilen in `platformio.ini` einkommentieren (`upload_protocol`, `upload_port`)
-- ☐ Test: Kleine Änderung deployen und per WLAN übertragen
+- ✅ `src/secrets.h` mit WLAN-Credentials angelegt (in `.gitignore` eingetragen)
+- ✅ Code per USB geflasht, `[HEARTBEAT]` bestätigt
+- ✅ **WLAN-Verbindung erfolgreich** – FRITZ!Box 6690 WI, IP: `192.168.178.64`
+- ✅ IP-Adresse im Serial Monitor abgelesen: `192.168.178.64`
+- ✅ IP-Adresse in `platformio.ini` unter `upload_port` eingetragen
+- ✅ OTA-Zeilen in `platformio.ini` aktiviert (`upload_protocol = espota`)
+- ✅ Test: OTA-Deploy erfolgreich – `[HEARTBEAT] OTA aktiv. Bereit für Motorsteuerung.` bestätigt
 
-### ❓ Offene Fragen – Milestone 3
+### ✅ Gelöste Fragen – Milestone 3
 
-- ❓ Wie sollen WLAN-Credentials sicher gespeichert werden? Hardcoded im Code ist unsicher.
-- ❓ Ist dein WLAN 2.4 GHz? (ESP32 unterstützt **kein** 5 GHz)
-
-### 💡 Optionen – Credentials-Handling
-
-- 💡 **Option A (schnell):** Direkt im Code – nur für lokale Entwicklung, nie ins Git!
-- 💡 **Option B (sicher):** `secrets.h` Datei anlegen und in `.gitignore` eintragen
-- 💡 **Option C (flexibel):** WiFiManager-Library → ESP32 öffnet eigenen Hotspot zur Konfiguration
+- ✅ Credentials-Strategie: **Option B** (`src/secrets.h` + `.gitignore`) – umgesetzt
+- ✅ WLAN-Typ: 2.4 GHz (Hotspot `Galaxy A21s11BE`) – kompatibel
 
 ---
 
@@ -70,15 +81,17 @@ Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestütz
 
 **Ziel:** Den Monitor-Output im Browser sehen (wichtig, wenn man nicht mehr am USB hängt).
 
-- ☐ WebSerial-Library in `lib_deps` der `platformio.ini` hinzufügen
-- ☐ WebSerial in `setup()` initialisieren und im `loop()` pollen
-- ☐ Test: Browser öffnen und `[HEARTBEAT]` Output live sehen
-- ☐ Copilot-gestützte UI-Verbesserung für Motorsteuerungs-Interface
+- ✅ `ayushsharma82/WebSerial @ ^2.1.2` + `me-no-dev/ESPAsyncWebServer` + `AsyncTCP` in `lib_deps` eingetragen
+- ✅ `AsyncWebServer server(80)` erstellt, `WebSerial.begin(&server)` in `setup()` aufgerufen
+- ✅ `LOG()`-Makro: Alle Ausgaben gleichzeitig auf USB-Serial und Web-Terminal
+- ✅ `WebSerial.onMessage()` Callback für bidirektionale Befehle aus dem Browser
+- ✅ Test: `[HEARTBEAT]` live im Browser sehen unter `http://192.168.178.64/webserial`
+- ✅ Befehle-Platzhalter `[CMD]` für spätere Motorsteuerung vorbereitet
 
-### ❓ Offene Fragen – Milestone 4
+### ✅ Entscheidungen – Milestone 4
 
-- ❓ Soll das Web-Terminal nur lesen oder auch Befehle senden können (bidirektional)?
-- ❓ Authentifizierung gewünscht? (HTTP Basic Auth oder komplett offen im lokalen Netz?)
+- ✅ **Bidirektional** – Browser kann Befehle an ESP32 senden (`[CMD]`-Tag)
+- ✅ **Offen** (kein Passwort) – nur im lokalen Netzwerk erreichbar
 
 ---
 
@@ -86,16 +99,24 @@ Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestütz
 
 | # | Status | Aktion | Hinweis |
 |---|--------|--------|---------|
-| 1 | ☐ | Hello World per USB flashen & Serial bestätigen | Milestone 1 abschließen |
-| 2 | ☐ | Credentials-Strategie wählen (Option A/B/C oben) | Vor OTA entscheiden |
-| 3 | ☐ | WLAN-Daten eintragen, IP notieren | Milestone 3 starten |
-| 4 | ☐ | OTA-Zeilen in `platformio.ini` aktivieren und testen | Milestone 3 abschließen |
-| 5 | ☐ | Board-Typ und COM-Port klären | Offene Frage M1 |
+| 1 | ✅ | Hello World per USB flashen & Serial bestätigen | `[HEARTBEAT]` live gesehen |
+| 2 | ✅ | Credentials-Strategie: `secrets.h` + `.gitignore` | Milestone 3 vorbereitet |
+| 3 | ✅ | WLAN-Verbindung testen & IP notieren | IP: `192.168.178.64` (FRITZ!Box 6690 WI) |
+| 4 | ✅ | OTA-Zeilen in `platformio.ini` aktivieren und testen | OTA-Deploy erfolgreich bestätigt |
+| 5 | ✅ | Board-Typ und COM-Port klären | ESP32-D0WDQ6 / COM3 |
+| 6 | ✅ | WebSerial (bidirektional) deployen | Browser-Terminal unter `http://192.168.178.64/webserial` |
 
 ---
 
 ## Architektur-Notizen
 
-- **Dateistruktur:** `example_ota_helloworld.cpp` ist eine Referenzimplementierung – für das finale Projekt bitte als `main.cpp` anlegen.
-- **Log-Tags:** `[START]`, `[ERROR]`, `[OTA]`, `[READY]`, `[INFO]`, `[HEARTBEAT]` – konsistent halten.
-- **OTA Hostname:** `esp32-motor-control` (konfiguriert in `ArduinoOTA.setHostname()`) 
+- **Dateistruktur:** `src/main.cpp` ist der aktive Code. `example_ota_helloworld.cpp` bleibt als Referenz im Root.
+- **Log-Tags:** `[START]`, `[ERROR]`, `[OTA]`, `[READY]`, `[INFO]`, `[HEARTBEAT]`, `[CMD]` – konsistent halten.
+- **LOG()-Makro:** Schreibt gleichzeitig auf USB-Serial und Web-Terminal. Alle neuen Ausgaben über `LOG()` statt `Serial.println()`.
+- **WebSerial URL:** `http://192.168.178.64/webserial` – im lokalen Netz ohne Passwort erreichbar.
+- **WebSerial Port:** HTTP auf Port 80. OTA auf Port 3232 (UDP/TCP). Kein Konflikt.
+- **OTA Hostname:** `esp32-motor-control` (konfiguriert in `ArduinoOTA.setHostname()`)
+- **OTA IP:** `192.168.178.64` – FRITZ!Box 6690 WI (Heimnetz). Bei Netzwechsel IP in `platformio.ini` aktualisieren.
+- **Firewall:** Windows-Firewall-Regel "ESP32 OTA" für TCP+UDP Port 3232 eingerichtet (Admin-Rechte benötigt).
+- **Flash-Workaround:** Board hat keinen Auto-Reset → manuell BOOT+EN drücken, Upload mit `--before no_reset`. Baudrate 460800 stabil nach Stub-Start.
+- **upload_speed:** `115200` in `platformio.ini` gesetzt (CP2102 stabiler bei niedrigerer Baud im Init-Phase) 

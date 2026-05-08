@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>honey_please</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- SIM mode banner -->
+<div id="sim-banner">⚠ SIMULATION MODE – No hardware output</div>
+
+<!-- Top bar -->
+<div id="topbar">
+  <h1>🍯 honey_please</h1>
+  <div id="conn-dot"></div>
+  <span id="conn-label">DISCONNECTED</span>
+  <span id="firmware-ver"></span>
+</div>
+
+<!-- Error overlay (critical) -->
+<div id="error-overlay"></div>
+<!-- Reset fault float bar -->
+<div id="resetfault-bar" onclick="sendCmd('resetfault')">🔴 FAULT STOP – Click to Reset</div>
+
+<div id="main">
+  <!-- Schematic row -->
+  <div id="schematic">
+
+    <!-- ESP32 box -->
+    <div class="comp-box" id="box-esp32">
+      <div class="comp-header">
+        <div class="status-ring green" id="ring-esp32"></div>
+        <span class="comp-title">⬡ ESP32</span>
+        <span class="sim-badge" id="sim-badge-esp32" style="display:none">SIM</span>
+      </div>
+      <div class="gpio-row">
+        <span class="gpio-num">GPIO 18</span>
+        <span class="gpio-name">PWM</span>
+        <span class="gpio-val pwm" id="gpio-pwm">0%</span>
+        <div class="duty-bar"><div class="duty-bar-fill" id="duty-bar-fill" style="width:0%"></div></div>
+      </div>
+      <div class="gpio-row">
+        <span class="gpio-num">GPIO 19</span>
+        <span class="gpio-name">DIR_A</span>
+        <span class="gpio-val" id="gpio-dira">—</span>
+      </div>
+      <div class="gpio-row">
+        <span class="gpio-num">GPIO 21</span>
+        <span class="gpio-name">DIR_B</span>
+        <span class="gpio-val" id="gpio-dirb">—</span>
+      </div>
+      <div class="gpio-row">
+        <span class="gpio-num">GPIO 22</span>
+        <span class="gpio-name">ENABLE</span>
+        <span class="gpio-val" id="gpio-en">—</span>
+      </div>
+      <div class="gpio-row">
+        <span class="gpio-num">GPIO 34</span>
+        <span class="gpio-name">RPM IN</span>
+        <span class="gpio-val" id="gpio-rpm">~~~~</span>
+      </div>
+      <div class="gpio-row">
+        <span class="gpio-num">GPIO 35</span>
+        <span class="gpio-name">nFAULT</span>
+        <span class="gpio-val" id="gpio-nfault">—</span>
+      </div>
+      <div style="margin-top:auto;font-size:11px;color:var(--muted)">
+        <div id="wifi-info">IP: —</div>
+        <div id="uptime-info">Uptime: —</div>
+      </div>
+    </div>
+
+    <!-- Motor controller box -->
+    <div class="comp-box" id="box-motctrl">
+      <div class="comp-header">
+        <div class="status-ring green" id="ring-motctrl"></div>
+        <span class="comp-title">⚡ MOTOR CTRL</span>
+        <span class="sim-badge" id="sim-badge-mc" style="display:none">SIM</span>
+      </div>
+      <div class="info-row"><span class="label">PWM duty</span><span class="val" id="mc-duty">0%</span></div>
+      <div class="info-row"><span class="label">Direction</span><span class="val" id="mc-dir">—</span></div>
+      <div class="info-row"><span class="label">Enable</span><span class="val" id="mc-en">—</span></div>
+      <div class="info-row"><span class="label">nFAULT</span><span class="val" id="mc-fault">OK</span></div>
+    </div>
+
+    <!-- Honigschleuder box -->
+    <div class="comp-box" id="box-motor">
+      <div class="comp-header">
+        <div class="status-ring green" id="ring-motor"></div>
+        <span class="comp-title">🍯 HONIGSCHLEUDER</span>
+        <span class="sim-badge" id="sim-badge-mot" style="display:none">SIM</span>
+      </div>
+      <div id="basket-container">
+        <svg id="basket-svg" width="70" height="70" viewBox="0 0 70 70">
+          <g id="basket-g" transform-origin="35 35">
+            <circle cx="35" cy="35" r="28" fill="none" stroke="currentColor" stroke-width="3" opacity=".3"/>
+            <circle cx="35" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="2" opacity=".5"/>
+            <line x1="35" y1="7" x2="35" y2="63" stroke="currentColor" stroke-width="2" opacity=".4"/>
+            <line x1="7" y1="35" x2="63" y2="35" stroke="currentColor" stroke-width="2" opacity=".4"/>
+            <path id="basket-arrow" d="M35 11 A24 24 0 0 1 59 35" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <polygon id="basket-arrowhead" points="59,35 54,28 64,28" fill="currentColor"/>
+          </g>
+        </svg>
+      </div>
+      <div class="dir-label" id="dir-label" style="color:var(--cw-color)">↻ CW / RIGHT</div>
+      <div class="rpm-display" id="rpm-display">0</div>
+      <div class="rpm-target" id="rpm-target">→ 0 RPM</div>
+      <div class="ramp-bar-wrap" style="margin-top:6px">
+        <div class="ramp-bar-fill" id="ramp-bar" style="width:0%"></div>
+        <div class="ramp-bar-label" id="ramp-label">IDLE</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:3px" id="eta-label">ETA: —</div>
+    </div>
+
+  </div><!-- /schematic -->
+
+  <!-- Sparkline -->
+  <div id="sparkline-wrap">
+    <div id="sparkline-label">RPM last 30 s</div>
+    <canvas id="sparkline" height="50"></canvas>
+  </div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <button class="btn" id="btn-ccw" onclick="dirChange('ccw')">◄ CCW</button>
+    <button class="btn primary" id="btn-cw"  onclick="dirChange('cw')">CW ►</button>
+    <input id="rpm-input" type="number" min="0" max="300" value="80" title="Target RPM">
+    <button class="btn primary" id="btn-go" onclick="goTarget()">▶ RUN</button>
+    <button class="btn" id="btn-stop" onclick="sendCmd('stop')">■ STOP</button>
+    <div class="spacer"></div>
+    <button class="btn estop" id="btn-estop" onclick="sendCmd('estop')">🚨 E-STOP</button>
+  </div>
+
+  <!-- Fault injection panel (visible in SIM mode) -->
+  <div id="fault-panel">
+    <div id="fault-panel-header">🔬 Fault Injection (Simulation)</div>
+    <div id="fault-buttons">
+      <button class="fault-btn" id="fi-driver" onclick="toggleFault('driver')">E06 Driver Fault</button>
+      <button class="fault-btn" id="fi-sensor" onclick="toggleFault('sensor')">E03 RPM Sensor Lost</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script src="/app.js"></script>
+</body>
+</html>

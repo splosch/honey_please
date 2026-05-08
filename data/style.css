@@ -1,0 +1,178 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;
+  --green:#3fb950;--blue:#58a6ff;--yellow:#d29922;--orange:#f0883e;--red:#f85149;
+  --purple:#bc8cff;--cw-color:#58a6ff;--ccw-color:#bc8cff;
+  --sim-banner:#b08800;
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;color:var(--text);background:var(--bg)
+}
+body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── SIM banner ───────────────────────────────────────────────────────────── */
+#sim-banner{
+  background:var(--sim-banner);color:#fff;text-align:center;padding:5px;
+  font-weight:700;font-size:13px;letter-spacing:.5px;display:none
+}
+#sim-banner.visible{display:block}
+
+/* ── Top bar ──────────────────────────────────────────────────────────────── */
+#topbar{
+  display:flex;align-items:center;gap:12px;padding:8px 16px;
+  background:var(--surface);border-bottom:1px solid var(--border)
+}
+#topbar h1{font-size:16px;font-weight:700;letter-spacing:1px}
+#conn-dot{width:10px;height:10px;border-radius:50%;background:var(--red)}
+#conn-dot.ok{background:var(--green)}
+#conn-label{font-size:12px;color:var(--muted)}
+#firmware-ver{margin-left:auto;font-size:11px;color:var(--muted)}
+
+/* ── Main layout ──────────────────────────────────────────────────────────── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#schematic{
+  display:flex;flex:1;gap:0;border-bottom:1px solid var(--border);min-height:0
+}
+
+/* ── Component boxes ──────────────────────────────────────────────────────── */
+.comp-box{
+  flex:1;padding:14px;border-right:1px solid var(--border);overflow-y:auto;
+  display:flex;flex-direction:column;gap:8px
+}
+.comp-box:last-child{border-right:none}
+.comp-header{
+  display:flex;align-items:center;gap:8px;padding-bottom:8px;
+  border-bottom:1px solid var(--border)
+}
+.comp-title{font-weight:700;font-size:13px}
+.status-ring{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+  transition:background .3s
+}
+.status-ring.green{background:var(--green)}
+.status-ring.green.pulse{animation:pulse-green 1.5s infinite}
+.status-ring.yellow{background:var(--yellow)}
+.status-ring.red{background:var(--red);animation:flash-red .5s infinite}
+.status-ring.gray{background:#555}
+@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes flash-red{0%,100%{opacity:1}50%{opacity:.2}}
+.sim-badge{
+  font-size:10px;background:var(--sim-banner);color:#fff;
+  padding:1px 5px;border-radius:3px;font-weight:700
+}
+
+/* ── GPIO rows ────────────────────────────────────────────────────────────── */
+.gpio-row{display:flex;align-items:center;gap:6px;font-size:12px}
+.gpio-num{color:var(--muted);width:55px;flex-shrink:0}
+.gpio-name{width:55px;flex-shrink:0}
+.gpio-val{font-weight:700;font-size:11px;padding:1px 5px;border-radius:3px;min-width:42px;text-align:center}
+.gpio-val.high{background:#1a3a1a;color:var(--green)}
+.gpio-val.low{background:#2a1a1a;color:var(--red)}
+.gpio-val.pwm{background:#1a2a3a;color:var(--blue)}
+
+/* ── Duty bar ─────────────────────────────────────────────────────────────── */
+.duty-bar-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.duty-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.duty-bar-fill{height:100%;background:var(--blue);transition:width .1s;border-radius:3px}
+
+/* ── Motor controller box ─────────────────────────────────────────────────── */
+.info-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.info-row .label{color:var(--muted)}
+.info-row .val{font-weight:700}
+
+/* ── Honigschleuder box ───────────────────────────────────────────────────── */
+#basket-container{
+  display:flex;justify-content:center;align-items:center;height:80px;
+  position:relative
+}
+#basket-svg{transition:color .3s}
+.dir-label{
+  font-size:20px;font-weight:700;margin-bottom:4px;
+  transition:color .3s
+}
+.rpm-display{font-size:28px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.rpm-target{font-size:12px;color:var(--muted);text-align:center}
+
+/* ── Ramp bar ─────────────────────────────────────────────────────────────── */
+.ramp-bar-wrap{position:relative;height:20px;background:var(--border);border-radius:4px;overflow:hidden}
+.ramp-bar-fill{
+  height:100%;border-radius:4px;transition:width .1s,background .3s;
+  background:var(--blue)
+}
+.ramp-bar-fill.running{background:var(--green)}
+.ramp-bar-fill.down{background:var(--orange)}
+.ramp-bar-fill.pause{background:#555;animation:pulse-gray 1s infinite}
+@keyframes pulse-gray{0%,100%{opacity:.6}50%{opacity:1}}
+.ramp-bar-label{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;pointer-events:none
+}
+
+/* ── Sparkline ────────────────────────────────────────────────────────────── */
+#sparkline-wrap{
+  padding:8px 16px 6px;border-bottom:1px solid var(--border);background:var(--surface)
+}
+#sparkline-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+#sparkline{display:block;width:100%;height:50px}
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
+#controls{
+  display:flex;align-items:center;gap:8px;padding:10px 16px;
+  background:var(--surface)
+}
+.btn{
+  padding:7px 14px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text);border-radius:5px;cursor:pointer;font-size:13px;font-weight:700;
+  transition:background .15s,border-color .15s
+}
+.btn:hover:not(:disabled){background:#21262d;border-color:var(--muted)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:#1f4d8f;border-color:var(--blue)}
+.btn.primary:hover:not(:disabled){background:#2860b0}
+.btn.danger{background:#6a1a1a;border-color:var(--red)}
+.btn.danger:hover:not(:disabled){background:#8a2020}
+.btn.estop{background:var(--red);color:#fff;border-color:#c00;font-size:14px}
+.btn.estop:hover:not(:disabled){background:#c02020}
+.btn.dir-active{border-color:var(--green)}
+
+#rpm-input{
+  width:70px;padding:6px 8px;background:#0d1117;border:1px solid var(--border);
+  color:var(--text);border-radius:5px;font-size:13px;text-align:center
+}
+#rpm-input:focus{outline:none;border-color:var(--blue)}
+.spacer{flex:1}
+
+/* ── Fault injection panel ────────────────────────────────────────────────── */
+#fault-panel{
+  border-top:1px solid var(--border);background:#0d1117;padding:8px 16px;
+  display:none
+}
+#fault-panel.visible{display:block}
+#fault-panel-header{
+  font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:6px
+}
+#fault-buttons{display:flex;flex-wrap:wrap;gap:6px}
+.fault-btn{
+  padding:4px 10px;font-size:11px;border:1px solid var(--border);border-radius:4px;
+  cursor:pointer;background:var(--surface);color:var(--text);transition:background .15s
+}
+.fault-btn:hover{background:#21262d}
+.fault-btn.active{background:#6a1a1a;border-color:var(--red);color:#fff}
+
+/* ── Error overlay ────────────────────────────────────────────────────────── */
+#error-overlay{
+  position:fixed;inset:0;background:rgba(248,81,73,.15);border:3px solid var(--red);
+  display:none;z-index:99;pointer-events:none
+}
+#error-overlay.visible{display:block;animation:flash-border .5s infinite}
+@keyframes flash-border{0%,100%{border-color:var(--red)}50%{border-color:transparent}}
+
+/* ── Reset fault button overlay ───────────────────────────────────────────── */
+#resetfault-bar{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:#6a1a1a;border:1px solid var(--red);border-radius:6px;
+  padding:10px 24px;font-size:14px;font-weight:700;color:#fff;
+  cursor:pointer;display:none;z-index:100
+}
+#resetfault-bar.visible{display:block}
+#resetfault-bar:hover{background:#8a2020}
