@@ -6,6 +6,11 @@
 #include "sim_rpm_source.h"
 #include "log.h"
 #include <LittleFS.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
+// Declared and initialised in main.cpp before server.begin().
+extern SemaphoreHandle_t g_mutex;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 static const char* rampStateStr(RampState s) {
@@ -148,7 +153,8 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
 
     const char* cmd = doc["cmd"] | "";
     LOG("[WS] cmd=" + String(cmd));
-
+    // Guard all shared state access from the Core-0 AsyncTCP task.
+    xSemaphoreTake(g_mutex, portMAX_DELAY);
     // ── Motor commands ────────────────────────────────────────────────────────
     if (strcmp(cmd, "target") == 0) {
         if (_errors.hasCritical()) return;
@@ -250,6 +256,8 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
             _session.stop(0, 0, _program.currentStep());
         }
     }
+
+    xSemaphoreGive(g_mutex);
 
     broadcastState();
 }

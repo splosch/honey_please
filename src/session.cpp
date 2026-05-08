@@ -74,14 +74,9 @@ String SessionLogger::sessionPath(uint16_t id) const {
 
 // ─── _append ──────────────────────────────────────────────────────────────────
 void SessionLogger::_append(const String& line) {
-    if (!_active) return;
-    File f = LittleFS.open(sessionPath(_id), FILE_APPEND);
-    if (!f) {
-        LOG("[SESSION] ERROR: cannot open session file for append");
-        return;
-    }
-    f.println(line);
-    f.close();  // flush after every write
+    if (!_active || !_file) return;
+    _file.println(line);
+    _file.flush();  // persist to flash without closing; avoids per-event open/close wear
 }
 
 // ─── start ────────────────────────────────────────────────────────────────────
@@ -95,6 +90,14 @@ bool SessionLogger::start(const String& fw, uint16_t maxRpm, uint8_t stepCount) 
     _sampleCount = 0;
     _peakRpm    = 0;
     _lastSample = 0;
+
+    // Open file once; keep it open for the session lifetime.
+    _file = LittleFS.open(sessionPath(_id), FILE_APPEND);
+    if (!_file) {
+        LOG("[SESSION] ERROR: cannot open session file – logging disabled");
+        _active = false;
+        return false;
+    }
 
     JsonDocument doc;
     doc["ts"]      = 0;
@@ -131,6 +134,7 @@ void SessionLogger::stop(float avgRpm, float maxRpmSeen, uint8_t stepsCompleted)
     _append(line);
 
     LOG("[SESSION] #" + String(_id) + " stopped – " + String(dur) + "s  avg=" + String(finalAvg, 1) + " RPM");
+    _file.close();
     _active = false;
 }
 

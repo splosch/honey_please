@@ -49,6 +49,11 @@ private:
     uint32_t _startMs        = 0;
     unsigned long _lastSample = 0;
 
+    // Session file kept open for the lifetime of a session.
+    // Opened in start(), flushed after each append(), closed in stop().
+    // This avoids the flash-wear penalty of open+close per log event.
+    File     _file;
+
     // Running stats for summary
     float    _sumRpm         = 0;
     uint32_t _sampleCount    = 0;

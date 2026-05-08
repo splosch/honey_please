@@ -1,6 +1,6 @@
 // src/main.cpp
 // honey_please – ESP32 Honigschleuder Motor Control
-// Firmware v1.4.0 | Phase 4: Multi-Step Program + Session Logger
+// Firmware v1.5.0 | Phase 4 + stability fixes
 //
 // Architecture:
 //   SimMotorDriver + SimRpmSource are the active implementations.
@@ -9,6 +9,14 @@
 //   ProgramRunner: NVS-stored 6-step CW/CCW extraction program (F09).
 //   SessionLogger: JSONL per-session log in /sessions/ on LittleFS (F10).
 //   No GPIO is touched until Phase 5 (REAL_HARDWARE build flag).
+//
+// Dual-core safety:
+//   AsyncTCP callbacks run on Core 0; loop() runs on Core 1.
+//   g_mutex protects all shared subsystem state. Callbacks take the mutex
+//   before touching any shared object. loop() takes it for the 20 Hz gate,
+//   programRunner.tick(), and the session tick.
+//   LOG() posts to a FreeRTOS queue; logDrain() (called at top of loop)
+//   is the only site that calls WebSerial.println().
 //
 // WebSerial commands: type 'help' in browser terminal
 #include <Arduino.h>
@@ -19,6 +27,8 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <WebSerial.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include "secrets.h"
 #include "log.h"
 #include "params.h"
@@ -67,9 +77,15 @@ WebApi         webApi(server, *motorDriver, *rpmSource, rampCtrl,
                       errorHandler, params, motorDriverImpl, rpmSourceImpl,
                       programRunner, sessionLogger);
 
+// ─── Dual-core mutex ─────────────────────────────────────────────────────────
+// Protects all shared subsystem state between Core-0 async callbacks and
+// Core-1 loop(). Initialised in setup() before WiFi/WebSocket start.
+SemaphoreHandle_t g_mutex = nullptr;
+
 // ─── Loop timing ─────────────────────────────────────────────────────────────
 static unsigned long lastTick      = 0;
 static unsigned long lastHeartbeat = 0;
+static unsigned long lastWifiCheck = 0;
 
 // ─── Helper: trigger CRITICAL error + always zero the ramp ───────────────────
 // All CRITICAL paths must go through here so ramp state stays consistent.
@@ -88,6 +104,7 @@ void onWebSerialMessage(uint8_t* data, size_t len) {
     for (size_t i = 0; i < len; i++) cmd += (char)data[i];
     cmd.trim();
     LOG("[CMD] " + cmd);
+    xSemaphoreTake(g_mutex, portMAX_DELAY);
 
     // ── status ───────────────────────────────────────────────────────────────
     if (cmd == "status") {
@@ -241,12 +258,17 @@ void onWebSerialMessage(uint8_t* data, size_t len) {
     } else {
         LOG("[WARN] Unknown command. Type 'help'.");
     }
+    xSemaphoreGive(g_mutex);
 }
 
 // ─── setup ───────────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     Serial.println("\n[START] honey_please v" FIRMWARE_VERSION);
+
+    // Mutex must exist before WiFi/WebSocket bring up Core-0 async tasks
+    g_mutex = xSemaphoreCreateMutex();
+    configASSERT(g_mutex);
 
     // LittleFS
     if (!LittleFS.begin()) {
@@ -295,16 +317,36 @@ void setup() {
 
 // ─── loop ────────────────────────────────────────────────────────────────────
 void loop() {
+    // Drain the thread-safe log queue first – only WebSerial.println() call site.
+    logDrain();
+
     ArduinoOTA.handle();
 
     const unsigned long now = millis();
 
-    // 20 Hz tick: ramp advance + fault polling
+    // ── WiFi reconnect watchdog ───────────────────────────────────────────────
+    // Checks every 10 s; reconnects transparently after AP restart or range loss.
+    // OTA + WebSocket resume automatically once the IP is restored.
+    if (now - lastWifiCheck >= 10000UL) {
+        lastWifiCheck = now;
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println("[WIFI] Connection lost – reconnecting...");
+            WiFi.disconnect();
+            WiFi.begin(ssid, password);
+        }
+    }
+
+    xSemaphoreTake(g_mutex, portMAX_DELAY);
+
+    // 20 Hz tick: ramp advance + fault polling + program runner
     if (now - lastTick >= 50UL) {
         lastTick = now;
 
         if (!errorHandler.hasCritical()) {
             rampCtrl.tick();
+
+            // Program runner tick must follow rampCtrl.tick() at same rate
+            programRunner.tick();
 
             // Overspeed guard (E04)
             if (rpmSource->getRpm() > PHYSICAL_MAX_RPM) {
@@ -323,11 +365,6 @@ void loop() {
         }
     }
 
-    // Program runner 20 Hz tick (must come after rampCtrl.tick)
-    if (!errorHandler.hasCritical()) {
-        programRunner.tick();
-    }
-
     // Session data-logger tick (samples every SESSION_SAMPLE_INT ms)
     {
         const char* dir = motorDriver->getDirection() ? "CW" : "CCW";
@@ -343,16 +380,19 @@ void loop() {
         sessionLogger.tick(rpmSource->getRpm(), dir, stStr);
     }
 
-    // WebSocket 10 Hz broadcast
+    xSemaphoreGive(g_mutex);
+
+    // WebSocket 10 Hz broadcast (outside mutex – AsyncTCP handles its own queueing)
     webApi.tick();
 
     // 5 s heartbeat
     if (now - lastHeartbeat >= 5000UL) {
         lastHeartbeat = now;
-        const char* stateStr[] = { "IDLE", "RAMPING_UP", "RUNNING", "RAMPING_DOWN", "DIR_CHG_PAUSE" };
+        const char* stateStr[] = { "IDLE", "RAMPING_UP", "RUNNING", "RAMPING_DOWN", "DIR_CHANGE_PAUSE" };
         LOG("[HB] RPM=" + String(rpmSource->getRpm(), 0)
             + " Tgt=" + String(rampCtrl.getTarget(), 0)
             + " " + stateStr[(uint8_t)rampCtrl.getState()]
-            + (errorHandler.hasCritical() ? " [FAULT_STOP]" : " [OK]"));
+            + (errorHandler.hasCritical() ? " [FAULT_STOP]" : " [OK]")
+            + " heap=" + String(ESP.getFreeHeap()));
     }
 }
