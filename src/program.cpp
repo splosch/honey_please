@@ -1,52 +1,65 @@
 // src/program.cpp
 // ProgramRunner implementation (F09)
+//
+// R4 migration (M6.8, 2026-05-16):
+//   NVS Preferences replaced with EEPROM struct at EEPROM_PROG_OFFSET.
+//   Layout (starting at EEPROM_PROG_OFFSET):
+//     [0]      = step count (1 byte)
+//     [1..N×4] = ProgramStep array (each 4 bytes: cw, rpm_pct, duration_s low, high)
+//     [N×4+1]  = PROG_MAGIC byte (0x5A)
 #include "program.h"
 #include "session.h"
 #include "log.h"
-#include <Preferences.h>
+#include <EEPROM.h>
 
-static const char* NVS_NS = "prog_steps";
+static constexpr uint8_t PROG_MAGIC = 0x5A;
 
-// ─── NVS helpers ─────────────────────────────────────────────────────────────
+// Offsets within the EEPROM_PROG_OFFSET block
+static constexpr int PROG_COUNT_OFF = 0;
+static constexpr int PROG_STEPS_OFF = 1;
+static constexpr int PROG_MAGIC_OFF = 1 + MAX_PROGRAM_STEPS * 4;
+
+// ─── EEPROM helpers ───────────────────────────────────────────────────────────
 void loadProgram(ProgramStep* steps, uint8_t& count) {
-    Preferences prefs;
-    prefs.begin(NVS_NS, true);
-    count = prefs.getUChar("count", DEFAULT_STEP_COUNT);
+    uint8_t magic = EEPROM.read(EEPROM_PROG_OFFSET + PROG_MAGIC_OFF);
+    if (magic != PROG_MAGIC) {
+        count = DEFAULT_STEP_COUNT;
+        for (uint8_t i = 0; i < count; i++) steps[i] = DEFAULT_STEPS[i];
+        return;
+    }
+    count = EEPROM.read(EEPROM_PROG_OFFSET + PROG_COUNT_OFF);
     if (count < 1 || count > MAX_PROGRAM_STEPS) count = DEFAULT_STEP_COUNT;
     for (uint8_t i = 0; i < count; i++) {
-        String pfx = "s" + String(i) + "_";
-        steps[i].cw         = prefs.getBool((pfx + "cw").c_str(),
-                                            DEFAULT_STEPS[i < DEFAULT_STEP_COUNT ? i : 0].cw);
-        steps[i].rpm_pct    = prefs.getUChar((pfx + "pct").c_str(),
-                                            DEFAULT_STEPS[i < DEFAULT_STEP_COUNT ? i : 0].rpm_pct);
-        steps[i].duration_s = prefs.getUShort((pfx + "dur").c_str(),
-                                            DEFAULT_STEPS[i < DEFAULT_STEP_COUNT ? i : 0].duration_s);
+        int base = EEPROM_PROG_OFFSET + PROG_STEPS_OFF + i * 4;
+        steps[i].cw         = EEPROM.read(base + 0) != 0;
+        steps[i].rpm_pct    = EEPROM.read(base + 1);
+        steps[i].duration_s = (uint16_t)EEPROM.read(base + 2) |
+                              ((uint16_t)EEPROM.read(base + 3) << 8);
     }
-    prefs.end();
 }
 
 void saveProgram(const ProgramStep* steps, uint8_t count) {
-    Preferences prefs;
-    prefs.begin(NVS_NS, false);
-    prefs.putUChar("count", count);
+    if (count < 1 || count > MAX_PROGRAM_STEPS) return;
+    EEPROM.write(EEPROM_PROG_OFFSET + PROG_COUNT_OFF, count);
     for (uint8_t i = 0; i < count; i++) {
-        String pfx = "s" + String(i) + "_";
-        prefs.putBool((pfx + "cw").c_str(),   steps[i].cw);
-        prefs.putUChar((pfx + "pct").c_str(),  steps[i].rpm_pct);
-        prefs.putUShort((pfx + "dur").c_str(), steps[i].duration_s);
+        int base = EEPROM_PROG_OFFSET + PROG_STEPS_OFF + i * 4;
+        EEPROM.write(base + 0, steps[i].cw ? 1 : 0);
+        EEPROM.write(base + 1, steps[i].rpm_pct);
+        EEPROM.write(base + 2, (uint8_t)(steps[i].duration_s & 0xFF));
+        EEPROM.write(base + 3, (uint8_t)(steps[i].duration_s >> 8));
     }
-    prefs.end();
+    EEPROM.write(EEPROM_PROG_OFFSET + PROG_MAGIC_OFF, PROG_MAGIC);
 }
 
 // ─── ProgramRunner ────────────────────────────────────────────────────────────
 void ProgramRunner::loadSteps() {
     loadProgram(_steps, _count);
-    LOG("[PROG] Loaded " + String(_count) + " steps from NVS");
+    LOG("[PROG] Loaded " + String(_count) + " steps from EEPROM");
 }
 
 void ProgramRunner::saveSteps() {
     saveProgram(_steps, _count);
-    LOG("[PROG] Saved " + String(_count) + " steps to NVS");
+    LOG("[PROG] Saved " + String(_count) + " steps to EEPROM");
 }
 
 void ProgramRunner::setStep(uint8_t i, const ProgramStep& s) {

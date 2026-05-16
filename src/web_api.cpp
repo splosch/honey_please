@@ -1,18 +1,75 @@
 // src/web_api.cpp
-// WebApi implementation – Phase 4: adds program & session state to broadcasts,
-// new WS commands (prog_start/skip/pause/resume/abort, session_start/stop),
-// HTTP GET /sessions and /sessions/<id> routes.
+// WebApi implementation – synchronous WiFiServer/WiFiClient for Arduino Uno R4 WiFi.
+//
+// R4 migration (M6.4-M6.7, 2026-05-16):
+//   Replaced ESPAsyncWebServer + FreeRTOS with synchronous WiFiServer.
+//   One WebSocket client supported at a time.
+//   Manual RFC 6455 WebSocket handshake (SHA1 + Base64 inline).
+//   CORS header on all HTTP responses.
 #include "web_api.h"
-#include "sim_rpm_source.h"
 #include "log.h"
-#include <LittleFS.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 
-// Declared and initialised in main.cpp before server.begin().
-extern SemaphoreHandle_t g_mutex;
+// ─── WebSocket SHA-1 (RFC 6455 handshake) ─────────────────────────────────────
+static void sha1(const uint8_t* msg, size_t len, uint8_t* digest) {
+    uint32_t h0=0x67452301UL, h1=0xEFCDAB89UL, h2=0x98BADCFEUL,
+             h3=0x10325476UL, h4=0xC3D2E1F0UL;
+    size_t newLen = len + 1;
+    while (newLen % 64 != 56) newLen++;
+    size_t totalLen = newLen + 8;
+    uint8_t* buf = (uint8_t*)calloc(totalLen, 1);
+    if (!buf) return;
+    memcpy(buf, msg, len);
+    buf[len] = 0x80;
+    uint64_t bitLen = (uint64_t)len * 8;
+    for (int i = 0; i < 8; i++) buf[totalLen-1-i] = (uint8_t)(bitLen >> (i*8));
+    auto rotl = [](uint32_t v, int n) -> uint32_t { return (v<<n)|(v>>(32-n)); };
+    for (size_t chunk = 0; chunk < totalLen; chunk += 64) {
+        uint32_t w[80];
+        for (int i = 0; i < 16; i++) {
+            w[i]  = ((uint32_t)buf[chunk+i*4  ])<<24;
+            w[i] |= ((uint32_t)buf[chunk+i*4+1])<<16;
+            w[i] |= ((uint32_t)buf[chunk+i*4+2])<<8;
+            w[i] |= ((uint32_t)buf[chunk+i*4+3]);
+        }
+        for (int i=16;i<80;i++) w[i]=rotl(w[i-3]^w[i-8]^w[i-14]^w[i-16],1);
+        uint32_t a=h0,b=h1,c=h2,d=h3,e=h4;
+        for (int i=0;i<80;i++) {
+            uint32_t f,k;
+            if      (i<20){f=(b&c)|(~b&d);k=0x5A827999UL;}
+            else if (i<40){f=b^c^d;       k=0x6ED9EBA1UL;}
+            else if (i<60){f=(b&c)|(b&d)|(c&d);k=0x8F1BBCDCUL;}
+            else          {f=b^c^d;       k=0xCA62C1D6UL;}
+            uint32_t temp=rotl(a,5)+f+e+k+w[i];
+            e=d;d=c;c=rotl(b,30);b=a;a=temp;
+        }
+        h0+=a;h1+=b;h2+=c;h3+=d;h4+=e;
+    }
+    free(buf);
+    uint32_t hh[5]={h0,h1,h2,h3,h4};
+    for (int i=0;i<5;i++){
+        digest[i*4  ]=(uint8_t)(hh[i]>>24);
+        digest[i*4+1]=(uint8_t)(hh[i]>>16);
+        digest[i*4+2]=(uint8_t)(hh[i]>>8);
+        digest[i*4+3]=(uint8_t)(hh[i]);
+    }
+}
+
+static const char B64[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static String base64Encode(const uint8_t* src, size_t len) {
+    String out; out.reserve(((len+2)/3)*4+1);
+    for (size_t i=0;i<len;i+=3){
+        uint8_t b0=src[i], b1=(i+1<len)?src[i+1]:0, b2=(i+2<len)?src[i+2]:0;
+        out+=B64[b0>>2];
+        out+=B64[((b0&3)<<4)|(b1>>4)];
+        out+=(i+1<len)?B64[((b1&0xF)<<2)|(b2>>6)]:'=';
+        out+=(i+2<len)?B64[b2&0x3F]:'=';
+    }
+    return out;
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+static const char CORS_HEADER[] = "Access-Control-Allow-Origin: *\r\n";
+
 static const char* rampStateStr(RampState s) {
     switch (s) {
         case RampState::IDLE:             return "IDLE";
@@ -37,56 +94,10 @@ static const char* progStateStr(ProgramState s) {
     return "UNKNOWN";
 }
 
-// ─── begin ────────────────────────────────────────────────────────────────────
-void WebApi::begin() {
-    _ws.onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client,
-                       AwsEventType type, void* arg, uint8_t* data, size_t len) {
-        if (type == WS_EVT_CONNECT) {
-            LOG("[WS] Client connected: " + String(client->id()));
-            broadcastState();
-        } else if (type == WS_EVT_DISCONNECT) {
-            LOG("[WS] Client disconnected: " + String(client->id()));
-            _frameBuf[client->id() % WS_RATE_SLOTS] = "";
-        } else if (type == WS_EVT_DATA) {
-            AwsFrameInfo* info = (AwsFrameInfo*)arg;
-            if (info->opcode == WS_TEXT) {
-                uint8_t slot = client->id() % WS_RATE_SLOTS;
-                if (info->index == 0) _frameBuf[slot] = "";
-                _frameBuf[slot].concat((const char*)data, len);
-                if (info->final) handleCommand(client, _frameBuf[slot]);
-            }
-        }
-    });
-    _server.addHandler(&_ws);
+static char s_jsonBuf[1024];
 
-    // HTTP GET /sessions          – JSON list of stored session files
-    // HTTP GET /sessions?id=<n>   – download session JSONL (no regex needed)
-    _server.on("/sessions", HTTP_GET, [this](AsyncWebServerRequest* req) {
-        if (req->hasParam("id")) {
-            uint16_t id = (uint16_t)req->getParam("id")->value().toInt();
-            String path = _session.sessionPath(id);
-            if (LittleFS.exists(path)) {
-                req->send(LittleFS, path, "application/json", true);  // attachment
-            } else {
-                req->send(404, "application/json", "{\"error\":\"session not found\"}");
-            }
-        } else {
-            req->send(200, "application/json", _session.listSessions());
-        }
-    });
-
-    // Serve static UI files from LittleFS
-    _server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
-    LOG("[WS] WebSocket /ws + HTTP /sessions ready");
-}
-
-// ─── broadcastState ───────────────────────────────────────────────────────────
-void WebApi::broadcastState() {
-    if (_ws.count() == 0) return;
-
+const char* WebApi::_buildStateJson() {
     JsonDocument doc;
-
-    // Motor state
     doc["rpm"]      = (float)((int)(_rpm.getRpm() * 10)) / 10.0f;
     doc["target"]   = _ramp.getTarget();
     doc["eta"]      = (float)((int)(_ramp.getEtaSeconds() * 10)) / 10.0f;
@@ -99,7 +110,6 @@ void WebApi::broadcastState() {
     doc["critical"] = _errors.hasCritical();
     doc["uptime"]   = millis();
 
-    // Errors
     JsonArray errors = doc["errors"].to<JsonArray>();
     for (uint8_t i = 0; i < _errors.count(); i++) {
         const ActiveError& e = _errors.errors()[i];
@@ -109,17 +119,15 @@ void WebApi::broadcastState() {
         obj["ts"]   = e.timestamp_ms;
     }
 
-    // Params
-    JsonObject p    = doc["params"].to<JsonObject>();
-    p["max_rpm"]    = _params.max_rpm;
-    p["accel"]      = _params.accel_rate;
-    p["decel"]      = _params.decel_rate;
-    p["dir_pause"]  = _params.dir_pause_ms;
+    JsonObject p   = doc["params"].to<JsonObject>();
+    p["max_rpm"]   = _params.max_rpm;
+    p["accel"]     = _params.accel_rate;
+    p["decel"]     = _params.decel_rate;
+    p["dir_pause"] = _params.dir_pause_ms;
 
-    // Program state (Phase 4)
     JsonObject prog      = doc["prog"].to<JsonObject>();
     prog["state"]        = progStateStr(_program.state());
-    prog["step"]         = _program.currentStep() + 1;  // 1-based
+    prog["step"]         = _program.currentStep() + 1;
     prog["step_total"]   = _program.stepCount();
     prog["hold_remain"]  = _program.holdRemaining();
     prog["total_remain"] = _program.totalRemainingSecs();
@@ -134,41 +142,243 @@ void WebApi::broadcastState() {
         st["dur"] = ps.duration_s;
     }
 
-    // Session state (Phase 4)
-    JsonObject sess    = doc["session"].to<JsonObject>();
-    sess["active"]     = _session.isActive();
-    sess["id"]         = _session.sessionId();
+    JsonObject sess = doc["session"].to<JsonObject>();
+    sess["active"]  = _session.isActive();
+    sess["id"]      = _session.sessionId();
 
-    // P2-C: static buffer avoids a heap String allocation on every broadcast
-    static char jsonBuf[1024];
-    serializeJson(doc, jsonBuf, sizeof(jsonBuf));
-    _ws.textAll(jsonBuf);
+    serializeJson(doc, s_jsonBuf, sizeof(s_jsonBuf));
+    return s_jsonBuf;
 }
 
-// ─── handleCommand ────────────────────────────────────────────────────────────
-void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
-    // P2-B: rate-limit – drop commands arriving faster than 50 ms per client slot
-    uint8_t slot = client->id() % WS_RATE_SLOTS;
-    uint32_t now_ms = millis();
-    if (now_ms - _lastCmdMs[slot] < 50) return;
-    _lastCmdMs[slot] = now_ms;
+// ─── WebSocket frame encode (RFC 6455, server->client, unmasked text) ─────────
+void WebApi::_wsSend(WiFiClient& client, const char* payload, size_t len) {
+    if (!client.connected()) return;
+    client.write((uint8_t)0x81);
+    if (len <= 125) {
+        client.write((uint8_t)len);
+    } else if (len <= 65535) {
+        client.write((uint8_t)126);
+        client.write((uint8_t)(len >> 8));
+        client.write((uint8_t)(len & 0xFF));
+    } else {
+        return;
+    }
+    client.write((const uint8_t*)payload, len);
+}
 
+// ─── WebSocket frame decode (client->server, masked text) ─────────────────────
+static bool wsReadFrame(WiFiClient& client, String& out) {
+    if (client.available() < 2) return false;
+    uint8_t b0 = client.read();
+    uint8_t b1 = client.read();
+    bool masked   = (b1 & 0x80) != 0;
+    uint64_t plen = b1 & 0x7F;
+    uint8_t opcode = b0 & 0x0F;
+
+    if (plen == 126) {
+        if (client.available() < 2) return false;
+        uint8_t p[2]; client.readBytes(p, 2);
+        plen = ((uint64_t)p[0] << 8) | p[1];
+    } else if (plen == 127) {
+        if (client.available() < 8) return false;
+        uint8_t p[8]; client.readBytes(p, 8);
+        plen = 0;
+        for (int i = 0; i < 8; i++) plen = (plen << 8) | p[i];
+    }
+
+    uint8_t mask[4] = {};
+    if (masked) {
+        if (client.available() < 4) return false;
+        client.readBytes(mask, 4);
+    }
+
+    if ((size_t)client.available() < (size_t)plen) return false;
+
+    if (opcode == 0x08) { while (plen--) client.read(); client.stop(); return false; }
+    if (opcode == 0x09) {
+        uint8_t pong[2] = { 0x8A, 0x00 };
+        client.write(pong, 2);
+        while (plen--) client.read();
+        return false;
+    }
+    if (opcode != 0x01) { while (plen--) client.read(); return false; }
+
+    out = "";
+    out.reserve((size_t)plen + 1);
+    for (uint64_t i = 0; i < plen; i++) {
+        char c = (char)client.read();
+        if (masked) c ^= mask[i % 4];
+        out += c;
+    }
+    return true;
+}
+
+// ─── begin ────────────────────────────────────────────────────────────────────
+void WebApi::begin() {
+    _server.begin();
+    LOG("[HTTP] WiFiServer started on port 80");
+}
+
+// ─── _checkNewConnection ──────────────────────────────────────────────────────
+void WebApi::_checkNewConnection() {
+    WiFiClient client = _server.available();
+    if (!client) return;
+
+    unsigned long t0 = millis();
+    String req;
+    req.reserve(HTTP_BUF_SIZE);
+    while (client.connected() && (millis() - t0) < 300) {
+        while (client.available()) {
+            char c = client.read();
+            req += c;
+            if (req.endsWith("\r\n\r\n")) goto done_reading;
+        }
+    }
+done_reading:
+    int nl = req.indexOf('\n');
+    String reqLine = (nl > 0) ? req.substring(0, nl) : req;
+    String headers = (nl > 0) ? req.substring(nl + 1) : "";
+    _handleHttpRequest(client, reqLine, headers);
+}
+
+// ─── _handleHttpRequest ───────────────────────────────────────────────────────
+void WebApi::_handleHttpRequest(WiFiClient& client,
+                                const String& reqLine,
+                                const String& headers) {
+    if (reqLine.startsWith("OPTIONS")) { _replyOptions(client); return; }
+
+    bool isUpgrade = (headers.indexOf("Upgrade: websocket") >= 0 ||
+                      headers.indexOf("upgrade: websocket") >= 0);
+    bool isWsPath  = reqLine.indexOf("/ws") >= 0;
+
+    if (isUpgrade && isWsPath) {
+        if (_wsActive && _wsClient.connected()) {
+            client.print("HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n");
+            client.stop();
+            return;
+        }
+        if (_wsHandshake(client, headers)) {
+            _wsClient = client;
+            _wsActive = true;
+            LOG("[WS] Client connected");
+            const char* json = _buildStateJson();
+            _wsSend(_wsClient, json, strlen(json));
+        }
+        return;
+    }
+    if (reqLine.startsWith("GET") && reqLine.indexOf("/status") >= 0)   { _replyStatus(client);   return; }
+    if (reqLine.startsWith("GET") && reqLine.indexOf("/sessions") >= 0) { _replySessions(client); return; }
+    _replyNotFound(client);
+}
+
+// ─── _wsHandshake ─────────────────────────────────────────────────────────────
+bool WebApi::_wsHandshake(WiFiClient& client, const String& headers) {
+    const char* keyHeader = "Sec-WebSocket-Key: ";
+    int keyIdx = headers.indexOf(keyHeader);
+    if (keyIdx < 0) {
+        client.print("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
+        client.stop();
+        return false;
+    }
+    keyIdx += strlen(keyHeader);
+    int keyEnd = headers.indexOf('\r', keyIdx);
+    if (keyEnd < 0) keyEnd = headers.indexOf('\n', keyIdx);
+    String clientKey = headers.substring(keyIdx, keyEnd);
+    clientKey.trim();
+
+    String combined = clientKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    uint8_t digest[20];
+    sha1((const uint8_t*)combined.c_str(), combined.length(), digest);
+    String acceptKey = base64Encode(digest, 20);
+
+    client.print("HTTP/1.1 101 Switching Protocols\r\n"
+                 "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                 "Access-Control-Allow-Origin: *\r\n"
+                 "Sec-WebSocket-Accept: ");
+    client.print(acceptKey);
+    client.print("\r\n\r\n");
+    return true;
+}
+
+// ─── HTTP reply helpers ───────────────────────────────────────────────────────
+void WebApi::_replyStatus(WiFiClient& client) {
+    const char* json = _buildStateJson();
+    size_t len = strlen(json);
+    client.print("HTTP/1.1 200 OK\r\n");
+    client.print(CORS_HEADER);
+    client.print("Content-Type: application/json\r\nContent-Length: ");
+    client.print((unsigned int)len);
+    client.print("\r\n\r\n");
+    client.print(json);
+    client.stop();
+}
+
+void WebApi::_replySessions(WiFiClient& client) {
+    String body = _session.listSessions();
+    client.print("HTTP/1.1 200 OK\r\n");
+    client.print(CORS_HEADER);
+    client.print("Content-Type: application/json\r\nContent-Length: ");
+    client.print(body.length());
+    client.print("\r\n\r\n");
+    client.print(body);
+    client.stop();
+}
+
+void WebApi::_replyOptions(WiFiClient& client) {
+    client.print("HTTP/1.1 200 OK\r\n");
+    client.print(CORS_HEADER);
+    client.print("Access-Control-Allow-Methods: GET, OPTIONS\r\n"
+                 "Access-Control-Allow-Headers: Content-Type\r\n"
+                 "Content-Length: 0\r\n\r\n");
+    client.stop();
+}
+
+void WebApi::_replyNotFound(WiFiClient& client) {
+    client.print("HTTP/1.1 404 Not Found\r\n");
+    client.print(CORS_HEADER);
+    client.print("Content-Type: application/json\r\nContent-Length: 21\r\n\r\n"
+                 "{\"error\":\"not found\"}");
+    client.stop();
+}
+
+// ─── _wsProcessIncoming ───────────────────────────────────────────────────────
+void WebApi::_wsProcessIncoming() {
+    if (!_wsActive) return;
+    if (!_wsClient.connected()) {
+        LOG("[WS] Client disconnected");
+        _wsActive = false;
+        _wsClient.stop();
+        return;
+    }
+    String frame;
+    if (wsReadFrame(_wsClient, frame)) {
+        _handleCommand(frame);
+        const char* json = _buildStateJson();
+        _wsSend(_wsClient, json, strlen(json));
+    }
+}
+
+// ─── _broadcastState ──────────────────────────────────────────────────────────
+void WebApi::_broadcastState() {
+    if (!_wsActive || !_wsClient.connected()) return;
+    const char* json = _buildStateJson();
+    _wsSend(_wsClient, json, strlen(json));
+}
+
+// ─── _handleCommand ───────────────────────────────────────────────────────────
+void WebApi::_handleCommand(const String& json) {
     JsonDocument doc;
     if (deserializeJson(doc, json) != DeserializationError::Ok) {
-        LOG("[WS] Bad JSON from client " + String(client->id()));
-        return;
+        LOG("[WS] Bad JSON"); return;
     }
 
     const char* cmd = doc["cmd"] | "";
     LOG("[WS] cmd=" + String(cmd));
-    // Guard all shared state access from the Core-0 AsyncTCP task.
-    xSemaphoreTake(g_mutex, portMAX_DELAY);
-    // ── Motor commands ────────────────────────────────────────────────────────
+
     if (strcmp(cmd, "target") == 0) {
         if (_errors.hasCritical()) return;
-        float rpm = doc["value"] | 0.0f;
         _driver.enable();
-        _ramp.setTarget(rpm);
+        _ramp.setTarget(doc["value"] | 0.0f);
 
     } else if (strcmp(cmd, "stop") == 0) {
         _ramp.setTarget(0.0f);
@@ -180,8 +390,7 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
 
     } else if (strcmp(cmd, "resetfault") == 0) {
         if (_simDriver.isFault() || !_simRpm.isHealthy()) {
-            LOG("[WS] Cannot reset: active injected fault");
-            return;
+            LOG("[WS] Cannot reset: active injected fault"); return;
         }
         _ramp.emergencyStop();
         _errors.clearAll();
@@ -190,7 +399,7 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
     } else if (strcmp(cmd, "dir") == 0) {
         if (_errors.hasCritical()) return;
         const char* val = doc["value"] | "cw";
-        bool targetCw = strcmp(val, "cw") == 0;
+        bool targetCw = (strcmp(val, "cw") == 0);
         _session.logDirectionChange(_ramp.isCurrentDirectionCw() ? "CW" : "CCW",
                                     targetCw ? "CW" : "CCW");
         _ramp.requestDirectionChange(targetCw);
@@ -206,13 +415,11 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
         if (validateParams(next)) {
             _session.logParamChange(key, val);
             _params = next;
-            // P2-E: do NOT write NVS here; use params_save to persist explicitly
         }
 
     } else if (strcmp(cmd, "params_save") == 0) {
-        // P2-E: explicit NVS persist – decoupled from live set_param updates
         saveParams(_params);
-        LOG("[WS] Params saved to NVS");
+        LOG("[WS] Params saved to EEPROM");
 
     } else if (strcmp(cmd, "inject_fault") == 0) {
         const char* type = doc["type"] | "";
@@ -236,7 +443,6 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
             }
         }
 
-    // ── Program commands (Phase 4) ────────────────────────────────────────────
     } else if (strcmp(cmd, "prog_start") == 0) {
         if (_errors.hasCritical()) return;
         _driver.enable();
@@ -254,12 +460,11 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
         _program.resume();
 
     } else if (strcmp(cmd, "prog_abort") == 0) {
-        _program.abort();  // abort() now calls _session.logProgramAbort() internally
+        _program.abort();
 
-    // ── Session commands (Phase 4) ────────────────────────────────────────────
     } else if (strcmp(cmd, "session_start") == 0) {
         if (!_session.isActive()) {
-            extern const char* FIRMWARE_VERSION_STR;  // defined in main.cpp
+            extern const char* FIRMWARE_VERSION_STR;
             _session.start(String(FIRMWARE_VERSION_STR),
                            _params.max_rpm, _program.stepCount());
         }
@@ -269,18 +474,16 @@ void WebApi::handleCommand(AsyncWebSocketClient* client, const String& json) {
             _session.stop(0, 0, _program.currentStep());
         }
     }
-
-    xSemaphoreGive(g_mutex);
-
-    broadcastState();
 }
 
 // ─── tick ─────────────────────────────────────────────────────────────────────
 void WebApi::tick() {
+    _checkNewConnection();
+    _wsProcessIncoming();
     const unsigned long now = millis();
     if (now - _lastBroadcast >= 100UL) {
         _lastBroadcast = now;
-        broadcastState();
-        _ws.cleanupClients();
+        _broadcastState();
     }
 }
+

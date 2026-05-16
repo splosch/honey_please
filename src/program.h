@@ -7,7 +7,9 @@
 //   - Direction changes use the full F04 RampController sequence.
 //   - Supports SKIP, PAUSE (saves remaining time), RESUME, ABORT.
 //
-// NVS namespace: "prog_steps"  keys: "count", "s0_dir" … "s11_rpm" etc.
+// R4 migration (M6.8, 2026-05-16):
+//   Steps stored in EEPROM at EEPROM_PROG_OFFSET (defined in params.h).
+//   NVS namespace removed. See program.cpp for EEPROM layout.
 // Max steps: 12, Min steps: 1
 #pragma once
 #include <Arduino.h>

@@ -1,43 +1,31 @@
 // src/web_api.h
-// WebSocket server – broadcasts system state JSON at 10 Hz.
+// HTTP + WebSocket server for Arduino Uno R4 WiFi (M6.4–M6.7)
 //
-// WebSocket endpoint: ws://<ip>/ws
-// Frame rate: 10 Hz (every 100 ms, called from loop())
+// R4 migration (2026-05-16):
+//   ESPAsyncWebServer + AsyncTCP + FreeRTOS removed.
+//   Replaced with synchronous WiFiServer/WiFiClient (single-threaded loop).
+//   WebSocket handshake performed manually (SHA1 + Base64 in web_api.cpp).
+//   Supports one WebSocket client at a time (one browser tab).
+//   CORS: Access-Control-Allow-Origin: * on all HTTP responses (M6.6).
 //
-// Outbound message format (JSON):
-// {
-//   "rpm":       80.0,
-//   "target":    80.0,
-//   "eta":       0.0,
-//   "state":     "RUNNING",         // IDLE | RAMPING_UP | RUNNING | RAMPING_DOWN | DIR_CHANGE_PAUSE
-//   "duty":      68,
-//   "dir":       "CW",              // CW | CCW
-//   "enabled":   true,
-//   "fault":     false,
-//   "sim":       true,
-//   "critical":  false,
-//   "errors":    [{"code":6,"msg":"...","ts":12345}],
-//   "params":    {"max_rpm":100,"accel":10,"decel":15,"dir_pause":2000},
-//   "uptime":    84521
-// }
+// Endpoints:
+//   WS   /ws        – 10 Hz JSON state broadcast; accepts command frames
+//   GET  /status    – JSON snapshot (M6.7)
+//   GET  /sessions  – session ring-buffer list / export (M6.9 integration)
+//   OPTIONS *       – CORS preflight (M6.6)
 //
-// Inbound message format (JSON):
-// { "cmd": "target",    "value": 80   }
-// { "cmd": "stop"                     }
-// { "cmd": "estop"                    }
-// { "cmd": "resetfault"               }
-// { "cmd": "dir",       "value": "cw" }
-// { "cmd": "set_param",       "key": "accel", "value": 20 }
-// { "cmd": "prog_start"                                    }
-// { "cmd": "prog_skip"                                     }
-// { "cmd": "prog_pause"                                    }
-// { "cmd": "prog_resume"                                   }
-// { "cmd": "prog_abort"                                    }
-// { "cmd": "session_start"                                 }
-// { "cmd": "session_stop"                                  }
-// { "cmd": "params_save"                                   }
+// WebSocket JSON protocol: unchanged from ESP32 version (see file header below)
+//
+// Outbound frame:
+// { "rpm":0,"target":0,"eta":0,"state":"IDLE","duty":0,"dir":"CW",
+//   "enabled":false,"fault":false,"sim":true,"critical":false,
+//   "errors":[],"params":{...},"prog":{...},"session":{...},"uptime":0 }
+//
+// Inbound commands: target, stop, estop, resetfault, dir, set_param,
+//   prog_start/skip/pause/resume/abort, session_start/stop, params_save,
+//   inject_fault
 #pragma once
-#include <ESPAsyncWebServer.h>
+#include <WiFiS3.h>
 #include <ArduinoJson.h>
 #include "params.h"
 #include "motor_driver.h"
@@ -49,41 +37,51 @@
 #include "session.h"
 
 class WebApi {
-    AsyncWebServer&    _server;
-    AsyncWebSocket     _ws;
+    WiFiServer  _server;
 
-    IMotorDriver&      _driver;
-    IRpmSource&        _rpm;
-    RampController&    _ramp;
-    ErrorHandler&      _errors;
-    MotorParams&       _params;
+    // Active WebSocket client (at most one connection at a time)
+    WiFiClient  _wsClient;
+    bool        _wsActive  = false;
 
-    // Concrete impl refs for fault injection (sim only)
-    SimMotorDriver&    _simDriver;
-    SimRpmSource&      _simRpm;
+    // HTTP read buffer – re-used per request to avoid heap churn
+    // Large enough for typical HTTP request headers (~600 bytes)
+    static constexpr size_t HTTP_BUF_SIZE = 700;
 
-    // Phase 4
-    ProgramRunner&     _program;
-    SessionLogger&     _session;
+    // Subsystem references
+    IMotorDriver&   _driver;
+    IRpmSource&     _rpm;
+    RampController& _ramp;
+    ErrorHandler&   _errors;
+    MotorParams&    _params;
+    SimMotorDriver& _simDriver;
+    SimRpmSource&   _simRpm;
+    ProgramRunner&  _program;
+    SessionLogger&  _session;
 
     unsigned long _lastBroadcast = 0;
 
-    // P2-B: per-client rate-limit timestamps (max 50 ms between commands)
-    // P2-F: per-client frame accumulation buffer for fragmented WS frames
-    static constexpr uint8_t WS_RATE_SLOTS = 8;
-    uint32_t _lastCmdMs[WS_RATE_SLOTS] = {};
-    String   _frameBuf[WS_RATE_SLOTS];
+    // ── Internal helpers ──────────────────────────────────────────────────────
+    void _checkNewConnection();
+    void _handleHttpRequest(WiFiClient& client, const String& reqLine, const String& headers);
+    bool _wsHandshake(WiFiClient& client, const String& headers);
+    void _wsSend(WiFiClient& client, const char* payload, size_t len);
+    void _wsProcessIncoming();
+    void _handleCommand(const String& json);
+    void _broadcastState();
+    const char* _buildStateJson();
 
-    void handleCommand(AsyncWebSocketClient* client, const String& json);
-    void broadcastState();
+    // Helpers for HTTP responses with CORS headers
+    void _replyStatus(WiFiClient& client);
+    void _replySessions(WiFiClient& client);
+    void _replyOptions(WiFiClient& client);
+    void _replyNotFound(WiFiClient& client);
 
 public:
-    WebApi(AsyncWebServer& server,
-           IMotorDriver& driver, IRpmSource& rpm,
+    WebApi(IMotorDriver& driver, IRpmSource& rpm,
            RampController& ramp, ErrorHandler& errors, MotorParams& params,
            SimMotorDriver& simDriver, SimRpmSource& simRpm,
            ProgramRunner& program, SessionLogger& session)
-        : _server(server), _ws("/ws"),
+        : _server(80),
           _driver(driver), _rpm(rpm), _ramp(ramp),
           _errors(errors), _params(params),
           _simDriver(simDriver), _simRpm(simRpm),
@@ -91,6 +89,6 @@ public:
 
     void begin();
 
-    // Call every loop() iteration – broadcasts at 10 Hz
+    // Call every loop() iteration – handles new connections and 10 Hz broadcast.
     void tick();
 };

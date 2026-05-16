@@ -1,21 +1,27 @@
 // src/session.h
-// Extraction session logger (F10)
+// Extraction session logger – in-memory ring buffer (F10)
 //
-// Appends JSONL (one JSON object per line) to /sessions/sNNN.jsonl on LittleFS.
-// Timestamps are ms-since-session-start offsets.
-// Max 50 sessions; oldest is deleted when limit is exceeded.
-// Flushed to flash after every append (close+reopen).
+// R4 migration (M6.9, 2026-05-16):
+//   LittleFS removed (not available on R4). Sessions are stored in a SRAM
+//   ring buffer capped at SESSION_RING_SIZE entries (~5 KB).
+//   No persistence across power cycles (acceptable for operator use).
+//   Session ID resets to 1 on reboot; future O-6.1 can add EEPROM persistence.
 #pragma once
 #include <Arduino.h>
-#include <LittleFS.h>
 
-constexpr uint8_t  SESSION_MAX_FILES  = 50;
-constexpr uint16_t SESSION_SAMPLE_INT = 5000;  // ms between RPM_SAMPLE events
+constexpr uint8_t  SESSION_RING_SIZE  = 50;   // max log entries per session
+constexpr uint16_t SESSION_SAMPLE_INT = 5000; // ms between RPM_SAMPLE events
+
+struct SessionEntry {
+    uint32_t ts;           // ms since session start
+    char     type[20];     // event type string
+    char     payload[80];  // JSON key:value pairs (no outer braces)
+};
 
 class SessionLogger {
 public:
     // ── Lifecycle ─────────────────────────────────────────────────────────────
-    void begin();            // scan LittleFS, determine next session ID
+    void begin();
     bool start(const String& firmwareVersion, uint16_t maxRpm, uint8_t stepCount);
     void stop(float avgRpm, float maxRpmSeen, uint8_t stepsCompleted);
     bool isActive() const { return _active; }
@@ -38,29 +44,27 @@ public:
     void tick(float currentRpm, const char* dir, const char* state);
 
     // ── HTTP helpers ──────────────────────────────────────────────────────────
-    // Returns JSON array string of session metadata objects
+    // Returns JSON array string of current session metadata (at most one active)
     String listSessions();
-    // Builds the export path; caller must handle file read+send
-    String sessionPath(uint16_t id) const;
+    // Serialises ring buffer to JSONL string for export
+    String exportSession() const;
 
 private:
-    bool     _active         = false;
-    uint16_t _id             = 0;
-    uint32_t _startMs        = 0;
+    bool     _active      = false;
+    uint16_t _id          = 0;
+    uint32_t _startMs     = 0;
     unsigned long _lastSample = 0;
 
-    // Session file kept open for the lifetime of a session.
-    // Opened in start(), flushed after each append(), closed in stop().
-    // This avoids the flash-wear penalty of open+close per log event.
-    File     _file;
+    // Ring buffer
+    SessionEntry _entries[SESSION_RING_SIZE];
+    uint8_t      _count   = 0;  // entries written (0–SESSION_RING_SIZE)
+    uint8_t      _head    = 0;  // index of oldest entry (used when full)
 
     // Running stats for summary
-    float    _sumRpm         = 0;
-    uint32_t _sampleCount    = 0;
-    float    _peakRpm        = 0;
+    float    _sumRpm      = 0;
+    uint32_t _sampleCount = 0;
+    float    _peakRpm     = 0;
 
-    void _append(const String& line);
+    void     _append(const char* type, const String& payload);
     uint32_t _ts() const { return millis() - _startMs; }
-    uint16_t _nextId();
-    void _pruneOldest();
 };

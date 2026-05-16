@@ -1,114 +1,60 @@
 // src/session.cpp
-// SessionLogger implementation (F10)
+// SessionLogger implementation – in-memory ring buffer (F10)
+//
+// R4 migration (M6.9, 2026-05-16):
+//   Replaced LittleFS JSONL file storage with a SRAM ring buffer.
+//   All LittleFS / File API removed. No filesystem dependency.
 #include "session.h"
 #include "log.h"
 #include <ArduinoJson.h>
-
-static const char* SESSION_DIR = "/sessions";
+#include <string.h>
+#include <stdio.h>
 
 // ─── begin ────────────────────────────────────────────────────────────────────
 void SessionLogger::begin() {
-    if (!LittleFS.exists(SESSION_DIR)) {
-        LittleFS.mkdir(SESSION_DIR);
-    }
-    LOG("[SESSION] Storage ready at " + String(SESSION_DIR));
-}
-
-// ─── _nextId ──────────────────────────────────────────────────────────────────
-uint16_t SessionLogger::_nextId() {
-    uint16_t maxId = 0;
-    File dir = LittleFS.open(SESSION_DIR);
-    if (dir) {
-        File f = dir.openNextFile();
-        while (f) {
-            // f.name() returns full path e.g. /sessions/s001.jsonl — extract basename
-            String full = String(f.name());
-            int sl = full.lastIndexOf('/');
-            String name = (sl >= 0) ? full.substring(sl + 1) : full;
-            if (name.startsWith("s") && name.endsWith(".jsonl")) {
-                uint16_t n = (uint16_t)name.substring(1, name.length() - 6).toInt();
-                if (n > maxId) maxId = n;
-            }
-            f = dir.openNextFile();
-        }
-        dir.close();
-    }
-    return maxId + 1;
-}
-
-// ─── _pruneOldest ─────────────────────────────────────────────────────────────
-void SessionLogger::_pruneOldest() {
-    // Count files; if ≥ SESSION_MAX_FILES, delete the one with the lowest ID
-    uint16_t minId = 0xFFFF;
-    uint8_t  count = 0;
-    File dir = LittleFS.open(SESSION_DIR);
-    if (!dir) return;
-    File f = dir.openNextFile();
-    while (f) {
-        String full = String(f.name());
-        int sl = full.lastIndexOf('/');
-        String name = (sl >= 0) ? full.substring(sl + 1) : full;
-        if (name.startsWith("s") && name.endsWith(".jsonl")) {
-            count++;
-            uint16_t n = (uint16_t)name.substring(1, name.length() - 6).toInt();
-            if (n < minId) minId = n;
-        }
-        f = dir.openNextFile();
-    }
-    dir.close();
-
-    if (count >= SESSION_MAX_FILES && minId != 0xFFFF) {
-        char buf[40];
-        snprintf(buf, sizeof(buf), "%s/s%03u.jsonl", SESSION_DIR, minId);
-        LittleFS.remove(buf);
-        LOG("[SESSION] Pruned oldest session s" + String(minId));
-    }
-}
-
-// ─── sessionPath ──────────────────────────────────────────────────────────────
-String SessionLogger::sessionPath(uint16_t id) const {
-    char buf[40];
-    snprintf(buf, sizeof(buf), "%s/s%03u.jsonl", SESSION_DIR, id);
-    return String(buf);
+    _count = 0;
+    _head  = 0;
+    LOG("[SESSION] Ring buffer ready (" + String(SESSION_RING_SIZE) + " entries)");
 }
 
 // ─── _append ──────────────────────────────────────────────────────────────────
-void SessionLogger::_append(const String& line) {
-    if (!_active || !_file) return;
-    _file.println(line);
-    _file.flush();  // persist to flash without closing; avoids per-event open/close wear
+void SessionLogger::_append(const char* type, const String& payload) {
+    if (!_active) return;
+
+    SessionEntry& e = _entries[(_head + _count) % SESSION_RING_SIZE];
+    e.ts = _ts();
+    strncpy(e.type,    type,            sizeof(e.type)    - 1);
+    strncpy(e.payload, payload.c_str(), sizeof(e.payload) - 1);
+    e.type[sizeof(e.type)       - 1] = '\0';
+    e.payload[sizeof(e.payload) - 1] = '\0';
+
+    if (_count < SESSION_RING_SIZE) {
+        _count++;
+    } else {
+        // Ring is full – advance head (oldest overwritten)
+        _head = (_head + 1) % SESSION_RING_SIZE;
+    }
 }
 
 // ─── start ────────────────────────────────────────────────────────────────────
 bool SessionLogger::start(const String& fw, uint16_t maxRpm, uint8_t stepCount) {
     if (_active) return false;
-    _pruneOldest();
-    _id         = _nextId();
-    _startMs    = millis();
-    _active     = true;
-    _sumRpm     = 0;
+    _id          = _id + 1;   // simple incrementing ID; resets to 1 on reboot
+    _startMs     = millis();
+    _active      = true;
+    _sumRpm      = 0;
     _sampleCount = 0;
-    _peakRpm    = 0;
-    _lastSample = 0;
+    _peakRpm     = 0;
+    _lastSample  = 0;
+    _count       = 0;
+    _head        = 0;
 
-    // Open file once; keep it open for the session lifetime.
-    _file = LittleFS.open(sessionPath(_id), FILE_APPEND);
-    if (!_file) {
-        LOG("[SESSION] ERROR: cannot open session file – logging disabled");
-        _active = false;
-        return false;
-    }
-
-    JsonDocument doc;
-    doc["ts"]      = 0;
-    doc["type"]    = "SESSION_START";
-    doc["id"]      = _id;
-    doc["fw"]      = fw;
-    doc["max_rpm"] = maxRpm;
-    doc["steps"]   = stepCount;
-    String line;
-    serializeJson(doc, line);
-    _append(line);
+    // SESSION_START entry
+    char payload[80];
+    snprintf(payload, sizeof(payload),
+             "\"id\":%u,\"fw\":\"%s\",\"max_rpm\":%u,\"steps\":%u",
+             _id, fw.c_str(), maxRpm, stepCount);
+    _append("SESSION_START", payload);
 
     LOG("[SESSION] #" + String(_id) + " started");
     return true;
@@ -118,33 +64,23 @@ bool SessionLogger::start(const String& fw, uint16_t maxRpm, uint8_t stepCount) 
 void SessionLogger::stop(float avgRpm, float maxRpmSeen, uint8_t stepsCompleted) {
     if (!_active) return;
 
-    float finalAvg = _sampleCount > 0 ? (_sumRpm / _sampleCount) : avgRpm;
-    float finalMax = _peakRpm > maxRpmSeen ? _peakRpm : maxRpmSeen;
-    uint32_t dur = (_ts()) / 1000;
+    float    finalAvg = (_sampleCount > 0) ? (_sumRpm / _sampleCount) : avgRpm;
+    float    finalMax = (_peakRpm > maxRpmSeen) ? _peakRpm : maxRpmSeen;
+    uint32_t dur      = _ts() / 1000;
 
-    JsonDocument doc;
-    doc["ts"]            = _ts();
-    doc["type"]          = "SESSION_SUMMARY";
-    doc["duration_s"]    = dur;
-    doc["avg_rpm"]       = (float)((int)(finalAvg * 10)) / 10.0f;
-    doc["max_rpm"]       = (float)((int)(finalMax * 10)) / 10.0f;
-    doc["steps_done"]    = stepsCompleted;
-    String line;
-    serializeJson(doc, line);
-    _append(line);
+    char payload[80];
+    snprintf(payload, sizeof(payload),
+             "\"duration_s\":%lu,\"avg_rpm\":%.1f,\"max_rpm\":%.1f,\"steps_done\":%u",
+             (unsigned long)dur, finalAvg, finalMax, stepsCompleted);
+    _append("SESSION_SUMMARY", payload);
 
     LOG("[SESSION] #" + String(_id) + " stopped – " + String(dur) + "s  avg=" + String(finalAvg, 1) + " RPM");
-    _file.close();
     _active = false;
 }
 
 // ─── logEvent ─────────────────────────────────────────────────────────────────
 void SessionLogger::logEvent(const char* type, const String& extra) {
-    if (!_active) return;
-    String line = "{\"ts\":" + String(_ts()) + ",\"type\":\"" + type + "\"";
-    if (extra.length()) line += "," + extra;
-    line += "}";
-    _append(line);
+    _append(type, extra);
 }
 
 // ─── logRpmSample ─────────────────────────────────────────────────────────────
@@ -154,73 +90,70 @@ void SessionLogger::logRpmSample(float rpm, const char* dir, const char* state) 
     _sumRpm += rpm;
     _sampleCount++;
 
-    JsonDocument doc;
-    doc["ts"]    = _ts();
-    doc["type"]  = "RPM_SAMPLE";
-    doc["rpm"]   = (float)((int)(rpm * 10)) / 10.0f;
-    doc["dir"]   = dir;
-    doc["state"] = state;
-    String line;
-    serializeJson(doc, line);
-    _append(line);
+    char payload[80];
+    snprintf(payload, sizeof(payload),
+             "\"rpm\":%.1f,\"dir\":\"%s\",\"state\":\"%s\"",
+             rpm, dir, state);
+    _append("RPM_SAMPLE", payload);
 }
 
 // ─── logError ─────────────────────────────────────────────────────────────────
 void SessionLogger::logError(const char* code, const char* msg) {
-    logEvent("ERROR", "\"code\":\"" + String(code) + "\",\"msg\":\"" + String(msg) + "\"");
+    char payload[80];
+    snprintf(payload, sizeof(payload), "\"code\":\"%s\",\"msg\":\"%s\"", code, msg);
+    _append("ERROR", payload);
 }
 
 void SessionLogger::logErrorCleared(const char* code) {
-    logEvent("ERROR_CLEARED", "\"code\":\"" + String(code) + "\"");
+    char payload[40];
+    snprintf(payload, sizeof(payload), "\"code\":\"%s\"", code);
+    _append("ERROR_CLEARED", payload);
 }
 
 // ─── logStepStart / Done ──────────────────────────────────────────────────────
 void SessionLogger::logStepStart(uint8_t idx, uint8_t total, bool cw, float targetRpm, uint16_t durS) {
-    JsonDocument doc;
-    doc["ts"]         = _ts();
-    doc["type"]       = "STEP_START";
-    doc["step"]       = idx + 1;
-    doc["total"]      = total;
-    doc["dir"]        = cw ? "CW" : "CCW";
-    doc["target_rpm"] = (int)targetRpm;
-    doc["dur_s"]      = durS;
-    String line;
-    serializeJson(doc, line);
-    _append(line);
+    char payload[80];
+    snprintf(payload, sizeof(payload),
+             "\"step\":%u,\"total\":%u,\"dir\":\"%s\",\"target_rpm\":%d,\"dur_s\":%u",
+             idx + 1, total, cw ? "CW" : "CCW", (int)targetRpm, durS);
+    _append("STEP_START", payload);
 }
 
 void SessionLogger::logStepDone(uint8_t idx, float avgRpm) {
-    JsonDocument doc;
-    doc["ts"]      = _ts();
-    doc["type"]    = "STEP_COMPLETE";
-    doc["step"]    = idx + 1;
-    doc["avg_rpm"] = (float)((int)(avgRpm * 10)) / 10.0f;
-    String line;
-    serializeJson(doc, line);
-    _append(line);
+    char payload[40];
+    snprintf(payload, sizeof(payload), "\"step\":%u,\"avg_rpm\":%.1f", idx + 1, avgRpm);
+    _append("STEP_COMPLETE", payload);
 }
 
 // ─── logProgram* ──────────────────────────────────────────────────────────────
 void SessionLogger::logProgramStart(uint8_t steps, uint16_t maxRpm) {
-    logEvent("PROGRAM_START", "\"steps\":" + String(steps) + ",\"max_rpm\":" + String(maxRpm));
+    char payload[40];
+    snprintf(payload, sizeof(payload), "\"steps\":%u,\"max_rpm\":%u", steps, maxRpm);
+    _append("PROGRAM_START", payload);
 }
 
 void SessionLogger::logProgramComplete(uint32_t durationS) {
-    logEvent("PROGRAM_COMPLETE", "\"duration_s\":" + String(durationS));
+    char payload[30];
+    snprintf(payload, sizeof(payload), "\"duration_s\":%lu", (unsigned long)durationS);
+    _append("PROGRAM_COMPLETE", payload);
 }
 
 void SessionLogger::logProgramAbort(uint8_t atStep) {
-    logEvent("PROGRAM_ABORT", "\"at_step\":" + String(atStep + 1));
+    char payload[20];
+    snprintf(payload, sizeof(payload), "\"at_step\":%u", atStep + 1);
+    _append("PROGRAM_ABORT", payload);
 }
 
 void SessionLogger::logDirectionChange(const char* from, const char* to) {
-    logEvent("DIRECTION_CHANGE",
-             "\"from\":\"" + String(from) + "\",\"to\":\"" + String(to) + "\"");
+    char payload[40];
+    snprintf(payload, sizeof(payload), "\"from\":\"%s\",\"to\":\"%s\"", from, to);
+    _append("DIRECTION_CHANGE", payload);
 }
 
 void SessionLogger::logParamChange(const char* key, float value) {
-    logEvent("PARAM_CHANGE",
-             "\"key\":\"" + String(key) + "\",\"value\":" + String(value, 2));
+    char payload[60];
+    snprintf(payload, sizeof(payload), "\"key\":\"%s\",\"value\":%.2f", key, value);
+    _append("PARAM_CHANGE", payload);
 }
 
 // ─── tick ─────────────────────────────────────────────────────────────────────
@@ -235,30 +168,28 @@ void SessionLogger::tick(float currentRpm, const char* dir, const char* state) {
 
 // ─── listSessions ─────────────────────────────────────────────────────────────
 String SessionLogger::listSessions() {
-    // Build a JSON array of {id, path, size} for each session file
-    // P2-D: reserve upfront to avoid repeated heap reallocation during concatenation
-    String out = "[";
-    out.reserve(SESSION_MAX_FILES * 70);
-    bool first = true;
-    File dir = LittleFS.open(SESSION_DIR);
-    if (dir) {
-        File f = dir.openNextFile();
-        while (f) {
-            String full = String(f.name());
-            int sl = full.lastIndexOf('/');
-            String name = (sl >= 0) ? full.substring(sl + 1) : full;
-            if (name.startsWith("s") && name.endsWith(".jsonl")) {
-                uint16_t n = (uint16_t)name.substring(1, name.length() - 6).toInt();
-                if (!first) out += ",";
-                out += "{\"id\":" + String(n) +
-                       ",\"size\":" + String(f.size()) +
-                       ",\"path\":\"/sessions/" + name + "\"}";
-                first = false;
-            }
-            f = dir.openNextFile();
-        }
-        dir.close();
-    }
-    out += "]";
+    // Returns JSON array. If a session is active or was completed this boot, include it.
+    if (_id == 0) return "[]";
+    String out = "[{\"id\":" + String(_id) +
+                 ",\"active\":" + String(_active ? "true" : "false") +
+                 ",\"entries\":" + String(_count) + "}]";
     return out;
 }
+
+// ─── exportSession ────────────────────────────────────────────────────────────
+String SessionLogger::exportSession() const {
+    // Serialises ring buffer as JSONL (one JSON object per line)
+    String out;
+    out.reserve(_count * 60);
+    for (uint8_t i = 0; i < _count; i++) {
+        const SessionEntry& e = _entries[(_head + i) % SESSION_RING_SIZE];
+        out += "{\"ts\":" + String(e.ts) +
+               ",\"type\":\"" + e.type + "\"";
+        if (e.payload[0] != '\0') {
+            out += ",";
+            out += e.payload;
+        }
+        out += "}\n";
+    }
+    return out;
+}
