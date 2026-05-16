@@ -1,8 +1,12 @@
 # Milestone-Plan: ESP32 Motorsteuerung (Phase 1: Setup & OTA)
 
-Dieser Plan führt dich von der Hardware-Initialisierung bis hin zum KI-gestützten Deployment.
+> ⚠️ **LEGACY DOCUMENT – ESP32 board retired 2026-05-16.**  
+> Milestones 1–4 documented here were completed on the ESP32 platform and are preserved as a historical record.  
+> The active platform is the **Arduino Uno R4 WiFi**. See [FEATURE-OVERVIEW.md](./FEATURE-OVERVIEW.md) and [R4 WiFi Onboarding](./r4wifi_onboarding.md) for the current plan.
 
-> **Legende:** ✅ Erledigt · ☐ Offen · 🔄 In Arbeit · ❓ Offene Frage · 💡 Option
+---
+
+Dieser Plan führte von der Hardware-Initialisierung bis hin zum KI-gestützten Deployment auf dem ESP32-Board.
 
 ---
 

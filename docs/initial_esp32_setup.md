@@ -1,7 +1,12 @@
 # Initial ESP32 Setup (Blank Board)
 
-This guide applies only when flashing a **brand-new or wiped ESP32** for the first time.  
-If you received a board with firmware already installed → go back to the [README](../README.md).
+> ⚠️ **LEGACY DOCUMENT – ESP32 board retired 2026-05-16.**  
+> The project has migrated to the **Arduino Uno R4 WiFi**. This document is kept as a historical record only.  
+> For the current setup procedure, see [R4 WiFi Onboarding](./r4wifi_onboarding.md).
+
+---
+
+This guide applied only when flashing a **brand-new or wiped ESP32** for the first time.
 
 ---
 
