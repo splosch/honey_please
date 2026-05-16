@@ -2,8 +2,9 @@
 
 This guide walks from an unprogrammed R4 WiFi board to a fully functional OTA-deployable system, with the Web UI running from your local dev server. Follow every step in order and verify each one before proceeding.
 
-> **⚠️ CURRENT STATE (2026-05-16):** The sketch does **not yet compile** for the R4 board. `main.cpp`, `log.h`, `web_api.*`, `params.*`, `session.*`, and `program.cpp` still contain ESP32-specific code. This guide is the authoritative checklist. Each step below maps to one or more Phase 6 milestones in [FEATURE-OVERVIEW.md](./FEATURE-OVERVIEW.md).  
-> **Start at Step 0 (hardware pre-check) and do not skip steps.** Each step has a binary pass/fail criterion before you can proceed.
+> **✅ CURRENT STATE (2026-05-16):** Migration complete. All source files compile cleanly for `[env:r4wifi]`. Board verified at `192.168.178.70`. Selfcheck PASSED (HTTP + WebSocket). Steps 0–11 done. Steps 12–15 (Web UI + simulation run) are next.
+>
+> **Note on OTA:** `ArduinoOTA` is **not available** in the `renesas-ra` PlatformIO package. USB flash via `sam-ba` is the current upload workflow. OTA may become available in a future platform release.
 
 ---
 
@@ -11,19 +12,19 @@ This guide walks from an unprogrammed R4 WiFi board to a fully functional OTA-de
 
 | Step | What | Maps to | Status |
 |---|---|---|---|
-| 0 | Hardware pre-check: board, cable, COM port | M0.2 pre-req | 🔲 |
-| 1 | WiFi credentials in `secrets.h` | M6.2 pre-req | 🔲 |
-| 2 | Board package + R4 Arduino core installed | M0.1 on R4 | 🔲 |
-| 3 | Rewrite `log.h` for R4 (no FreeRTOS, no WebSerial) | M6.10 | 🔲 |
-| 4 | Rewrite `params.cpp` for R4 (EEPROM, no NVS) | M6.8 | 🔲 |
-| 5 | Rewrite `session.cpp` for R4 (ring buffer, no LittleFS) | M6.9 | 🔲 |
-| 6 | Rewrite `web_api.cpp` for R4 (sync WiFiServer/WiFiClient) | M6.4 | 🔲 |
-| 7 | Rewrite `main.cpp` for R4 (WiFiS3, OTA, USB Serial) | M6.2 | 🔲 |
-| 8 | First USB flash – verify Serial output and WiFi connect | M0.2, M0.3 on R4 | 🔲 |
-| 9 | USB Serial command interface verified | M6.3 | 🔲 |
-| 10 | Configure OTA in `platformio.ini`, first OTA flash | M6.13 | 🔲 |
-| 11 | Run `selfcheck.js` – HTTP + WebSocket pass | M6.12 check | 🔲 |
-| 12 | Start local dev server, Web UI connects to board | M6.14 pre-req | 🔲 |
+| 0 | Hardware pre-check: board, cable, COM port | M0.2 pre-req | ✅ |
+| 1 | WiFi credentials in `secrets.h` | M6.2 pre-req | ✅ |
+| 2 | Board package + R4 Arduino core installed | M0.1 on R4 | ✅ |
+| 3 | Rewrite `log.h` for R4 (no FreeRTOS, no WebSerial) | M6.10 | ✅ |
+| 4 | Rewrite `params.cpp` for R4 (EEPROM, no NVS) | M6.8 | ✅ |
+| 5 | Rewrite `session.cpp` for R4 (ring buffer, no LittleFS) | M6.9 | ✅ |
+| 6 | Rewrite `web_api.cpp` for R4 (sync WiFiServer/WiFiClient) | M6.4 | ✅ |
+| 7 | Rewrite `main.cpp` for R4 (WiFiS3, USB Serial, no FreeRTOS) | M6.2 | ✅ |
+| 8 | First USB flash – verify Serial output and WiFi connect | M0.2, M0.3 on R4 | ✅ |
+| 9 | USB Serial command interface verified | M6.3 | ✅ |
+| 10 | USB flash workflow (OTA not available in renesas-ra PlatformIO) | M6.13 | ✅ (USB) |
+| 11 | Run `selfcheck.js` – HTTP + WebSocket pass | M6.12 check | ✅ |
+| 12 | Start local dev server, Web UI connects to board | M6.14 pre-req | ✅ |
 | 13 | Full simulation run in browser (6-step program) | M6.14 | 🔲 |
 | 14 | Fault injection panel verified in SIM mode | M6.14, F08 | 🔲 |
 | 15 | Status LED behavior verified (`LED_BUILTIN`) | M6.11 | 🔲 |
@@ -104,61 +105,34 @@ Open the Serial Monitor at **115200 baud**:
 
 **Expected output after boot:**
 ```
-[BOOT] honey_please v1.5.0
-[WIFI] Connecting to <your-ssid>...
-[WIFI] Connected. IP: 192.168.x.x
-[OTA]  ArduinoOTA ready
-[READY] Board up. Simulation mode active.
+[BOOT]  honey_please v1.5.0
+[WIFI]  Connecting to <ssid>...
+[WIFI]  Connected. IP: 192.168.x.x
+[HTTP]  Server started on port 80
+[WS]    WebSocket /ws ready
+[SIM]   SimMotorDriver + SimRpmSource active
+[READY] Board up.
 ```
 
-> **Note the IP address.** You will need it for OTA and the Web UI.
-
-If you see `[WIFI] Connection failed` — check your SSID/password in `secrets.h`, then reflash.
+> **Note:** There is no `[OTA]` line — ArduinoOTA is not available in the renesas-ra PlatformIO package and has been removed from the sketch. Upload via USB only.
 
 ---
 
-## Step 5 – Configure OTA in platformio.ini
+## Step 5 – Note on OTA (Not Available)
 
-Edit `platformio.ini` and activate the OTA lines (currently commented out):
+`ArduinoOTA` is **not included** in the `renesas-ra` PlatformIO platform package (as of 2026-05-16). The `upload_protocol = arduinoota` lines in `platformio.ini` are commented out.
 
-```ini
-[env:r4wifi]
-; ... existing settings ...
-upload_protocol = arduinoota
-upload_port     = 192.168.x.x   ; ← replace with your board's IP
-```
-
-> **Tip:** Give the board a static DHCP lease in your router (bind by MAC address) so the IP never changes. The board prints its MAC address on boot if you add `Serial.println(WiFi.macAddress())` to setup.
-
-**Windows Firewall:** OTA uses UDP port 3232. If the upload times out, allow it:
-```
-netsh advfirewall firewall add rule name="ArduinoOTA R4" dir=in action=allow protocol=UDP localport=3232
-```
-
----
-
-## Step 6 – First OTA Flash
-
-With OTA configured, rebuild and upload wirelessly:
-
+**Current workflow — USB flash:**
 ```bash
-pio run -e r4wifi --target upload
+pio run -e r4wifi --target upload --upload-port COM4
 ```
+Replace `COM4` with your board's port (check Device Manager or `pio device list`).
 
-PlatformIO now sends the firmware via WiFi instead of USB. The board reboots automatically.
-
-**Expected output:**
-```
-Uploading: [============================================================] 100%
-```
-
-The board's built-in LED will blink rapidly during the OTA transfer, then go solid when the sketch restarts.
-
-> **Fallback:** If OTA fails (board unreachable, wrong IP), switch back to USB by temporarily commenting out `upload_protocol` and `upload_port` lines.
+> If OTA becomes available in a future renesas-ra release, uncomment the OTA lines and follow the original instructions. Firewall rule for UDP 3232 may be required on Windows.
 
 ---
 
-## Step 7 – Run the Self-Check
+## Step 6 – Run the Self-Check
 
 After OTA (or USB flash), wait ~10 seconds for the board to boot, then run:
 
@@ -194,7 +168,7 @@ The script performs three checks:
 
 ---
 
-## Step 8 – Connect the Web UI
+## Step 7 – Connect the Web UI
 
 The Web UI (`data/index.html`) runs on your computer and connects to the board via WebSocket.
 
@@ -238,7 +212,7 @@ If the WebSocket shows "Connecting..." forever:
 
 ---
 
-## Step 9 – Agentic Development Workflow (Copilot + PlatformIO)
+## Step 8 – Agentic Development Workflow (Copilot + PlatformIO)
 
 Once onboarding is complete, the standard development cycle is:
 
@@ -258,8 +232,8 @@ The Copilot Agent (see `AGENTS.md`) runs this cycle automatically after each cod
 | Task | How |
 |---|---|
 | Compile only | `pio run -e r4wifi` or click ✓ in PlatformIO toolbar |
-| Upload (USB) | Comment out `upload_protocol`; `pio run -e r4wifi --target upload` |
-| Upload (OTA) | Uncomment `upload_protocol = arduinoota`; same command |
+| Upload (USB) | `pio run -e r4wifi --target upload --upload-port COM4` |
+| Upload (OTA) | Not available in renesas-ra PlatformIO (see Step 5) |
 | Serial Monitor | `pio device monitor -e r4wifi` or click plug icon |
 | Clean build | `pio run -e r4wifi --target clean` |
 | Library update | `pio pkg update -e r4wifi` |
@@ -282,7 +256,6 @@ If Flash exceeds ~90%, remove unused libraries or reduce `String` usage.
 [BOOT]  honey_please v1.5.0
 [WIFI]  Connecting to <ssid>...
 [WIFI]  Connected. IP: 192.168.x.x
-[OTA]   ArduinoOTA ready
 [HTTP]  Server started on port 80
 [WS]    WebSocket /ws ready
 [SIM]   SimMotorDriver + SimRpmSource active

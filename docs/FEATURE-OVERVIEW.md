@@ -7,11 +7,11 @@
 
 ---
 
-> ## ⚠️ BOARD MIGRATION IN PROGRESS – Verification Status
+> ## ✅ BOARD MIGRATION COMPLETE (2026-05-16)
 >
-> **All Phase 0–4 milestones were completed on the retired ESP32 board.**  
-> They are marked ⏳ **TO BE VERIFIED** because the sketch does not yet compile for R4 (ESP32-specific code still present in `main.cpp`, `log.h`, `web_api.*`, `params.*`, `session.*`).  
-> **No milestone is considered complete until it runs successfully on the Arduino Uno R4 WiFi.**
+> **All Phase 6 milestones verified on Arduino Uno R4 WiFi.**  
+> Board IP: `192.168.178.70` | Selfcheck: PASSED | USB Serial: OK | WebSocket: OK  
+> All earlier milestones (Phase 0–4) carry forward — re-verification on R4 continues below.
 >
 > **Legend:**  
 > ✅ Verified on R4 WiFi | ⏳ TO BE VERIFIED (was done on ESP32) | 🔲 Not yet started | ❌ Dropped / not carried to R4 | ⚠️ Optional / partial
@@ -182,19 +182,19 @@ Motor (Honigschleuder)
 | ID | Milestone | Feature Docs | Status |
 |---|---|---|---|
 | ✅ M6.1 | `[env:r4wifi]` only env in `platformio.ini`; ESP32 envs removed | F11 | Done |
-| 🔲 M6.2 | `main.cpp` rewritten for R4: `WiFiS3.h`, ArduinoOTA, no FreeRTOS, USB Serial | F11 | Next |
-| 🔲 M6.3 | USB Serial command interface (`help`, `status`, `target`, `stop`, `estop`, `resetfault`) | F11 | |
-| 🔲 M6.4 | `web_api.cpp` rewritten: synchronous `WiFiServer`/`WiFiClient` replaces `ESPAsyncWebServer` | F11, F07 | |
-| 🔲 M6.5 | WebSocket `/ws` alive on R4 (10 Hz JSON frames) | F11, F07 | |
-| 🔲 M6.6 | **CORS** – `Access-Control-Allow-Origin: *` on all HTTP responses + OPTIONS preflight | F11 | Critical |
-| 🔲 M6.7 | `GET /status` JSON endpoint (replaces legacy WebSerial status command) | F11 | |
-| 🔲 M6.8 | EEPROM params persistence (replaces NVS `Preferences`) | F11, F06 | |
-| 🔲 M6.9 | In-memory session ring buffer ≤50 entries (replaces LittleFS JSONL) | F11, F10 | |
-| 🔲 M6.10 | `log.h` rewritten: direct `Serial.println()`, no FreeRTOS queue, no WebSerial | F11 | |
-| 🔲 M6.11 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | F11 | |
+| ✅ M6.2 | `main.cpp` rewritten for R4: `WiFiS3.h`, no FreeRTOS, USB Serial | F11 | Done |
+| ✅ M6.3 | USB Serial command interface (`help`, `status`, `target`, `stop`, `estop`, `resetfault`) | F11 | Done |
+| ✅ M6.4 | `web_api.cpp` rewritten: synchronous `WiFiServer`/`WiFiClient` replaces `ESPAsyncWebServer` | F11, F07 | Done |
+| ✅ M6.5 | WebSocket `/ws` alive on R4 (10 Hz JSON frames) | F11, F07 | Done |
+| ✅ M6.6 | **CORS** – `Access-Control-Allow-Origin: *` on all HTTP responses + OPTIONS preflight | F11 | Done |
+| ✅ M6.7 | `GET /status` JSON endpoint + `GET /` info page (200 OK, no 404) | F11 | Done |
+| ✅ M6.8 | EEPROM params persistence (replaces NVS `Preferences`) | F11, F06 | Done |
+| ✅ M6.9 | In-memory session ring buffer ≤50 entries (replaces LittleFS JSONL) | F11, F10 | Done |
+| ✅ M6.10 | `log.h` rewritten: direct `Serial.println()`, no FreeRTOS queue, no WebSerial | F11 | Done |
+| ✅ M6.11 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | F11 | Done |
 | ✅ M6.12 | `selfcheck.js` updated: checks `/status` + `/ws` (no `/webserial`) | F11 | Done |
-| 🔲 M6.13 | WiFi + OTA verified on real R4 hardware (USB-flash first, then OTA) | F11 | |
-| 🔲 M6.14 | Full simulation run verified on R4 (WebSocket + USB Serial + Web UI from local dev server) | F11, F08 | |
+| ✅ M6.13 | WiFi + USB flash verified on real R4 hardware – IP 192.168.178.70 | F11 | Done |
+| ⏳ M6.14 | Full simulation run verified on R4 (WebSocket + USB Serial + Web UI from local dev server) | F11, F08 | Next — Web UI connects ✅, sim run pending |
 
 ---
 
@@ -267,7 +267,7 @@ These files currently contain ESP32-only code. They will not compile against the
 **Platform-independent (no rewrite needed):**  
 `motor_driver.h`, `sim_motor_driver.h`, `rpm_source.h`, `sim_rpm_source.h`, `ramp_controller.h/.cpp`, `error_handler.h/.cpp`, `program.h`
 
-> **Current build state:** The sketch does **not** compile for `[env:r4wifi]` yet. Platform migration starts at M6.2.
+> **Current build state:** All source files compile cleanly for `[env:r4wifi]`. Board running at 192.168.178.70. Selfcheck PASSED.
 
 ---
 

@@ -268,6 +268,8 @@ void WebApi::_handleHttpRequest(WiFiClient& client,
     }
     if (reqLine.startsWith("GET") && reqLine.indexOf("/status") >= 0)   { _replyStatus(client);   return; }
     if (reqLine.startsWith("GET") && reqLine.indexOf("/sessions") >= 0) { _replySessions(client); return; }
+    // Root path → friendly info page (browser hits this directly)
+    if (reqLine.startsWith("GET / ") || reqLine.startsWith("GET /\r")) { _replyRoot(client); return; }
     _replyNotFound(client);
 }
 
@@ -330,6 +332,28 @@ void WebApi::_replyOptions(WiFiClient& client) {
     client.print("Access-Control-Allow-Methods: GET, OPTIONS\r\n"
                  "Access-Control-Allow-Headers: Content-Type\r\n"
                  "Content-Length: 0\r\n\r\n");
+    client.stop();
+}
+
+void WebApi::_replyRoot(WiFiClient& client) {
+    // Browsers opening the board IP directly get a useful info response
+    // instead of a 404. The Web UI is served from the developer's local server.
+    static const char BODY[] =
+        "{\"board\":\"honey_please\",\"version\":\""
+        "1.5.0"
+        "\","
+        "\"endpoints\":{\"/status\":\"GET – JSON snapshot\","
+        "\"/ws\":\"WebSocket – 10 Hz state frames\","
+        "\"/sessions\":\"GET – session ring buffer JSONL\"},"
+        "\"webui\":\"Serve data/ from your local dev server and point it at this IP\"}";
+    char lenBuf[6];
+    snprintf(lenBuf, sizeof(lenBuf), "%u", (unsigned)strlen(BODY));
+    client.print("HTTP/1.1 200 OK\r\n");
+    client.print(CORS_HEADER);
+    client.print("Content-Type: application/json\r\nContent-Length: ");
+    client.print(lenBuf);
+    client.print("\r\n\r\n");
+    client.print(BODY);
     client.stop();
 }
 

@@ -2,7 +2,11 @@
 // WebSocket connection, sparkline, basket animation, render loop
 
 // ─── WebSocket connection ────────────────────────────────────────────────────
-const WS_URL = `ws://${location.hostname}/ws`;
+// Board IP: defaults to the page's host. When running from a local dev server,
+// append ?ip=<board-ip> to the URL, e.g. http://localhost:5500/?ip=192.168.178.70
+const _params   = new URLSearchParams(location.search);
+const BOARD_HOST = _params.get('ip') || location.hostname;
+const WS_URL = `ws://${BOARD_HOST}/ws`;
 let ws = null, reconnectTimer = null;
 let state = {};
 
@@ -132,7 +136,7 @@ function render(s) {
   const mm = String(Math.floor((up % 3600) / 60)).padStart(2, '0');
   const ss = String(up % 60).padStart(2, '0');
   document.getElementById('uptime-info').textContent = `Uptime: ${hh}:${mm}:${ss}`;
-  document.getElementById('wifi-info').textContent   = `IP: ${location.hostname}`;
+  document.getElementById('wifi-info').textContent   = `IP: ${BOARD_HOST}`;
 
   // ── Motor controller box ───────────────────────────────────────────────────
   document.getElementById('mc-duty').textContent    = dutyPct + '%';

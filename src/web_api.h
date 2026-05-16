@@ -74,6 +74,7 @@ class WebApi {
     void _replyStatus(WiFiClient& client);
     void _replySessions(WiFiClient& client);
     void _replyOptions(WiFiClient& client);
+    void _replyRoot(WiFiClient& client);
     void _replyNotFound(WiFiClient& client);
 
 public:

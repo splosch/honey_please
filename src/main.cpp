@@ -235,8 +235,9 @@ static String g_serialBuf;
 // ─── setup ───────────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
-    // Brief pause for CDC USB enumeration on native USB
-    delay(500);
+    // Wait for CDC USB host to open – ensures boot banner is always visible.
+    // Timeout after 5 s so WiFi init proceeds even with no monitor attached.
+    { unsigned long t0 = millis(); while (!Serial && millis() - t0 < 5000UL) {} }
     Serial.println("\n[BOOT] honey_please v" FIRMWARE_VERSION);
 
     pinMode(LED_BUILTIN, OUTPUT);
@@ -264,6 +265,13 @@ void setup() {
         setLedMode(LedMode::ERROR_BLINK);
         // Continue without WiFi – Serial commands still work
     } else {
+        // Wait for DHCP (localIP stays 0.0.0.0 until lease is granted)
+        {
+            unsigned long t0 = millis();
+            while (WiFi.localIP() == IPAddress(0, 0, 0, 0) && millis() - t0 < 5000UL) {
+                delay(100);
+            }
+        }
         Serial.print("[WIFI] Connected. IP: ");
         Serial.println(WiFi.localIP());
 
@@ -303,6 +311,9 @@ void loop() {
         if (WiFi.status() != WL_CONNECTED) {
             Serial.println("[WIFI] Reconnecting...");
             WiFi.begin(ssid, password);
+        } else {
+            Serial.print("[WIFI] IP: ");
+            Serial.println(WiFi.localIP());
         }
     }
 
