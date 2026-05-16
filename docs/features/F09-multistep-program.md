@@ -1,6 +1,6 @@
 # F09 – Multi-Step Extraction Program
 
-**Status:** ✅ Implemented (v1.4.0)  
+**Status:** ✅ Implemented on ESP32 (v1.4.0) | ⚠️ R4 port pending – `program.cpp` uses NVS `Preferences`, must be rewritten to EEPROM (Phase 6: M6.8)  
 **Depends on:** [F03 – Ramps](./F03-acceleration-deceleration-ramps.md), [F04 – Direction Control](./F04-direction-control.md), [F06 – Params](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F10 – Extraction Session](./F10-extraction-session.md)
 
@@ -144,12 +144,14 @@ Each step transition generates a session log entry:
 
 ## 8. Acceptance Criteria
 
-- [x] Default 6-step sequence runs end-to-end in SIM mode without manual intervention
-- [x] Step timer starts only after target RPM is reached
-- [x] Direction change between steps uses the full F04 safe sequence
-- [x] PAUSE saves step position + remaining time; RESUME continues correctly
-- [x] SKIP STEP works from any step including first and last
-- [x] Custom step configuration persists across power cycles (NVS)
-- [x] All step events logged to session protocol with timestamps
-- [x] Total program duration estimate shown before start and updated live
+> \u26a0\ufe0f Criteria marked [x] were verified on the ESP32 build. Must be re-verified on R4 after Phase 6 port (M6.8).
+
+- [x] Default 6-step sequence runs end-to-end in SIM mode without manual intervention *(verified on ESP32)*
+- [x] Step timer starts only after target RPM is reached *(verified on ESP32)*
+- [x] Direction change between steps uses the full F04 safe sequence *(verified on ESP32)*
+- [x] PAUSE saves step position + remaining time; RESUME continues correctly *(verified on ESP32)*
+- [x] SKIP STEP works from any step including first and last *(verified on ESP32)*
+- [ ] Custom step configuration persists across power cycles \u2013 **ESP32: NVS; R4: EEPROM rewrite pending (M6.8)**
+- [x] All step events logged to session protocol with timestamps *(verified on ESP32)*
+- [x] Total program duration estimate shown before start and updated live *(verified on ESP32)*
 - [ ] Step editing UI (RPM%, duration, add/remove steps) – Phase 4+ deferred

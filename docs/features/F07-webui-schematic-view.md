@@ -1,6 +1,7 @@
 # F07 – Web UI Schematic View
 
-**Status:** Done – M3.1–7, M3.11 complete ┃ M3.8 / M3.9 / M3.10 optional (deferred)  
+**Status:** ✅ Implemented on ESP32 (v1.4.0) | ⚠️ R4 port pending – `web_api.cpp` / `main.cpp` rewrite required (Phase 6: M6.4–M6.7)  
+Web UI files (`data/`) carry over unchanged. Board-side WebSocket server and HTTP endpoints need rewrite.  
 **Depends on:** [F01](./F01-motor-control-architecture.md), [F02](./F02-rpm-monitoring.md), [F03](./F03-acceleration-deceleration-ramps.md), [F04](./F04-direction-control.md), [F05](./F05-error-states.md), [F06](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
@@ -184,14 +185,16 @@ Fixed at bottom, always visible:
 
 ## 8. Acceptance Criteria
 
-- [x] All three component boxes visible on 1024×768 and mobile portrait
-- [x] GPIO states update within 200 ms of pin change
-- [x] Basket SVG animation speed proportional to current RPM
-- [x] RPM gauge arc updates at ≥ 10 Hz *(replaced by large numerical RPM display + sparkline)*
-- [x] CRITICAL error triggers red full-screen overlay within 500 ms
-- [x] Web UI served from local dev server (no files on board)
-- [x] WebSocket reconnect is automatic and transparent (< 3 s)
-- [x] E-STOP button always interactive (not disabled by any state)
+> \u26a0\ufe0f Criteria marked [x] were verified on the ESP32 build. The Web UI files (`data/`) work as-is. The board-side WebSocket/HTTP must be re-verified on R4 after Phase 6 (M6.4\u2013M6.7).
+
+- [x] All three component boxes visible on 1024\u00d7768 and mobile portrait *(UI verified on ESP32)*
+- [x] GPIO states update within 200 ms of pin change *(verified on ESP32)*
+- [x] Basket SVG animation speed proportional to current RPM *(verified on ESP32)*
+- [x] RPM gauge arc updates at \u2265 10 Hz *(replaced by large numerical RPM display + sparkline)*
+- [x] CRITICAL error triggers red full-screen overlay within 500 ms *(verified on ESP32)*
+- [ ] Web UI served from local dev server (no files on board) \u2013 **architecture change; not yet tested with R4**
+- [ ] WebSocket reconnect is automatic and transparent (< 3 s) \u2013 **must re-verify on R4 (M6.5)**
+- [x] E-STOP button always interactive (not disabled by any state) *(verified on ESP32)*
 - [ ] *(optional)* PAUSE / RESUME buttons in control bar (M3.8)
 - [ ] *(optional)* WARNING (yellow banner) and ERROR (orange banner) overlays differentiated from CRITICAL (M3.9)
 - [ ] *(optional)* Parameters panel: sliders for max\_rpm, accel, decel, dir\_pause with live WS `set_param` dispatch (M3.10)

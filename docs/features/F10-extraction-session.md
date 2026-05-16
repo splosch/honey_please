@@ -1,6 +1,6 @@
 # F10 – Honey Extraction Session
 
-**Status:** ✅ Implemented (v1.4.0)  
+**Status:** ✅ Implemented on ESP32 (v1.4.0) | ⚠️ R4 port pending – `session.cpp` uses LittleFS, must be rewritten to in-memory ring buffer (Phase 6: M6.9)  
 **Depends on:** [F02 – RPM Monitoring](./F02-rpm-monitoring.md), [F04 – Direction Control](./F04-direction-control.md), [F05 – Error States](./F05-error-states.md), [F09 – Multi-Step Program](./F09-multistep-program.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
@@ -190,11 +190,13 @@ Response: `Content-Type: application/x-ndjson` with the full ring buffer as JSON
 
 ## 9. Acceptance Criteria
 
-- [x] Session starts/stops on operator command or program completion
-- [x] RPM samples written every 5 seconds during active session
-- [x] All errors logged with code, message, and timestamp
-- [x] Session summary (`SESSION_SUMMARY`) generated on every STOP
-- [x] Session accessible via `GET /session` (JSONL API, CORS header included)
+> \u26a0\ufe0f Criteria marked [x] were verified on the ESP32 build. They must be re-verified on R4 after the Phase 6 port.
+
+- [x] Session starts/stops on operator command or program completion *(verified on ESP32)*
+- [x] RPM samples written every 5 seconds during active session *(verified on ESP32)*
+- [x] All errors logged with code, message, and timestamp *(verified on ESP32)*
+- [x] Session summary (`SESSION_SUMMARY`) generated on every STOP *(verified on ESP32)*
+- [ ] Session accessible via `GET /session` (JSONL API, CORS header included) \u2013 **R4 port not done**
 - [ ] JSONL export downloadable from browser – not yet implemented for R4
 - [ ] Live scrolling event log in UI during recording – not yet implemented
 - [ ] Optional EEPROM snapshot of last SESSION_SUMMARY on stop – not yet implemented

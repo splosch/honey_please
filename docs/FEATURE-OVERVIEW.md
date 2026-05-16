@@ -82,9 +82,11 @@ Motor (Honigschleuder)
 
 ---
 
-### ✅ Phase 1 – HAL + Simulation Drivers (DONE)
+### ✅ Phase 1 – HAL + Simulation Drivers (DONE on ESP32)
 
 **Goal:** Firmware compiles and runs end-to-end with `SimMotorDriver` + `SimRpmSource`. No hardware required.
+
+> The HAL interfaces (`motor_driver.h`, `rpm_source.h`, `sim_motor_driver.h`, `sim_rpm_source.h`) and `ramp_controller.h/.cpp`, `error_handler.h/.cpp` are **platform-independent** and carry over to R4 unchanged. `main.cpp`, `log.h`, `web_api.*`, `params.*`, `session.*`, `program.*` all need R4 rewrites (Phase 6).
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
@@ -98,7 +100,7 @@ Motor (Honigschleuder)
 
 ---
 
-### ✅ Phase 2 – Ramp Control, Direction & Safety Logic (DONE)
+### ✅ Phase 2 – Ramp Control, Direction & Safety Logic (DONE on ESP32)
 
 **Goal:** Full motor behaviour testable via serial commands, all sim drivers.
 
@@ -110,15 +112,17 @@ Motor (Honigschleuder)
 | ✅ M2.4 | `ErrorHandler` with all error codes E01–E09 | F05 |
 | ✅ M2.5 | EMERGENCY_STOP: immediate `disable()` + `FAULT_STOP` state | F05 |
 | ✅ M2.6 | Fault injection (E03, E06) triggers correct state | F05, F08 |
-| ✅ M2.7 | Params persistence *(ESP32: NVS — R4: EEPROM, see M6.6)* | F06 |
+| ✅ M2.7 | Params persistence via NVS `Preferences` – **R4: replace with EEPROM (M6.8)** | F06 |
 
 ---
 
-### ✅ Phase 3 – Web UI Schematic (DONE)
+### ✅ Phase 3 – Web UI Schematic (DONE on ESP32)
 
 **Goal:** Browser shows live system schematic. Developed without hardware.
 
-> **Architecture update:** On R4 WiFi the Web UI is served from the developer's local dev server (not from the board). The WebSocket protocol is unchanged. See M6.CORS.
+> ⚠️ **Completed on ESP32 (AsyncWebServer + LittleFS + FreeRTOS).** The Web UI files (`data/`) carry over unchanged. The board-side web server (`web_api.cpp`, `main.cpp`) must be rewritten for R4 as part of Phase 6 (M6.4–M6.7). After that rewrite, all Phase 3 features work identically on R4.
+
+> **Web UI architecture change on R4:** Static files served from developer’s local dev server (not from the board). WebSocket protocol is unchanged.
 
 | ID | Milestone | Feature Docs | Notes |
 |---|---|---|---|
@@ -136,22 +140,22 @@ Motor (Honigschleuder)
 
 ---
 
-### ✅ Phase 4 – Multi-Step Program & Session Protocol (DONE)
+### ✅ Phase 4 – Multi-Step Program & Session Protocol (DONE on ESP32)
 
 **Goal:** Full extraction workflow end-to-end in simulation. Session log exported and verified.
 
-> **Note:** Session storage was LittleFS JSONL on ESP32. On R4 it becomes an in-memory ring buffer (M6.9). The endpoint is `GET /session` (single current session, no history list).
+> ⚠️ **Completed on the ESP32 board.** The logic is sound and the feature set is complete. The R4 port replaces ESP32-specific storage (NVS → EEPROM, LittleFS → ring buffer) and the async web server, tracked in Phase 6 milestones M6.4, M6.8, M6.9.
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
-| ✅ M4.1 | Multi-step program (6 default steps) stored in params | F09 |
+| ✅ M4.1 | Multi-step program (6 default steps) stored in NVS params | F09 |
 | ✅ M4.2 | Program runner: step sequencer with direction transitions | F09 |
 | ✅ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort | F09 |
-| ✅ M4.4 | Session storage (ring buffer, current session only) + event on each state change | F10 |
+| ✅ M4.4 | Session storage: JSONL append to LittleFS `/sessions/sNNN.jsonl` + event on each state change | F10 |
 | ✅ M4.5 | Session start/stop on operator command | F10 |
 | ✅ M4.6 | RPM samples every 5 s + program/step/error/direction events | F10 |
-| ✅ M4.7 | Session summary on stop; `GET /session` JSONL response | F10 |
-| ✅ M4.8 | JSONL export via `GET /session` (current session only) | F10 |
+| ✅ M4.7 | Session summary on stop; `GET /sessions` JSON list | F10 |
+| ✅ M4.8 | JSONL export via `GET /sessions?id=N` | F10 |
 | ✅ M4.9 | Full 6-step program runs in SIM, session export verified | F08, F09, F10 |
 
 ---
@@ -238,16 +242,21 @@ Motor (Honigschleuder)
 
 ## Code Files Needing R4 Rewrite (Phase 6 Scope)
 
-These files currently contain ESP32-only code. They compile only against ESP32 libraries and must be rewritten for R4 before M6.14:
+These files currently contain ESP32-only code. They will not compile against the R4 toolchain and must be rewritten before M6.14:
 
-| File | ESP32-only dependency | R4 replacement |
-|---|---|---|
-| `src/main.cpp` | `WiFi.h`, `ESPmDNS.h`, `AsyncTCP.h`, `ESPAsyncWebServer.h`, `WebSerial.h`, FreeRTOS, `LittleFS.h` | `WiFiS3.h`, `ArduinoOTA.h`, `WiFiServer`/`WiFiClient`, `Serial`, `EEPROM.h` |
-| `src/web_api.h` / `.cpp` | `ESPAsyncWebServer`, `AsyncWebSocket`, `LittleFS`, `freertos/semphr.h` | Synchronous `WiFiServer`/`WiFiClient` WebSocket implementation |
-| `src/log.h` | FreeRTOS queue + `WebSerial.h` | Direct `Serial.println()` |
-| `src/session.cpp` | LittleFS JSONL file I/O | In-memory ring buffer array |
+| File | ESP32-only dependency | R4 replacement | Phase 6 milestone |
+|---|---|---|---|
+| `src/main.cpp` | `WiFi.h`, `ESPmDNS.h`, `AsyncTCP.h`, `ESPAsyncWebServer.h`, `WebSerial.h`, FreeRTOS, `LittleFS.h` | `WiFiS3.h`, `ArduinoOTA.h`, `WiFiServer`/`WiFiClient`, `Serial`, `EEPROM.h` | M6.2 |
+| `src/web_api.h` / `.cpp` | `ESPAsyncWebServer`, `AsyncWebSocket`, `LittleFS`, `freertos/semphr.h` | Synchronous `WiFiServer`/`WiFiClient` WebSocket | M6.4 |
+| `src/log.h` | FreeRTOS queue + `WebSerial.h` | Direct `Serial.println()` | M6.10 |
+| `src/params.h` / `.cpp` | `Preferences.h` (NVS) | `EEPROM.h` struct + magic-byte | M6.8 |
+| `src/program.cpp` | `Preferences.h` (NVS) | EEPROM struct after MotorParams | M6.8 |
+| `src/session.h` / `.cpp` | `LittleFS.h` JSONL files | In-memory ring buffer (≤50 entries, ~5 KB SRAM) | M6.9 |
 
-> **Not changing yet:** These files are documented for awareness. They will be rewritten incrementally starting at M6.2.
+**Platform-independent (no rewrite needed):**  
+`motor_driver.h`, `sim_motor_driver.h`, `rpm_source.h`, `sim_rpm_source.h`, `ramp_controller.h/.cpp`, `error_handler.h/.cpp`, `program.h`
+
+> **Current build state:** The sketch does **not** compile for `[env:r4wifi]` yet. Platform migration starts at M6.2.
 
 ---
 
