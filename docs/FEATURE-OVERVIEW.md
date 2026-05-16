@@ -1,7 +1,8 @@
 # honey_please – Feature Documentation Overview
 
-**Project:** ESP32-based Honigschleuder Motor Control  
-**Board:** ESP32-D0WDQ6 @ `192.168.178.64`  
+**Project:** Honigschleuder Motor Control  
+**Board (active):** Arduino Uno R4 WiFi — *Phase 6 migration in progress* (see [F11](./features/F11-platform-migration-r4-wifi.md))  
+**Board (legacy):** ESP32-D0WDQ6 @ `192.168.178.64` — remains functional until Phase 6 complete  
 **Firmware:** v1.4.0 | Framework: Arduino / PlatformIO
 
 ---
@@ -22,6 +23,7 @@
 | **[F08 – Simulation Mode](./features/F08-simulation-mode.md)** | **Phase 1 starting point** – HAL-based sim, fault injection, compile-time driver selection |
 | **[F09 – Multi-Step Extraction Program](./features/F09-multistep-program.md)** | L-Slow → R-Fast sequence, configuration |
 | **[F10 – Honey Extraction Session](./features/F10-extraction-session.md)** | Session lifecycle, protocol log, export |
+| **[F11 – Platform Migration: Arduino Uno R4 WiFi](./features/F11-platform-migration-r4-wifi.md)** | Board swap rationale, impact analysis, Web UI deferral, Phase 6 milestones |
 
 ---
 
@@ -29,33 +31,44 @@
 
 ```
 Browser (Web UI)
-    │   HTTP  /         → serves index.html from LittleFS
-    │   WS    /ws       → real-time bidirectional state sync (10 Hz)
-    │   GET   /sessions        → session list (JSON) or download by ?id=N
+    │   HTTP  /         → Phase 1–4 (ESP32): served from LittleFS
+    │                     Phase 6   (R4):    DEFERRED – SD card planned (M6.SD)
+    │   WS    /ws       → real-time bidirectional state sync (10 Hz) [unchanged]
+    │   GET   /status   → Phase 6+: JSON status endpoint (replaces /sessions on R4)
     ▼
-ESP32 (192.168.178.64)
+MCU  [ESP32 (legacy) | Arduino Uno R4 WiFi (Phase 6+)]
     │
-    ├── AsyncWebServer  (port 80)
-    ├── WebSerial       (port 80, /webserial – debug terminal)
-    ├── ArduinoOTA      (port 3232 – wireless firmware updates)
+    ├── Web Server
+    │       ESP32:  ESPAsyncWebServer + AsyncTCP
+    │       R4:     WiFiServer (synchronous, lightweight)
+    ├── Serial Terminal
+    │       ESP32:  WebSerial (browser, /webserial)
+    │       R4:     USB CDC Serial (replaces WebSerial)
+    ├── OTA             → ArduinoOTA (both platforms)
     │
-    ├── RampController  → calls IMotorDriver
-    ├── StateMachine    → calls IMotorDriver
-    ├── ErrorHandler    → calls IMotorDriver + IRpmSource
-    ├── Session         → LittleFS log writer
-    ├── Params          → NVS persistence
+    ├── RampController  → calls IMotorDriver  [unchanged]
+    ├── StateMachine    → calls IMotorDriver  [unchanged]
+    ├── ErrorHandler    → calls IMotorDriver + IRpmSource  [unchanged]
+    ├── Session
+    │       ESP32:  LittleFS JSONL writer
+    │       R4:     In-memory ring buffer (M6.7); SD card persistence (M6.SD)
+    ├── Params
+    │       ESP32:  NVS (Preferences library)
+    │       R4:     EEPROM (8 KB emulated flash, M6.6)
     │
-    ├── IMotorDriver  ◄─ HAL boundary
-    │       ├─ SimMotorDriver   (Phases 1–4: no GPIO)
-    │       └─ RealMotorDriver  (Phase 5: PWM + GPIO)
+    ├── IMotorDriver  ◄─ HAL boundary  [identical on both platforms]
+    │       ├─ SimMotorDriver   (Phases 1–6: no GPIO)
+    │       └─ RealMotorDriver  (Phase 5/6: PWM + GPIO)
+    │                               ESP32: 3.3 V (needs level-shifter)
+    │                               R4:    5 V native ✅
     │
-    └── IRpmSource    ◄─ HAL boundary
-            ├─ SimRpmSource     (Phases 1–4: reads RampController)
-            └─ RealRpmSource    (Phase 5: GPIO interrupt ISR)
+    └── IRpmSource    ◄─ HAL boundary  [identical on both platforms]
+            ├─ SimRpmSource     (Phases 1–6)
+            └─ RealRpmSource    (Phase 5/6: GPIO interrupt ISR)
                       │
-                      ▼ (Phase 5 only)
-              Motor Controller (type TBD)
-                      │
+                      ▼
+              Motor Controller (type TBD – Q1)
+                      │  Motor power lines
                       ▼
               Motor – Honigschleuder
 ```
@@ -161,6 +174,28 @@ ESP32 (192.168.178.64)
 
 ---
 
+### 🔲 Phase 6 – Platform Migration: Arduino Uno R4 WiFi
+
+**Goal:** The sketch runs on the Arduino Uno R4 WiFi. WiFi, OTA, WebSocket API, and USB Serial control all verified on real hardware. Web UI deferred to Phase 7 (SD card). See [F11](./features/F11-platform-migration-r4-wifi.md) for the full analysis.
+
+> **Why now, before Phase 5:** The R4 WiFi's 5 V GPIO eliminates the level-shifter required between the 3.3 V ESP32 and the motor driver. Doing the platform migration before wiring real hardware avoids having to redo the hardware connections.
+
+| ID | Milestone | Feature Docs | Status |
+|---|---|---|---|
+| M6.1 | `[env:r4wifi]` in `platformio.ini`; sketch compiles for R4 | F11 | 🔲 |
+| M6.2 | WiFi (`WiFiS3.h`) + OTA verified on R4 hardware | F11 | 🔲 |
+| M6.3 | USB Serial command interface (replaces WebSerial) | F11 | 🔲 |
+| M6.4 | WebSocket `/ws` endpoint alive (10 Hz JSON frames) | F11, F07 | 🔲 |
+| M6.5 | Minimal HTTP `GET /status` → JSON endpoint | F11 | 🔲 |
+| M6.6 | EEPROM params persistence (replaces NVS) | F11, F06 | 🔲 |
+| M6.7 | In-memory session ring buffer (replaces LittleFS) | F11, F10 | 🔲 |
+| M6.8 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | F11 | 🔲 |
+| M6.9 | `selfcheck.js` updated for R4 IP + `/status` check | F11 | 🔲 |
+| M6.10 | Full simulation run verified on R4 (WebSocket + USB Serial) | F11, F08 | 🔲 |
+| M6.SD | SD card web UI assets served; full browser UI restored | F11, F07 | 🔲 Phase 7 |
+
+---
+
 ### 🔲 Phase 5 – Hardware Integration (RealMotorDriver)
 
 **Goal:** Swap `SimMotorDriver` + `SimRpmSource` for real GPIO implementations. All other code stays unchanged.
@@ -181,15 +216,15 @@ ESP32 (192.168.178.64)
 
 ---
 
-## Phase 5 Prerequisites – Open Questions
+## Phase 5 / 6 Prerequisites – Open Questions
 
-> These questions block **Phase 5 only**. All of Phases 1–4 proceed without answers.
+> These questions block **RealMotorDriver / RealRpmSource** on either platform. The platform migration (Phase 6) can proceed to M6.10 without answers (simulation mode only).
 
 | # | Question | Needed before |
 |---|---|---|
-| Q1 | Which motor driver chip? (L298N / DRV8833 / DRV8871 / BTS7960) | M5.3 |
+| Q1 | Which motor driver chip? (L298N / DRV8833 / DRV8871 / BTS7960 / IBT-2) | M5.3 / M6 real HW |
 | Q2 | Motor voltage and rated current? | Driver selection |
-| Q3 | RPM sensor type? (Hall / optical / encoder) | M5.6 |
+| Q3 | RPM sensor type? (Hall / optical / encoder) | M5.6 / M6 real HW |
 | Q4 | Gear ratio between motor shaft and basket? | `GEAR_RATIO` constant |
 | Q5 | PWM frequency appropriate for driver? | `motor_config.h` |
 | Q6 | Exact pin wiring (schematic or photo)? | All `PIN_*` defines |

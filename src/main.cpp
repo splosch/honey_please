@@ -87,11 +87,71 @@ static unsigned long lastTick      = 0;
 static unsigned long lastHeartbeat = 0;
 static unsigned long lastWifiCheck = 0;
 
+// ─── Status LED ──────────────────────────────────────────────────────────────
+// Built-in LED pin – GPIO 2 on DevKit, NodeMCU-32S, LOLIN32 and most clones.
+constexpr uint8_t STATUS_LED_PIN = 2;
+// NodeMCU-32S / LOLIN32 / Wemos: LED cathode → GPIO (LOW = ON, HIGH = OFF).
+// Set false for classic ESP32-DevKitC where HIGH = ON.
+constexpr bool    LED_ACTIVE_LOW = true;
+
+// Polarity-aware write helper.
+static inline void ledWrite(bool on) {
+    digitalWrite(STATUS_LED_PIN, (LED_ACTIVE_LOW ? !on : on) ? HIGH : LOW);
+}
+
+enum class LedMode : uint8_t { STARTUP, ERROR_BLINK, READY };
+
+static LedMode       g_ledMode   = LedMode::STARTUP;
+static unsigned long g_ledLastMs = 0;
+static uint8_t       g_ledPhase  = 0;
+
+// Error pattern (ms per phase): ON-100, OFF-100, ON-100, OFF-700 → fast-fast-[gap]
+static const uint16_t LED_ERR_PATTERN[] = { 100, 100, 100, 700 };
+static constexpr uint8_t LED_ERR_PHASES = 4;
+
+static void setLedMode(LedMode mode) {
+    g_ledMode   = mode;
+    // phase=1 for STARTUP so the first toggle (at 500 ms) turns OFF correctly
+    g_ledPhase  = (mode == LedMode::STARTUP) ? 1 : 0;
+    g_ledLastMs = millis();
+    ledWrite(true);   // all modes start LED ON
+}
+
+// Call every loop() iteration – non-blocking.
+static void ledTick() {
+    const unsigned long now = millis();
+
+    if (g_ledMode == LedMode::READY) {
+        // Constant ON – redundant writes are harmless.
+        ledWrite(true);
+        return;
+    }
+
+    if (g_ledMode == LedMode::STARTUP) {
+        // 1 Hz symmetric blink: 500 ms ON / 500 ms OFF
+        if (now - g_ledLastMs >= 500UL) {
+            g_ledLastMs = now;
+            g_ledPhase ^= 1;
+            ledWrite(g_ledPhase != 0);
+        }
+        return;
+    }
+
+    // ERROR_BLINK: fast-fast-[long gap] repeating pattern
+    if (now - g_ledLastMs >= LED_ERR_PATTERN[g_ledPhase]) {
+        g_ledLastMs = now;
+        g_ledPhase  = (g_ledPhase + 1) % LED_ERR_PHASES;
+        // Even phases (0, 2) = ON; odd phases (1, 3) = OFF
+        ledWrite(g_ledPhase % 2 == 0);
+    }
+}
+
 // ─── Helper: trigger CRITICAL error + always zero the ramp ───────────────────
 // All CRITICAL paths must go through here so ramp state stays consistent.
 static void triggerCritical(ErrorCode code, const char* msg) {
     rampCtrl.emergencyStop();          // zero ramp + PWM before error state set
     errorHandler.trigger(code, msg);   // sets hasCritical() + disables driver again
+    setLedMode(LedMode::ERROR_BLINK);  // visual indicator: fast-fast-[gap] pattern
     // Log to active session
     String codeStr = "E0" + String((uint8_t)code);
     sessionLogger.logError(codeStr.c_str(), msg);
@@ -164,6 +224,7 @@ void onWebSerialMessage(uint8_t* data, size_t len) {
         }
         rampCtrl.emergencyStop();   // ensure ramp is zeroed before clearing
         errorHandler.clearAll();
+        setLedMode(LedMode::READY);     // error cleared → constant ON
         sessionLogger.logEvent("ERROR_CLEARED");
 
     // ── dir cw / ccw ──────────────────────────────────────────────────────────
@@ -266,6 +327,10 @@ void setup() {
     Serial.begin(115200);
     Serial.println("\n[START] honey_please v" FIRMWARE_VERSION);
 
+    // Status LED – slow blink (1 Hz) while connecting / initialising
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    setLedMode(LedMode::STARTUP);
+
     // Mutex must exist before WiFi/WebSocket bring up Core-0 async tasks
     g_mutex = xSemaphoreCreateMutex();
     configASSERT(g_mutex);
@@ -284,9 +349,23 @@ void setup() {
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
-    while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-        Serial.println("[ERROR] WiFi failed. Rebooting...");
-        delay(5000);
+    // Non-blocking wait so ledTick() keeps the STARTUP blink alive during connect.
+    // Cold-boot WiFi can take longer than OTA-reboot reconnects.
+    {
+        constexpr unsigned long WIFI_TIMEOUT_MS = 15000UL;
+        unsigned long t0 = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) {
+            ledTick();
+            delay(10);
+        }
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("[ERROR] WiFi connect timeout. Rebooting...");
+        setLedMode(LedMode::ERROR_BLINK);
+        for (unsigned long _t = millis(); millis() - _t < 5000;) {
+            ledTick();
+            delay(10);
+        }
         ESP.restart();
     }
 
@@ -308,6 +387,7 @@ void setup() {
     motorDriver->begin();
     rpmSource->begin();
 
+    setLedMode(LedMode::READY);   // all subsystems up → LED constant ON
     LOG("[READY] honey_please v" FIRMWARE_VERSION);
     LOG("[INFO]  IP:        " + WiFi.localIP().toString());
     LOG("[INFO]  Web UI:    http://" + WiFi.localIP().toString() + "/");
@@ -320,6 +400,7 @@ void loop() {
     // Drain the thread-safe log queue first – only WebSerial.println() call site.
     logDrain();
 
+    ledTick();   // non-blocking LED state machine (STARTUP / ERROR_BLINK / READY)
     ArduinoOTA.handle();
 
     const unsigned long now = millis();

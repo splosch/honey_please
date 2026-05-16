@@ -1,8 +1,10 @@
-# honey_please – ESP32 Motor Control
+# honey_please – Honigschleuder Motor Control
 
-ESP32-based motor control system with OTA firmware updates and a browser-accessible web terminal (WebSerial). Built with PlatformIO + Arduino framework.
+Motor control system for a honey extractor, with OTA firmware updates and a browser-accessible Web UI. Built with PlatformIO + Arduino framework.
 
-> **Got a pre-flashed board?** You're in the right place – follow the steps below.  
+> **Hardware (active):** ESP32-D0WDQ6 @ `192.168.178.64` — fully working, Phase 1–4 complete.  
+> **Hardware (migration):** Switching to **Arduino Uno R4 WiFi** (Phase 6). The R4's 5 V GPIO eliminates the level-shifter needed between the 3.3 V ESP32 and the motor driver. See [docs/features/F11-platform-migration-r4-wifi.md](docs/features/F11-platform-migration-r4-wifi.md) for the full migration plan. The ESP32 remains the production board until Phase 6 is verified.
+
 > **Setting up a blank board for the first time?** → [docs/initial_esp32_setup.md](docs/initial_esp32_setup.md)
 
 ---
