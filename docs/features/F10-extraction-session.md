@@ -1,6 +1,6 @@
 # F10 – Honey Extraction Session
 
-**Status:** ✅ Implemented on ESP32 (v1.4.0) | ⚠️ R4 port pending – `session.cpp` uses LittleFS, must be rewritten to in-memory ring buffer (Phase 6: M6.9)  
+**Status:** ⏳ TO BE VERIFIED – Logic complete on ESP32 (v1.4.0). **Blocked by M6.9:** `session.cpp` still uses LittleFS which does not exist on R4. Session recording will not work until in-memory ring buffer rewrite is done. Full end-to-end session export re-verified at M6.14.  
 **Depends on:** [F02 – RPM Monitoring](./F02-rpm-monitoring.md), [F04 – Direction Control](./F04-direction-control.md), [F05 – Error States](./F05-error-states.md), [F09 – Multi-Step Program](./F09-multistep-program.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 

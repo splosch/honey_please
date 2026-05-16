@@ -1,6 +1,6 @@
 # F02 – RPM Monitoring
 
-**Status:** In Development (SimRpmSource – Phase 1)  
+**Status:** ⏳ TO BE VERIFIED – `IRpmSource` interface and `SimRpmSource` exist (developed on ESP32). Platform-independent; must be verified compiling and running on R4 after M6.2. `RealRpmSource` (Phase 5) deferred pending hardware confirmation (Q1–Q6).  
 **Depends on:** [F01 – Motor Control Architecture](./F01-motor-control-architecture.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F10 – Extraction Session](./F10-extraction-session.md)
 

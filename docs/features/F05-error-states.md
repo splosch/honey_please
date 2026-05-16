@@ -1,6 +1,6 @@
 # F05 – Error States
 
-**Status:** Planning  
+**Status:** ⏳ TO BE VERIFIED – All E01–E09 error codes implemented on ESP32 (M2.4). `ErrorHandler` is platform-independent; verify on R4 after M6.2. E01 WiFi-lost and E02 WebSocket-lost behavior must be re-tested with R4 WiFiS3 stack.  
 **Depends on:** [F01 – Motor Control Architecture](./F01-motor-control-architecture.md), [F02 – RPM Monitoring](./F02-rpm-monitoring.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F07 – Web UI Schematic View](./F07-webui-schematic-view.md), [F10 – Extraction Session](./F10-extraction-session.md)
 

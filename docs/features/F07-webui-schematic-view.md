@@ -1,7 +1,6 @@
 # F07 – Web UI Schematic View
 
-**Status:** ✅ Implemented on ESP32 (v1.4.0) | ⚠️ R4 port pending – `web_api.cpp` / `main.cpp` rewrite required (Phase 6: M6.4–M6.7)  
-Web UI files (`data/`) carry over unchanged. Board-side WebSocket server and HTTP endpoints need rewrite.  
+**Status:** ⏳ TO BE VERIFIED – Web UI files (`data/index.html`, `data/style.css`, `data/app.js`) carry over from ESP32 unchanged. Board-side WebSocket server and HTTP endpoints (`web_api.cpp` / `main.cpp`) need complete rewrite for R4 (M6.4–M6.7). No UI milestone is considered done until `[SELFCHECK PASSED]` on R4 and Web UI connects from local dev server.  
 **Depends on:** [F01](./F01-motor-control-architecture.md), [F02](./F02-rpm-monitoring.md), [F03](./F03-acceleration-deceleration-ramps.md), [F04](./F04-direction-control.md), [F05](./F05-error-states.md), [F06](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 

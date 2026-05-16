@@ -1,6 +1,6 @@
 # F09 – Multi-Step Extraction Program
 
-**Status:** ✅ Implemented on ESP32 (v1.4.0) | ⚠️ R4 port pending – `program.cpp` uses NVS `Preferences`, must be rewritten to EEPROM (Phase 6: M6.8)  
+**Status:** ⏳ TO BE VERIFIED – Logic complete on ESP32 (v1.4.0). **Blocked by M6.8:** `program.cpp` still uses NVS `Preferences` which does not exist on R4. Step sequence will not persist until EEPROM rewrite is done. UI (step bubbles, skip/pause/abort) re-verified at M6.14.  
 **Depends on:** [F03 – Ramps](./F03-acceleration-deceleration-ramps.md), [F04 – Direction Control](./F04-direction-control.md), [F06 – Params](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F10 – Extraction Session](./F10-extraction-session.md)
 

@@ -1,6 +1,6 @@
 # F01 – Motor Control Architecture
 
-**Status:** In Development (HAL layer – Phase 1)  
+**Status:** ⏳ TO BE VERIFIED – HAL interfaces and SimMotorDriver exist (developed on ESP32). Must compile and run on R4 once M6.2 (`main.cpp` rewrite) is complete. Platform-independent code (`motor_driver.h`, `sim_motor_driver.h`, `ramp_controller.*`, `error_handler.*`) carries over unchanged; `main.cpp` and `web_api.*` need R4 rewrite first.  
 **Depends on:** [R4 WiFi Onboarding](../r4wifi_onboarding.md), [F06 – RPM Limits & Params](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 

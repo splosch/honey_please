@@ -2,6 +2,32 @@
 
 This guide walks from an unprogrammed R4 WiFi board to a fully functional OTA-deployable system, with the Web UI running from your local dev server. Follow every step in order and verify each one before proceeding.
 
+> **⚠️ CURRENT STATE (2026-05-16):** The sketch does **not yet compile** for the R4 board. `main.cpp`, `log.h`, `web_api.*`, `params.*`, `session.*`, and `program.cpp` still contain ESP32-specific code. This guide is the authoritative checklist. Each step below maps to one or more Phase 6 milestones in [FEATURE-OVERVIEW.md](./FEATURE-OVERVIEW.md).  
+> **Start at Step 0 (hardware pre-check) and do not skip steps.** Each step has a binary pass/fail criterion before you can proceed.
+
+---
+
+## Verification Checklist (Top-Level)
+
+| Step | What | Maps to | Status |
+|---|---|---|---|
+| 0 | Hardware pre-check: board, cable, COM port | M0.2 pre-req | 🔲 |
+| 1 | WiFi credentials in `secrets.h` | M6.2 pre-req | 🔲 |
+| 2 | Board package + R4 Arduino core installed | M0.1 on R4 | 🔲 |
+| 3 | Rewrite `log.h` for R4 (no FreeRTOS, no WebSerial) | M6.10 | 🔲 |
+| 4 | Rewrite `params.cpp` for R4 (EEPROM, no NVS) | M6.8 | 🔲 |
+| 5 | Rewrite `session.cpp` for R4 (ring buffer, no LittleFS) | M6.9 | 🔲 |
+| 6 | Rewrite `web_api.cpp` for R4 (sync WiFiServer/WiFiClient) | M6.4 | 🔲 |
+| 7 | Rewrite `main.cpp` for R4 (WiFiS3, OTA, USB Serial) | M6.2 | 🔲 |
+| 8 | First USB flash – verify Serial output and WiFi connect | M0.2, M0.3 on R4 | 🔲 |
+| 9 | USB Serial command interface verified | M6.3 | 🔲 |
+| 10 | Configure OTA in `platformio.ini`, first OTA flash | M6.13 | 🔲 |
+| 11 | Run `selfcheck.js` – HTTP + WebSocket pass | M6.12 check | 🔲 |
+| 12 | Start local dev server, Web UI connects to board | M6.14 pre-req | 🔲 |
+| 13 | Full simulation run in browser (6-step program) | M6.14 | 🔲 |
+| 14 | Fault injection panel verified in SIM mode | M6.14, F08 | 🔲 |
+| 15 | Status LED behavior verified (`LED_BUILTIN`) | M6.11 | 🔲 |
+
 ---
 
 ## Prerequisites

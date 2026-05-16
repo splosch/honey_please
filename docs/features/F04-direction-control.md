@@ -1,6 +1,6 @@
 # F04 – Direction Control
 
-**Status:** Planning  
+**Status:** ⏳ TO BE VERIFIED – Direction change sequence implemented on ESP32 (M2.3). Platform-independent logic; verify running on R4 after M6.2. GPIO pin assignments (DIR_A/DIR_B) remain TBD until Phase 5 hardware confirmation.  
 **Depends on:** [F01 – Motor Control Architecture](./F01-motor-control-architecture.md), [F03 – Acceleration/Deceleration Ramps](./F03-acceleration-deceleration-ramps.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F09 – Multi-Step Program](./F09-multistep-program.md)
 

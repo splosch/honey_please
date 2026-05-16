@@ -1,6 +1,6 @@
 # F03 – Acceleration / Deceleration Ramps
 
-**Status:** Planning  
+**Status:** ⏳ TO BE VERIFIED – `RampController` logic complete on ESP32 (M2.1). Platform-independent; must compile and be exercised on R4 after M6.2. EEPROM param storage (replaces NVS) verified at M6.8.  
 **Depends on:** [F01 – Motor Control Architecture](./F01-motor-control-architecture.md), [F02 – RPM Monitoring](./F02-rpm-monitoring.md), [F06 – RPM Limits & Params](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F04 – Direction Control](./F04-direction-control.md), [F09 – Multi-Step Program](./F09-multistep-program.md)
 

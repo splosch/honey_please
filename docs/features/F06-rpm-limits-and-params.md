@@ -1,6 +1,6 @@
 # F06 – RPM Limits & Parameters
 
-**Status:** Planning  
+**Status:** ⏳ TO BE VERIFIED – Parameter table and validation logic defined on ESP32. **Critical R4 change:** `params.cpp` must be rewritten from NVS (`Preferences.h`) to `EEPROM.h` struct (M6.8). Until M6.8 is done, params do NOT persist across power cycles on R4.  
 **Depends on:** [F01 – Motor Control Architecture](./F01-motor-control-architecture.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md), [F03 – Ramps](./F03-acceleration-deceleration-ramps.md), [F07 – Web UI](./F07-webui-schematic-view.md)
 
