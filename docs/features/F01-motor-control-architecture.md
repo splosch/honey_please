@@ -1,7 +1,7 @@
 # F01 – Motor Control Architecture
 
 **Status:** In Development (HAL layer – Phase 1)  
-**Depends on:** [Initial Setup](../initial_esp32_setup.md), [F06 – RPM Limits & Params](./F06-rpm-limits-and-params.md)  
+**Depends on:** [R4 WiFi Onboarding](../r4wifi_onboarding.md), [F06 – RPM Limits & Params](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
 > **Development approach:** The firmware is built against a `IMotorDriver` abstract interface from day one. `SimMotorDriver` (no GPIO, synthetic RPM) is used in Phases 1–4 so the full application can be developed and UI-tested without any hardware. `RealMotorDriver` replaces it in Phase 5 once the physical driver chip and wiring are confirmed. No calling code changes when swapping.
@@ -11,12 +11,13 @@
 ## 1. System Components
 
 ```
-[ Browser / Web UI ]
-        │  HTTP + WebSocket
+[ Browser / Web UI (local dev server) ]
+        │  HTTP + WebSocket (CORS: *)
         ▼
-[ ESP32 (192.168.178.64) ]
-   - WiFi / OTA
-   - Async Web Server
+[ R4 WiFi – RA4M1 (<board-ip>) ]
+   - WiFi (via internal ESP32-S3 coprocessor)
+   - OTA (arduinoota)
+   - WiFiServer/WiFiClient (synchronous)
    - RampController
    - StateMachine
    - ErrorHandler
@@ -116,21 +117,22 @@ Switching from sim to real requires only adding `-DREAL_HARDWARE` to `build_flag
 
 ---
 
-## 3. ESP32 Pin Assignments (Phase 5 – deferred)
+## 3. R4 WiFi Pin Assignments (Phase 5 – deferred)
 
 > ⚠️ **Not needed until Phase 5.** No GPIO code is written before the driver chip and schematic are confirmed.  
-> The table below uses placeholder values only.
+> The R4 WiFi uses standard Arduino pin numbering. All GPIOs are 5 V tolerant. No level-shifter required for motor driver or sensor.
 
-| Signal | ESP32 GPIO | Direction | Notes |
+| Signal | R4 WiFi Pin | Direction | Notes |
 |---|---|---|---|
-| PWM Speed | GPIO 18 | OUT | LEDC channel 0, freq TBD |
-| Motor Direction A | GPIO 19 | OUT | High = forward (CW) |
-| Motor Direction B | GPIO 21 | OUT | High = reverse (CCW) |
-| RPM Sensor | GPIO 34 | IN | Hall/optical interrupt, input-only pin |
-| Enable / nSLEEP | GPIO 22 | OUT | Pull high to enable driver |
-| Fault / nFAULT | GPIO 35 | IN | Active-low fault signal from driver |
+| PWM Speed | Pin 5 (TBD) | OUT | `analogWrite()` 8-bit, 490 Hz default |
+| Motor Direction A | Pin 7 (TBD) | OUT | High = forward (CW) |
+| Motor Direction B | Pin 8 (TBD) | OUT | High = reverse (CCW) |
+| RPM Sensor | Pin 2 (INT0) | IN | Hall/optical interrupt, `attachInterrupt(digitalPinToInterrupt(2), ...)` |
+| Enable / nSLEEP | Pin 6 (TBD) | OUT | Pull high to enable driver |
+| Fault / nFAULT | Pin 4 (TBD) | IN | Active-low fault signal from driver |
 
 > Update this table and all `#define` constants in `src/motor_config.h` when the schematic is confirmed.
+> All pin numbers marked TBD must be verified against the physical wiring before Phase 5.
 
 ---
 
@@ -167,7 +169,7 @@ The architecture above assumes a **PWM + 2-pin direction** interface. Adjust if 
 
 ```
 src/
-  main.cpp                – setup(), loop(), OTA, WebSerial
+  main.cpp                – setup(), loop(), OTA, USB Serial
   motor_driver.h          – IMotorDriver interface          [Phase 1 – NOW]
   sim_motor_driver.h      – SimMotorDriver implementation   [Phase 1 – NOW]
   rpm_source.h            – IRpmSource interface            [Phase 1 – NOW]
@@ -175,9 +177,9 @@ src/
   ramp_controller.h/cpp   – Linear ramp, 20 Hz tick         [Phase 2]
   direction_control.h/cpp – Safe direction change sequence  [Phase 2]
   error_handler.h/cpp     – All error codes E01–E09         [Phase 2]
-  params.h/cpp            – NVS persistence                 [Phase 2]
+  params.h/cpp            – EEPROM persistence              [Phase 2]
   web_api.h/cpp           – REST + WebSocket endpoints      [Phase 3]
-  session.h/cpp           – LittleFS event log              [Phase 4]
+  session.h/cpp           – In-memory ring buffer log       [Phase 4]
   motor_config.h          – Pin defines, PWM constants      [Phase 5]
   real_motor_driver.h/cpp – RealMotorDriver implementation  [Phase 5]
   real_rpm_source.h/cpp   – ISR-based RPM measurement       [Phase 5]
@@ -188,11 +190,11 @@ All hardware-specific files are isolated in the `real_*` modules – nothing els
 
 ---
 
-## 7. Communication Protocol (ESP32 ↔ Browser)
+## 7. Communication Protocol (R4 WiFi ↔ Browser)
 
-All real-time data flows over a single WebSocket endpoint (`/ws`).
+All real-time data flows over a single WebSocket endpoint (`/ws`). The browser connects from the local dev server; all HTTP responses include `Access-Control-Allow-Origin: *`.
 
-### ESP32 → Browser (JSON frames, ~100 ms interval)
+### R4 WiFi → Browser (JSON frames, ~100 ms interval)
 
 ```json
 {
@@ -202,25 +204,27 @@ All real-time data flows over a single WebSocket endpoint (`/ws`).
   "state":      "RAMPING_UP",
   "fault":      false,
   "pins": {
-    "pwm":     18,
-    "dir_a":   19,
-    "dir_b":   21,
-    "enable":  22,
-    "rpm_in":  34,
-    "fault_in":35
+    "pwm":     5,
+    "dir_a":   7,
+    "dir_b":   8,
+    "enable":  6,
+    "rpm_in":  2,
+    "fault_in":4
   },
   "pin_states": {
-    "18": 1,
-    "19": 1,
-    "21": 0,
-    "22": 1,
-    "34": 0,
-    "35": 1
+    "5": 1,
+    "7": 1,
+    "8": 0,
+    "6": 1,
+    "2": 0,
+    "4": 1
   }
 }
 ```
 
-### Browser → ESP32 (JSON commands)
+> ⚠️ Pin numbers in the JSON reflect the TBD values from §3 and must be updated when the schematic is finalized.
+
+### Browser → R4 WiFi (JSON commands)
 
 ```json
 { "cmd": "SET_SPEED",    "rpm": 80 }

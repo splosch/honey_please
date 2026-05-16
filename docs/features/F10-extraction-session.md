@@ -34,8 +34,8 @@ Track a complete honey extraction run from start to finish. Every significant ev
 ```
 
 A session is identified by:
-- `session_id`: incrementing integer, stored in NVS
-- `started_at`: ISO 8601 timestamp (system clock or millis offset)
+- `session_id`: incrementing integer, stored in EEPROM (persists across power cycles)
+- `started_at`: millis-based offset from boot (no RTC on R4 WiFi by default)
 - `firmware_version`: from `FIRMWARE_VERSION` constant
 
 ---
@@ -89,25 +89,36 @@ All timestamps are milliseconds since session start (`millis()` offset).
 
 ## 5. Storage
 
-Sessions are stored in **LittleFS** on the ESP32:
+On R4 WiFi, **no filesystem is available** (no LittleFS, no SD card). Sessions are stored in a **SRAM ring buffer** capped at 50 entries.
 
+```cpp
+// session.h
+struct SessionEntry {
+    uint32_t ts;             // ms since session start
+    char     type[20];       // event type string
+    char     payload[80];    // JSON fragment (key:value pairs)
+};
+
+const uint8_t SESSION_RING_SIZE = 50;
+SessionEntry sessionRing[SESSION_RING_SIZE];
+uint8_t      sessionHead = 0;  // next write index (wraps)
+uint8_t      sessionCount = 0; // total entries (capped at SESSION_RING_SIZE)
 ```
-/sessions/
-  s001.jsonl
-  s002.jsonl
-  ...
-```
 
-Format: **JSONL** (newline-delimited JSON – one event object per line). The file is opened for append and immediately closed after every write, ensuring each event survives a power loss.
+**Constraints:**
+- Max entries per session: 50 (oldest overwritten when limit reached)
+- Each entry: ~100 bytes → 50 entries ≈ 5 KB SRAM
+- Session data is **volatile** – lost on power cycle or reset
+- Typical 6-step program ≈ 30–40 entries – fits comfortably within 50-entry limit
 
-**Storage limits:**
-- Max sessions stored: 50 (oldest deleted when limit reached)
-- No fixed per-session entry cap; limited by available LittleFS partition space
-- Typical session entry ~80–120 bytes; a full 6-step program ≈ 50–80 entries ≈ 5–10 KB
-- Partition: `min_spiffs.csv` – ~1.5 MB for LittleFS; sufficient for many sessions
+> **TODO (open item):** Consider optional EEPROM snapshot of SESSION_SUMMARY on stop, so the last session result survives a reboot (requires ~100 bytes of EEPROM).
 
-> ⚠️ LittleFS partition size limits maximum total stored data.  
-> At ~8 KB/session average, 50 sessions ≈ 400 KB – well within the 1.5 MB budget.
+Format: **JSONL in-memory** – entries written to the ring buffer immediately. No disk flush needed (no filesystem). Each entry is a small struct with a type string and a payload JSON fragment.
+
+**Entry lifecycle:**
+- Written on each event (motor state changes, RPM samples, errors, step transitions)
+- Served over HTTP / WebSocket on demand
+- Cleared when a new session starts
 
 ---
 
@@ -145,18 +156,20 @@ After stop, the label changes to `Session #3 – Stopped` and the Export button 
 
 Planned but not yet implemented:
 - Live scrolling event log during recording
-- Session history browser page (list of all stored sessions)
-- DELETE action per session
+- Session history browser page (currently only the active session is in RAM)
 
-### Session List API
+### Session API
 
-`GET /sessions` (no `id` param) returns a JSON array:
+`GET /session` returns the current session's ring buffer as a JSONL response (one entry per line):
 
-```json
-[
-  {"id": 3, "size": 4821, "path": "/sessions/s003.jsonl"},
-  {"id": 2, "size": 6102, "path": "/sessions/s002.jsonl"}
-]
+```
+HTTP/1.1 200 OK
+Content-Type: application/x-ndjson
+Access-Control-Allow-Origin: *
+
+{"ts":0,"type":"SESSION_START","id":3,"fw":"1.5.0",...}
+{"ts":2041,"type":"PROGRAM_START",...}
+...
 ```
 
 ---
@@ -165,13 +178,13 @@ Planned but not yet implemented:
 
 ### JSONL Download
 
-The raw session file is downloaded as-is via:
+The current in-memory session can be downloaded via:
 ```
-GET /sessions?id=3
+GET /session
 ```
-Response: `Content-Disposition: attachment; filename="s003.jsonl"` with the full JSONL body.
+Response: `Content-Type: application/x-ndjson` with the full ring buffer as JSONL text. The browser can save this as a `.jsonl` file for offline analysis.
 
-> Plain text / human-readable export is not yet implemented.
+> Only the **current session** is available (in-memory). Previous sessions are not stored after a new session starts or the board is reset.
 
 ---
 
@@ -180,12 +193,10 @@ Response: `Content-Disposition: attachment; filename="s003.jsonl"` with the full
 - [x] Session starts/stops on operator command or program completion
 - [x] RPM samples written every 5 seconds during active session
 - [x] All errors logged with code, message, and timestamp
-- [x] Session file survives power loss mid-session (LittleFS flush after each append)
 - [x] Session summary (`SESSION_SUMMARY`) generated on every STOP
-- [x] Session list accessible via `GET /sessions` (JSON API)
-- [x] JSONL export works via `GET /sessions?id=N`
-- [x] Max 50 sessions stored; oldest auto-deleted when exceeded
-- [ ] Plain text / human-readable export – not yet implemented
+- [x] Session accessible via `GET /session` (JSONL API, CORS header included)
+- [ ] JSONL export downloadable from browser – not yet implemented for R4
 - [ ] Live scrolling event log in UI during recording – not yet implemented
-- [ ] Session history browser page (list + delete) – not yet implemented
+- [ ] Optional EEPROM snapshot of last SESSION_SUMMARY on stop – not yet implemented
+- [ ] Plain text / human-readable export – not yet implemented
 - [ ] Live scroll pauses on manual scroll-up – not yet implemented

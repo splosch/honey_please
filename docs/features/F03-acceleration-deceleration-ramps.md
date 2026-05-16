@@ -14,7 +14,7 @@ Protect the mechanical system and honey by never changing motor speed instantane
 
 ## 2. Ramp Parameters
 
-Stored persistently via `Preferences` (ESP32 NVS). Adjustable via Web UI and REST API.
+Stored persistently via `EEPROM` (8 KB emulated flash on R4 WiFi). Adjustable via Web UI and REST API.
 
 | Parameter | Default | Min | Max | Unit | Description |
 |---|---|---|---|---|---|

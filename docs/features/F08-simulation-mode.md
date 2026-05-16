@@ -8,12 +8,6 @@
 
 ---
 
-## 1. Goal
-
-Allow the **full application** – ramp controller, state machine, Web UI, session logging, multi-step program – to be developed, deployed (OTA), and UI-tested without any motor hardware connected. Simulation runs entirely on the ESP32 using `SimMotorDriver` and `SimRpmSource`. No GPIOs are driven. The complete feature set is exercisable in this mode.
-
----
-
 ## 2. How It Works (HAL-based, not a mode toggle)
 
 Simulation is not a runtime switch applied over the real driver – it is the **default HAL implementation** during Phases 1–4. The architecture from F01 makes this transparent:
@@ -88,7 +82,7 @@ When simulation is active, every component box has a prominent **[SIM]** badge:
 
 ```
 ┌─────────────────────────┐
-│ ⬡ ESP32      [SIM] 🟡   │
+│ ⬡ R4 WiFi    [SIM] 🟡   │
 │  ...                    │
 └─────────────────────────┘
 ```
@@ -118,12 +112,12 @@ Top bar `[SIM]` button toggles the runtime simulation flag. Applicable only in a
 
 ```ini
 ; platformio.ini - Phases 1-4 (default, no hardware)
-[env:esp32dev]
+[env:r4wifi]
 build_flags =
     ; no REAL_HARDWARE flag -> SimMotorDriver is active
 
 ; platformio.ini - Phase 5 (real hardware)
-[env:esp32dev_hw]
+[env:r4wifi_hw]
 build_flags = -DREAL_HARDWARE
 ```
 

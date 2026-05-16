@@ -14,7 +14,7 @@ Allow the operator to run the Honigschleuder in both directions (CW / CCW). Dire
 
 ## 2. Directions
 
-| Label | ESP32 DIR_A | ESP32 DIR_B | Basket rotation |
+| Label | DIR_A pin | DIR_B pin | Basket rotation |
 |---|---|---|---|
 | CW (Clockwise / "Right") | HIGH | LOW | Right |
 | CCW (Counter-clockwise / "Left") | LOW | HIGH | Left |

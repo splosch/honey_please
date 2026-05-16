@@ -94,7 +94,7 @@ Error state is included in every WebSocket broadcast frame:
 
 ### Component-Level Errors
 
-Each component box in the schematic (ESP32, Motor Controller, Motor) shows an error badge overlay:
+Each component box in the schematic (R4 WiFi, Motor Controller, Motor) shows an error badge overlay:
 
 ```
   ┌─────────────────────────────┐

@@ -36,7 +36,7 @@ Define all configurable operational parameters, their defaults, limits, and pers
 
 ## 3. Persistence
 
-Parameters are stored in ESP32 NVS (Non-Volatile Storage) via the Arduino `Preferences` library.
+Parameters are stored in **EEPROM** (8 KB emulated flash on R4 WiFi) via the Arduino `EEPROM` library as a packed struct at byte offset 0.
 
 ```cpp
 // params.h
@@ -51,12 +51,12 @@ struct MotorParams {
     uint16_t pwm_freq_hz    = 1000;
 };
 
-void loadParams(MotorParams& p);
-void saveParams(const MotorParams& p);
+void loadParams(MotorParams& p);   // EEPROM.get(0, p)
+void saveParams(const MotorParams& p); // EEPROM.put(0, p)
 void resetToDefaults(MotorParams& p);
 ```
 
-Namespace: `"motor_params"` in NVS.
+EEPROM struct is written at offset 0. A magic byte at offset `sizeof(MotorParams)` detects first-boot (use defaults if magic missing).
 
 ---
 
@@ -98,7 +98,7 @@ A collapsible panel (sidebar or bottom drawer) with:
 
 - Changes are **staged** (not applied until [APPLY]).
 - [APPLY] sends a `SET_PARAMS` command.
-- If the ESP32 rejects any value, the UI restores the previous value and highlights the rejected field.
+- If the board rejects any value, the UI restores the previous value and highlights the rejected field.
 - [RESET] restores factory defaults and sends `SET_PARAMS` with defaults.
 
 ---
@@ -116,7 +116,7 @@ When the user drags a slider, the UI previews the effect:
 
 ## 7. Acceptance Criteria
 
-- [ ] Default values load on first boot (no NVS data)
+- [ ] Default values load on first boot (no EEPROM magic byte found)
 - [ ] Modified params persist across power cycle (verified by reboot + param check)
 - [ ] `max_rpm > 300` rejected by firmware with `E07_PARAM_INVALID`
 - [ ] UI slider for max_rpm physically stops at 300 and defaults to 100

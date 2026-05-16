@@ -12,8 +12,6 @@
 | Document | Topic |
 |---|---|
 | **[R4 WiFi Onboarding](./r4wifi_onboarding.md)** | First flash, OTA setup, selfcheck, Web UI dev server |
-| ~~[Initial ESP32 Setup](./initial_esp32_setup.md)~~ | ⚠️ Legacy – ESP32 board retired |
-| ~~[Dev Environment & Milestone History (ESP32)](./esp_basic_dev_env.md)~~ | ⚠️ Legacy – historical record only |
 | **[F01 – Motor Control Architecture](./features/F01-motor-control-architecture.md)** | `IMotorDriver` HAL, `SimMotorDriver`, `RealMotorDriver`, state machine, WebSocket protocol |
 | **[F02 – RPM Monitoring](./features/F02-rpm-monitoring.md)** | `IRpmSource` HAL, `SimRpmSource`, `RealRpmSource`, error detection |
 | **[F03 – Acceleration/Deceleration Ramps](./features/F03-acceleration-deceleration-ramps.md)** | Ramp algorithm, params, UI visualization |
@@ -142,18 +140,18 @@ Motor (Honigschleuder)
 
 **Goal:** Full extraction workflow end-to-end in simulation. Session log exported and verified.
 
-> **Note:** Session storage was LittleFS JSONL on ESP32. On R4 it becomes an in-memory ring buffer (M6.7). The `/sessions` HTTP endpoint is retained.
+> **Note:** Session storage was LittleFS JSONL on ESP32. On R4 it becomes an in-memory ring buffer (M6.9). The endpoint is `GET /session` (single current session, no history list).
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
 | ✅ M4.1 | Multi-step program (6 default steps) stored in params | F09 |
 | ✅ M4.2 | Program runner: step sequencer with direction transitions | F09 |
 | ✅ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort | F09 |
-| ✅ M4.4 | Session storage (JSONL per session) + append-write on each event | F10 |
+| ✅ M4.4 | Session storage (ring buffer, current session only) + event on each state change | F10 |
 | ✅ M4.5 | Session start/stop on operator command | F10 |
 | ✅ M4.6 | RPM samples every 5 s + program/step/error/direction events | F10 |
-| ✅ M4.7 | Session summary on stop; `GET /sessions` JSON list | F10 |
-| ✅ M4.8 | JSONL export via `GET /sessions?id=N` | F10 |
+| ✅ M4.7 | Session summary on stop; `GET /session` JSONL response | F10 |
+| ✅ M4.8 | JSONL export via `GET /session` (current session only) | F10 |
 | ✅ M4.9 | Full 6-step program runs in SIM, session export verified | F08, F09, F10 |
 
 ---
@@ -179,7 +177,7 @@ Motor (Honigschleuder)
 | 🔲 M6.9 | In-memory session ring buffer ≤50 entries (replaces LittleFS JSONL) | F11, F10 | |
 | 🔲 M6.10 | `log.h` rewritten: direct `Serial.println()`, no FreeRTOS queue, no WebSerial | F11 | |
 | 🔲 M6.11 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | F11 | |
-| 🔲 M6.12 | `selfcheck.js` updated: checks `/status` + `/ws` (no `/webserial`) | F11 | |
+| ✅ M6.12 | `selfcheck.js` updated: checks `/status` + `/ws` (no `/webserial`) | F11 | Done |
 | 🔲 M6.13 | WiFi + OTA verified on real R4 hardware (USB-flash first, then OTA) | F11 | |
 | 🔲 M6.14 | Full simulation run verified on R4 (WebSocket + USB Serial + Web UI from local dev server) | F11, F08 | |
 
@@ -219,6 +217,9 @@ Motor (Honigschleuder)
 | O-4.3 | Session history browser (list, view, delete) | 4 | F10 | Low |
 | O-4.4 | Plain-text session export | 4 | F10 | Low |
 | O-4.5 | `RAMP_START` / `RAMP_COMPLETE` session events in RampController | 4 | F10 | Low |
+| O-6.1 | EEPROM snapshot of last SESSION_SUMMARY on stop (survives reboot) | 6 | F10 | Low |
+| O-6.2 | Board IP configurable via URL param in Web UI (`?ip=<board-ip>`) | 6 | F07 | Medium |
+| O-6.3 | Finalize and verify pin assignments (schematic) before Phase 5 | 6 | F01, F02 | High |
 
 ---
 

@@ -19,7 +19,7 @@ The Web UI is a **live system schematic**, not a control panel. The operator sho
 │  honey_please  ●CONNECTED    [SIM]  [⚙ PARAMS]  [SESSION ▶]       │  ← Top bar
 ├──────────────────────┬──────────────────────┬───────────────────────┤
 │                      │                      │                       │
-│    [ ESP32 ]         │  [ MOTOR CTRL ]      │   [ HONIGSCHLEUDER ]  │  ← Component row
+│    [ R4 WiFi ]       │  [ MOTOR CTRL ]      │   [ HONIGSCHLEUDER ]  │  ← Component row
 │                      │        │             │                       │
 │  Pin Diagram         │  PWM ══╗             │    ↺  LEFT / CCW     │
 │  GPIO 18 ▪ PWM       │  DIR ══╝             │                       │
@@ -60,31 +60,32 @@ Each component is rendered as an SVG or HTML panel with a colored status ring:
 | Red flashing | CRITICAL / FAULT_STOP |
 | Gray | Offline / unknown |
 
-### 3.1 ESP32 Component Box
+### 3.1 R4 WiFi Component Box
 
-Shows the pin diagram of all motor-relevant GPIOs:
+Shows the pin diagram of all motor-relevant GPIOs (pin numbers are TBD placeholders until schematic confirmed):
 
 ```
 ┌─────────────────────────┐
-│ ⬡ ESP32                 │ ● GREEN
+│ ⬡ R4 WiFi / RA4M1    │ ● GREEN
 ├─────────────────────────┤
-│ GPIO 18  PWM     ██░░░░ │  ← duty cycle bar (live)
-│ GPIO 19  DIR_A   [HIGH] │  ← live HIGH/LOW badge
-│ GPIO 21  DIR_B   [LOW]  │
-│ GPIO 22  ENABLE  [HIGH] │
-│ GPIO 34  RPM IN  ~~~~   │  ← waveform indicator (pulse activity)
-│ GPIO 35  FAULT   [HIGH] │  ← HIGH = OK, LOW = FAULT
+│ Pin 5   PWM     ██░░░░ │  ← duty cycle bar (live)
+│ Pin 7   DIR_A   [HIGH] │  ← live HIGH/LOW badge
+│ Pin 8   DIR_B   [LOW]  │
+│ Pin 6   ENABLE  [HIGH] │
+│ Pin 2   RPM IN  ~~~~   │  ← waveform indicator (pulse activity)
+│ Pin 4   FAULT   [HIGH] │  ← HIGH = OK, LOW = FAULT
 ├─────────────────────────┤
-│ IP: 192.168.178.64      │
+│ IP: <board-ip>         │
 │ WiFi: ████ -65 dBm      │
-│ Uptime: 00:42:17        │
-│ Free RAM: 178 kB        │
+│ Uptime: 00:42:17       │
+│ Free SRAM: ~20 kB      │
 └─────────────────────────┘
 ```
 
-- Each GPIO row lights up with the color corresponding to its active state.
+- Each pin row lights up with the color corresponding to its active state.
 - PWM pin shows an animated duty cycle bar that reflects actual PWM value.
 - RPM input shows a small animated waveform when pulses are detected.
+- Pin numbers are TBD; update the UI constants in `app.js` when schematic is finalized.
 
 ### 3.2 Motor Controller Component Box
 
@@ -134,8 +135,8 @@ Shows the pin diagram of all motor-relevant GPIOs:
 
 SVG lines between component boxes represent physical wiring:
 
-- ESP32 PWM pin → Motor Controller PWM input: animated dashed line (dash flows in data direction)
-- ESP32 DIR pins → Motor Controller DIR: static lines
+- R4 WiFi PWM pin → Motor Controller PWM input: animated dashed line (dash flows in data direction)
+- R4 WiFi DIR pins → Motor Controller DIR: static lines
 - Motor Controller output → Motor: thick line, color reflects active power (gray = idle, green = powered, red = fault)
 
 ---
@@ -170,13 +171,14 @@ Fixed at bottom, always visible:
 
 | Layer | Technology | Rationale |
 |---|---|---|
-| Served from ESP32 | LittleFS + AsyncWebServer | Single device, no external hosting |
+| Served from | Developer's local machine (VS Code Live Server / `npx serve` / Python http.server) | Board has no filesystem; client-hosted approach avoids 256 KB flash constraint |
 | UI framework | Vanilla JS + SVG | Minimal payload, no npm bundle step |
 | WebSocket client | Native `WebSocket` API | No dependencies |
 | Styling | CSS custom properties | Theming, component state via CSS classes |
 | Charts | Canvas 2D API (custom) | Lightweight, no library overhead |
+| CORS | All board HTTP responses include `Access-Control-Allow-Origin: *` | Required for cross-origin browser→board requests from localhost |
 
-> Alternative: **HTMX + minimal CSS** for even simpler state management. Evaluate during prototyping.
+> **Note:** Web UI files live in `data/` in the repo. They are **never** uploaded to the board.
 
 ---
 
@@ -187,7 +189,7 @@ Fixed at bottom, always visible:
 - [x] Basket SVG animation speed proportional to current RPM
 - [x] RPM gauge arc updates at ≥ 10 Hz *(replaced by large numerical RPM display + sparkline)*
 - [x] CRITICAL error triggers red full-screen overlay within 500 ms
-- [x] UI works offline (served from ESP32 LittleFS, no CDN)
+- [x] Web UI served from local dev server (no files on board)
 - [x] WebSocket reconnect is automatic and transparent (< 3 s)
 - [x] E-STOP button always interactive (not disabled by any state)
 - [ ] *(optional)* PAUSE / RESUME buttons in control bar (M3.8)
@@ -198,9 +200,10 @@ Fixed at bottom, always visible:
 
 ## 9. Implementation Notes (v1.3.0)
 
-- UI split into three LittleFS files: `index.html` (structure), `style.css` (theme + layout), `app.js` (WebSocket + render loop).
-- `app.js` connects to `ws://<host>/ws`, auto-reconnects every 2 s on close.
-- Basket SVG uses `requestAnimationFrame`; angle advances by `rpm × dt / 60 000 × 360°` per frame.
+- UI split into three files in `data/`: `index.html` (structure), `style.css` (theme + layout), `app.js` (WebSocket + render loop).
+- `app.js` connects to `ws://<board-ip>/ws`, auto-reconnects every 2 s on close.
+- Board IP is configured as a constant in `app.js` (or read from a URL param like `?ip=192.168.x.x`).
+- Basket SVG uses `requestAnimationFrame`; angle advances by `rpm × dt / 60 000 × 360°` per frame.
 - Sparkline uses Canvas 2D, 30 s rolling buffer at 500 ms resolution (60 samples).
 - Fault injection panel is hidden when `state.sim === false`; buttons toggle `inject_fault` WS commands.
-- `set_param` WS command is implemented in `web_api.cpp` (key/value dispatch + NVS save). UI panel pending.
+- `set_param` WS command is implemented in `web_api.cpp` (key/value dispatch + EEPROM save). UI panel pending.

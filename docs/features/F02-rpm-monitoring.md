@@ -69,7 +69,7 @@ public:
 | B | Optical (IR slot) | Digital pulse | 1–N per rev | Clean signal, no magnet needed |
 | C | Encoder (quadrature) | 2x digital | N per rev | Direction info, higher resolution |
 
-> All options use interrupt-driven counting on GPIO 34 (input-only, no pull-up needed with external circuit).  
+> All options use interrupt-driven counting on Pin 2 (INT0, 5 V tolerant) using `attachInterrupt(digitalPinToInterrupt(2), onRpmPulse, RISING)`.  
 > Update `PULSES_PER_REVOLUTION` constant once sensor is confirmed.
 
 ---
@@ -83,7 +83,7 @@ public:
 volatile uint32_t pulseCount = 0;
 volatile uint32_t lastPulseTime_us = 0;
 
-void IRAM_ATTR onRpmPulse() {
+void onRpmPulse() {  // standard ISR on R4 WiFi (no IRAM_ATTR needed)
     pulseCount++;
     lastPulseTime_us = micros();
 }
@@ -104,7 +104,7 @@ If no pulse arrives within `ZERO_RPM_TIMEOUT_MS` (default: 2000 ms) while the mo
 ## 5. Firmware Constants (in `motor_config.h` – Phase 5)
 
 ```cpp
-#define RPM_SENSOR_PIN          34
+#define RPM_SENSOR_PIN          2    // Pin 2 = INT0, 5 V tolerant
 #define PULSES_PER_REVOLUTION    1   // Update once sensor confirmed
 #define RPM_WINDOW_MS          500
 #define ZERO_RPM_TIMEOUT_MS   2000
@@ -116,7 +116,7 @@ If no pulse arrives within `ZERO_RPM_TIMEOUT_MS` (default: 2000 ms) while the mo
 
 ```
 [Phase 1–4 – Sim]               [Phase 5 – Real]
-RampController.getCurrent()      GPIO 34 interrupt ISR
+RampController.getCurrent()      Pin 2 (INT0) interrupt ISR
           │                           │
           └──────── IRpmSource ────────┘
                        │

@@ -45,7 +45,7 @@ All step parameters are configurable per-step via the UI:
 }
 ```
 
-Steps are stored in NVS under namespace `"prog_steps"` (keys: `count`, `s0_cw`, `s0_pct`, `s0_dur`, …). The UI currently shows steps as read-only bubbles. Planned but not yet implemented:
+Steps are stored in **EEPROM** as a packed array after the `MotorParams` struct (see F06 for layout). The UI currently shows steps as read-only bubbles. Planned but not yet implemented:
 - Editing RPM percentage or duration per step in the UI
 - Adding/removing steps in the UI
 - Reordering steps via drag-and-drop
