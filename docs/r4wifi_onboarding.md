@@ -38,7 +38,7 @@ This guide walks from an unprogrammed R4 WiFi board to a fully functional OTA-de
 | Arduino Uno R4 WiFi | USB-C cable (data, not charge-only) |
 | VS Code | [Download](https://code.visualstudio.com/) |
 | PlatformIO extension | Install from VS Code Marketplace |
-| Node.js ≥ 18 | For `tests/selfcheck.js` |
+| Node.js ≥ 18 | For `npm test` (selfcheck) and `npm start` (Web UI dev server) |
 | WiFi network | 2.4 GHz. Note: R4 WiFi supports both 2.4 and 5 GHz (ESP32-S3 co-processor) |
 
 > **No additional USB driver needed.** The R4 WiFi uses native USB CDC. Windows 10/11, macOS, and Linux all recognise it without driver installation.
@@ -56,13 +56,23 @@ Create `src/secrets.h` (this file is `.gitignore`d — never commit it):
 
 ---
 
-## Step 2 – Install Test Dependencies
+## Step 2 – Install Dependencies
+
+From the **project root** (not `tests/`):
 
 ```bash
-cd tests && npm install
+npm install
 ```
 
-This installs the `ws` package used by `selfcheck.js`.
+This installs the `ws` package used by `selfcheck.js` and the built-in `serve.js` dev server.
+
+Available npm scripts:
+
+| Command | Effect |
+|---|---|
+| `npm test` | Run selfcheck against board (`192.168.178.70`) |
+| `npm start` | Start Web UI dev server at `http://localhost:5500` |
+| `npm run selfcheck` | Same as `npm test` |
 
 ---
 

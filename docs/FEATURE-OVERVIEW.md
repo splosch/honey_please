@@ -11,7 +11,7 @@
 >
 > **All Phase 6 milestones verified on Arduino Uno R4 WiFi.**  
 > Board IP: `192.168.178.70` | Selfcheck: PASSED | USB Serial: OK | WebSocket: OK  
-> All earlier milestones (Phase 0–4) carry forward — re-verification on R4 continues below.
+> Phases 0–2 fully verified on R4 (2026-05-17). Phase 3–4 board-side verified; browser UI + M6.14 sim run pending.
 >
 > **Legend:**  
 > ✅ Verified on R4 WiFi | ⏳ TO BE VERIFIED (was done on ESP32) | 🔲 Not yet started | ❌ Dropped / not carried to R4 | ⚠️ Optional / partial
@@ -84,50 +84,50 @@ Motor (Honigschleuder)
 
 ## Implementation Milestones
 
-### ⏳ Phase 0 – Foundation (TO BE VERIFIED – completed on ESP32, not yet verified on R4 WiFi)
+### ✅ Phase 0 – Foundation (VERIFIED on R4 WiFi, 2026-05-17 — except M0.3)
 
-- ⏳ M0.1: VS Code + PlatformIO setup *(tools still valid; verify R4 board package installed)*
-- ⏳ M0.2: USB flash, Serial Monitor working *(must be re-verified with R4 board – native CDC, no driver)*
-- ⏳ M0.3: OTA deployment via WiFi *(must be re-verified on R4 – covered by M6.13)*
+- ✅ M0.1: VS Code + PlatformIO setup *(`[env:r4wifi]` active, renesas-ra platform, uno_r4_wifi board confirmed)*
+- ✅ M0.2: USB flash, Serial Monitor working *(native USB CDC confirmed – selfcheck PASSED, [BOOT] banner over Serial)*
+- ⚠️ M0.3: OTA deployment via WiFi *(ArduinoOTA removed – not available via PlatformIO renesas-ra; USB flash via COM port only)*
 - ❌ M0.4: WebSerial terminal in browser *(ESP32-specific – NOT carried to R4; replaced by USB Serial CDC)*
 
 ---
 
-### ⏳ Phase 1 – HAL + Simulation Drivers (TO BE VERIFIED – logic complete on ESP32, must compile and run on R4)
+### ✅ Phase 1 – HAL + Simulation Drivers (VERIFIED on R4 WiFi, 2026-05-17)
 
 **Goal:** Firmware compiles and runs end-to-end with `SimMotorDriver` + `SimRpmSource`. No hardware required.
 
-> The HAL interfaces (`motor_driver.h`, `rpm_source.h`, `sim_motor_driver.h`, `sim_rpm_source.h`) and `ramp_controller.h/.cpp`, `error_handler.h/.cpp` are **platform-independent** and carry over to R4 unchanged. `main.cpp`, `log.h`, `web_api.*`, `params.*`, `session.*`, `program.*` all need R4 rewrites (Phase 6).
+> All HAL interfaces compile and run on R4. Phase 6 rewrites complete. Selfcheck PASSED confirms firmware is live with sim drivers active.
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
-| ⏳ M1.1 | `IMotorDriver` interface defined | F01 §2 |
-| ⏳ M1.2 | `SimMotorDriver` implemented + tested | F01, F08 |
-| ⏳ M1.3 | `IRpmSource` interface defined | F02 §2 |
-| ⏳ M1.4 | `SimRpmSource` reads `RampController.getCurrent()` | F02, F08 |
-| ⏳ M1.5 | `main.cpp` wires drivers via interface pointers – **R4 rewrite required (M6.2)** | F01 |
-| ⏳ M1.6 | Fault injection: `injectFault`, `injectSensorLoss` | F08 |
-| ⏳ M1.7 | Default build uses sim (no `REAL_HARDWARE` flag) – **verify after M6.2** | F08 |
+| ✅ M1.1 | `IMotorDriver` interface defined | F01 §2 |
+| ✅ M1.2 | `SimMotorDriver` implemented + tested | F01, F08 |
+| ✅ M1.3 | `IRpmSource` interface defined | F02 §2 |
+| ✅ M1.4 | `SimRpmSource` reads `RampController.getCurrent()` | F02, F08 |
+| ✅ M1.5 | `main.cpp` wires drivers via interface pointers – **R4 rewrite done (M6.2)** | F01 |
+| ✅ M1.6 | Fault injection: `injectFault`, `injectSensorLoss` | F08 |
+| ✅ M1.7 | Default build uses sim (no `REAL_HARDWARE` flag) | F08 |
 
 ---
 
-### ⏳ Phase 2 – Ramp Control, Direction & Safety Logic (TO BE VERIFIED – logic complete on ESP32, must compile and run on R4)
+### ✅ Phase 2 – Ramp Control, Direction & Safety Logic (VERIFIED on R4 WiFi, 2026-05-17)
 
 **Goal:** Full motor behaviour testable via serial commands, all sim drivers.
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
-| ⏳ M2.1 | `RampController` (linear ramp, 20 Hz tick, ETA) | F03 |
-| ⏳ M2.2 | Accel/decel configurable via serial command – **R4: via USB Serial (M6.3)** | F03, F06 |
-| ⏳ M2.3 | Safe direction change: decel → pause → GPIO flip → accel | F04 |
-| ⏳ M2.4 | `ErrorHandler` with all error codes E01–E09 | F05 |
-| ⏳ M2.5 | EMERGENCY_STOP: immediate `disable()` + `FAULT_STOP` state | F05 |
-| ⏳ M2.6 | Fault injection (E03, E06) triggers correct state | F05, F08 |
-| ⏳ M2.7 | Params persistence – **R4: rewritten to EEPROM (M6.8); NVS code removed** | F06 |
+| ✅ M2.1 | `RampController` (linear ramp, 20 Hz tick, ETA) | F03 |
+| ✅ M2.2 | Accel/decel configurable via serial command – **R4: USB Serial `set` commands (M6.3)** | F03, F06 |
+| ✅ M2.3 | Safe direction change: decel → pause → GPIO flip → accel | F04 |
+| ✅ M2.4 | `ErrorHandler` with all error codes E01–E09 | F05 |
+| ✅ M2.5 | EMERGENCY_STOP: immediate `disable()` + `FAULT_STOP` state | F05 |
+| ✅ M2.6 | Fault injection (E03, E06) triggers correct state | F05, F08 |
+| ✅ M2.7 | Params persistence – **R4: EEPROM rewrite done (M6.8); NVS removed** | F06 |
 
 ---
 
-### ⏳ Phase 3 – Web UI Schematic (TO BE VERIFIED – UI files carry over, board-side server must be rewritten for R4 per M6.4–M6.7)
+### ⚠️ Phase 3 – Web UI Schematic (Board-side VERIFIED on R4, 2026-05-17 — browser UI rendering pending)
 
 **Goal:** Browser shows live system schematic. Developed without hardware.
 
@@ -137,21 +137,21 @@ Motor (Honigschleuder)
 
 | ID | Milestone | Feature Docs | Notes |
 |---|---|---|---|
-| ⏳ M3.1 | Static files (`index.html`, `style.css`, `app.js`) served | F07 | R4: served from local dev server – verify CORS works |
-| ⏳ M3.2 | WebSocket `/ws` endpoint, 10 Hz JSON state frames | F01, F07 | **blocked by M6.4–M6.5** – protocol unchanged |
-| ⏳ M3.3 | Three component boxes rendered | F07 | **verify after M6.5** |
-| ⏳ M3.4 | GPIO / internal state live in board box | F07 | **verify after M6.5** |
-| ⏳ M3.5 | Ramp progress bar + ETA countdown | F03, F07 | **verify after M6.5** |
-| ⏳ M3.6 | Direction indicator + basket SVG animation | F04, F07 | **verify after M6.5** |
-| ⏳ M3.7 | Large RPM display + 30 s sparkline | F02, F07 | **verify after M6.5** |
+| ✅ M3.1 | Static files (`index.html`, `style.css`, `app.js`) served | F07 | R4: served from local dev server – CORS `Access-Control-Allow-Origin: *` confirmed |
+| ✅ M3.2 | WebSocket `/ws` endpoint, 10 Hz JSON state frames | F01, F07 | Selfcheck PASSED (2026-05-17) – frame received with all fields |
+| ⏳ M3.3 | Three component boxes rendered | F07 | **pending browser verification** |
+| ⏳ M3.4 | GPIO / internal state live in board box | F07 | **pending browser verification** |
+| ⏳ M3.5 | Ramp progress bar + ETA countdown | F03, F07 | **pending browser verification** |
+| ⏳ M3.6 | Direction indicator + basket SVG animation | F04, F07 | **pending browser verification** |
+| ⏳ M3.7 | Large RPM display + 30 s sparkline | F02, F07 | **pending browser verification** |
 | ⚠️ M3.8 | PAUSE button in control bar | F04, F07 | Optional, not yet added |
 | ⚠️ M3.9 | WARNING / ERROR-level banners | F05, F07 | Optional, CRITICAL overlay done |
 | ⚠️ M3.10 | Parameters panel (sliders) | F06, F07 | Optional, `set_param` WS command wired |
-| ⏳ M3.11 | SIM mode indicator banner | F08 | **verify after M6.5** |
+| ✅ M3.11 | SIM mode indicator banner | F08 | `"sim":true` confirmed in WS frame (selfcheck 2026-05-17) |
 
 ---
 
-### ⏳ Phase 4 – Multi-Step Program & Session Protocol (TO BE VERIFIED – logic complete on ESP32, storage backend must change for R4 per M6.8–M6.9)
+### ⚠️ Phase 4 – Multi-Step Program & Session Protocol (Logic VERIFIED on R4, 2026-05-17 — browser UI + full sim run pending)
 
 **Goal:** Full extraction workflow end-to-end in simulation. Session log exported and verified.
 
@@ -159,15 +159,15 @@ Motor (Honigschleuder)
 
 | ID | Milestone | Feature Docs |
 |---|---|---|
-| ⏳ M4.1 | Multi-step program (6 default steps) – **R4: stored in EEPROM after M6.8 (was NVS)** | F09 |
-| ⏳ M4.2 | Program runner: step sequencer with direction transitions | F09 |
-| ⏳ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort – **verify after M6.5** | F09 |
-| ⏳ M4.4 | Session storage – **R4: in-memory ring buffer ≤50 entries (M6.9); LittleFS removed** | F10 |
-| ⏳ M4.5 | Session start/stop on operator command – **verify after M6.5** | F10 |
-| ⏳ M4.6 | RPM samples every 5 s + program/step/error/direction events | F10 |
-| ⏳ M4.7 | Session summary on stop; `GET /sessions` JSON list – **verify after M6.7** | F10 |
-| ⏳ M4.8 | JSONL export via `GET /sessions?id=N` – **R4: ring buffer export, no file** | F10 |
-| ⏳ M4.9 | Full 6-step program runs in SIM, session export verified – **re-verify after M6.14** | F08, F09, F10 |
+| ✅ M4.1 | Multi-step program (6 default steps) – **R4: EEPROM-stored, `loadSteps()` called in `setup()`** | F09 |
+| ✅ M4.2 | Program runner: step sequencer with direction transitions | F09 |
+| ⏳ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort | F09 | **pending browser verification** |
+| ✅ M4.4 | Session storage – **R4: in-memory ring buffer ≤50 entries (M6.9); LittleFS removed** | F10 |
+| ⏳ M4.5 | Session start/stop on operator command | F10 | **pending browser verification** |
+| ✅ M4.6 | RPM samples every 5 s + program/step/error/direction events | F10 |
+| ✅ M4.7 | Session summary on stop; `GET /sessions` JSON list | F10 |
+| ✅ M4.8 | JSONL export via `GET /sessions?id=N` – R4: ring buffer export, no file | F10 |
+| ⏳ M4.9 | Full 6-step program runs in SIM, session export verified – **pending M6.14** | F08, F09, F10 |
 
 ---
 

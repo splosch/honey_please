@@ -69,6 +69,13 @@ RPM-Sensor    →  Pin 2 (INT0, 5 V tolerant)
    - SRAM: 32 KB — Session-Ringpuffer klein halten (≤ 50 Einträge).
    - Bevorzuge `const char*` über `String` wo möglich.
 
+7. **Dokumentations-Pflege nach jedem Milestone:**
+   - Nach Abschluss eines Feature-Milestones (Mx.y) **immer** prüfen und ggf. aktualisieren:
+     - `README.md` — Board-IP, Firmware-Version, Befehle, Projektstruktur, Quick-Start-Anleitung
+     - `docs/FEATURE-OVERVIEW.md` — Milestone-Status (⏳ → ✅/⚠️), Phase-Header, Notizen
+   - Faustregel: Wenn sich IP, Protokoll, Dateistruktur oder ein Workflow ändert, ist README.md veraltet.
+   - **README.md darf nie auf veraltete IPs, Protokolle oder entfernte Features verweisen.**
+
 ---
 
 ## OTA Deploy & Verify Workflow (Automatisch)

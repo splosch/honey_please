@@ -1,0 +1,15 @@
+{
+  "name": "honey-please",
+  "version": "1.5.0",
+  "description": "Honigschleuder motor control – Web UI dev server + board selfcheck",
+  "private": true,
+  "scripts": {
+    "start":     "node serve.js",
+    "serve":     "node serve.js",
+    "test":      "node tests/selfcheck.js 192.168.178.70",
+    "selfcheck": "node tests/selfcheck.js 192.168.178.70"
+  },
+  "devDependencies": {
+    "ws": "^8.20.0"
+  }
+}

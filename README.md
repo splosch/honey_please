@@ -1,11 +1,10 @@
 # honey_please – Honigschleuder Motor Control
 
-Motor control system for a honey extractor, with OTA firmware updates and a browser-accessible Web UI. Built with PlatformIO + Arduino framework.
+Motor control system for a honey extractor with a browser-accessible Web UI. Built with PlatformIO + Arduino framework.
 
-> **Hardware (active):** ESP32-D0WDQ6 @ `192.168.178.64` — fully working, Phase 1–4 complete.  
-> **Hardware (migration):** Switching to **Arduino Uno R4 WiFi** (Phase 6). The R4's 5 V GPIO eliminates the level-shifter needed between the 3.3 V ESP32 and the motor driver. See [docs/features/F11-platform-migration-r4-wifi.md](docs/features/F11-platform-migration-r4-wifi.md) for the full migration plan. The ESP32 remains the production board until Phase 6 is verified.
-
-> **Setting up a blank board for the first time?** → [docs/initial_esp32_setup.md](docs/initial_esp32_setup.md)
+> **Hardware:** Arduino Uno R4 WiFi (RA4M1 @ 48 MHz) · IP `192.168.178.70` · Firmware v1.5.0  
+> **Status:** Phase 0–2 fully verified on R4. Phase 3–4 board-side verified. M6.14 (full sim run) pending.  
+> **ESP32 board:** retired — replaced by R4 WiFi (see [F11](docs/features/F11-platform-migration-r4-wifi.md))
 
 ---
 
@@ -15,56 +14,92 @@ Motor control system for a honey extractor, with OTA firmware updates and a brow
 
 | Tool | Notes |
 |---|---|
-| [VS Code](https://code.visualstudio.com/) + [PlatformIO](https://platformio.org/install/ide?install=vscode) | For building and OTA uploads |
-| Node.js | For running the self-check |
+| [VS Code](https://code.visualstudio.com/) + [PlatformIO](https://platformio.org/install/ide?install=vscode) | Build and flash |
+| Node.js ≥ 18 | Selfcheck script + local dev server |
 
-### 2. Install test dependencies
+### 2. Install dependencies
 
 ```bash
-cd tests && npm install
+npm install
 ```
+
+Installs the WebSocket library used by the selfcheck and the built-in dev server.
 
 ### 3. Verify the board is alive
 
 ```bash
-node tests/selfcheck.js 192.168.178.64
+npm test
 ```
 
 Expected:
 ```
-[SELFCHECK PASSED] IP: 192.168.178.64
+[SELFCHECK PASSED] IP: 192.168.178.70
 ```
 
-### 4. Open the web terminal
+### 4. Start the Web UI
 
-```
-http://192.168.178.64/webserial
+```bash
+npm start
 ```
 
-You should see live `[HEARTBEAT]` messages streaming from the board. You can also type commands into the input field – they arrive in the `[CMD]` handler in `src/main.cpp`.
+Serves `data/` at `http://localhost:5500`. The UI connects to the board at `ws://192.168.178.70/ws` automatically. Use `?ip=<board-ip>` in the URL if your board has a different IP.
+
+### 5. USB Serial Monitor (debug + commands)
+
+```bash
+pio device monitor --port COM4 --baud 115200
+```
+
+Type `help` to see all available commands. Boot banner starts with `[BOOT]`.
 
 ---
 
 ## Deploying Code Changes
 
-All updates go over Wi-Fi (OTA) – no USB cable needed:
+Flash via USB (COM4) — OTA WiFi upload is not available in the renesas-ra PlatformIO toolchain:
 
 ```bash
-pio run --target upload
+pio run -e r4wifi --target upload --upload-port COM4
 ```
 
-`platformio.ini` already points at the board:
+After upload the board reboots (~5 s). Verify:
+
+```bash
+npm test
+```
+
+`platformio.ini` is already configured for the R4 WiFi board:
 
 ```ini
-upload_protocol = espota
-upload_port = 192.168.178.64
+[env:r4wifi]
+platform  = renesas-ra
+board     = uno_r4_wifi
+framework = arduino
 ```
 
-After a successful upload the board reboots (~10 s), then verify:
+---
 
-```bash
-node tests/selfcheck.js 192.168.178.64
-```
+## USB Serial Commands
+
+Connect with `pio device monitor --port COM4 --baud 115200` and type:
+
+| Command | Effect |
+|---|---|
+| `help` | Print all commands |
+| `status` | Full system state (RPM, ramp, params, errors) |
+| `target <rpm>` | Ramp to target RPM |
+| `stop` | Ramp to 0 RPM |
+| `estop` | Immediate cut (E09 EMERGENCY_STOP) |
+| `resetfault` | Clear all errors after fault |
+| `dir cw` / `dir ccw` | Direction change (safe ramp sequence) |
+| `fault on/off` | Inject/clear simulated driver fault (E06) |
+| `sensor on/off` | Inject/clear simulated RPM sensor loss (E03) |
+| `set max_rpm <n>` | RPM ceiling (RAM only until `params save`) |
+| `set accel <n>` | Acceleration rate RPM/s |
+| `set decel <n>` | Deceleration rate RPM/s |
+| `set dir_pause <ms>` | Pause between direction changes |
+| `params save` | Persist current params to EEPROM |
+| `params reset` | Reset params to defaults + save |
 
 ---
 
@@ -73,97 +108,100 @@ node tests/selfcheck.js 192.168.178.64
 ```
 honey_please/
 ├── src/
-│   ├── main.cpp          # Main firmware (active code)
-│   └── secrets.h         # Wi-Fi credentials – NOT committed (see .gitignore)
+│   ├── main.cpp              # Firmware entry point (R4 WiFi, v1.5.0)
+│   ├── web_api.cpp/.h        # HTTP + WebSocket server (synchronous WiFiServer)
+│   ├── motor_driver.h        # IMotorDriver HAL + SimMotorDriver
+│   ├── rpm_source.h          # IRpmSource HAL
+│   ├── sim_rpm_source.h      # SimRpmSource (reads RampController)
+│   ├── ramp_controller.cpp/.h# Linear ramp, 20 Hz tick, ETA
+│   ├── error_handler.cpp/.h  # Error codes E03–E09, CRITICAL/FAULT_STOP
+│   ├── params.cpp/.h         # MotorParams – EEPROM persistence
+│   ├── program.cpp/.h        # Multi-step extraction program (ProgramRunner)
+│   ├── session.cpp/.h        # In-memory session ring buffer (≤50 entries)
+│   ├── log.h                 # LOG() macro → Serial.println()
+│   └── secrets.h             # Wi-Fi credentials – NOT committed
+├── data/
+│   ├── index.html            # Web UI – served from local dev server, NOT the board
+│   ├── style.css
+│   └── app.js                # WebSocket client (connects ws://<board-ip>/ws)
 ├── tests/
-│   ├── selfcheck.js      # Connectivity self-check script
-│   └── package.json      # Node deps (ws)
+│   ├── selfcheck.js          # Connectivity check: GET /status + WS /ws
+│   └── package.json          # ws dependency (also installed via root npm install)
 ├── docs/
-│   ├── esp_basic_dev_env.md      # Milestone log & architecture decisions
-│   └── initial_esp32_setup.md   # First-time USB flash guide (blank board)
-├── platformio.ini        # Board config, OTA settings, library deps
-├── AGENTS.md             # Copilot agent instructions
-└── example_ota_helloworld.cpp   # Reference sketch (do not edit)
+│   ├── FEATURE-OVERVIEW.md   # Milestone tracker + architecture
+│   ├── r4wifi_onboarding.md  # First flash, selfcheck, Web UI dev server
+│   └── features/             # Per-feature design docs (F01–F11)
+├── verify_sketch/
+│   └── main.cpp              # Standalone board health check (env:r4wifi_verify)
+├── package.json              # npm scripts: start (Web UI), test (selfcheck)
+├── serve.js                  # Built-in static dev server for data/ (port 5500)
+├── platformio.ini            # Board config, build flags, library deps
+└── AGENTS.md                 # Copilot agent instructions
 ```
 
 ---
 
-## Web Terminal
+## Board Endpoints
 
-| | |
-|---|---|
-| URL | `http://192.168.178.64/webserial` |
-| Read | Live log output (same as Serial Monitor at 115200 baud) |
-| Write | Send commands – handled in `onWebSerialMessage()` in `main.cpp` |
+| Endpoint | Method | Description |
+|---|---|---|
+| `/ws` | WebSocket | 10 Hz JSON state frames; accepts command frames |
+| `/status` | GET | JSON system snapshot |
+| `/sessions` | GET | Session ring-buffer list |
+| `/sessions?id=N` | GET | JSONL export of session N |
 
-### Log tags
+All HTTP responses include `Access-Control-Allow-Origin: *` (CORS for local dev server).
 
-| Tag | Meaning |
-|---|---|
-| `[START]` | Boot sequence started |
-| `[READY]` | All subsystems initialized |
-| `[VERSION]` | Firmware version |
-| `[INFO]` | Informational message |
-| `[HEARTBEAT]` | Periodic keep-alive (every 5 s) |
-| `[OTA]` | OTA update event |
-| `[CMD]` | Command received from browser |
-| `[ERROR]` | Hardware init or connection failure |
+### WebSocket state frame (10 Hz)
+
+```json
+{
+  "rpm": 0, "target": 0, "eta": 0, "state": "IDLE",
+  "duty": 0, "dir": "CW", "enabled": false, "fault": false,
+  "sim": true, "critical": false, "errors": [],
+  "params": { "max_rpm": 100, "accel_rate": 10, "decel_rate": 15, "dir_pause_ms": 2000 },
+  "prog": { "state": "IDLE", "step": 0, "total": 6 },
+  "session": { "active": false, "id": 0 },
+  "uptime": 12345
+}
+```
 
 ---
 
 ## Troubleshooting
 
-Run the self-check first – it pinpoints exactly which layer is broken:
+Run the selfcheck first — it pinpoints exactly which layer is broken:
 
 ```bash
-node tests/selfcheck.js 192.168.178.64
+npm test
 ```
 
-| Result | Diagnosis |
+| Result | Diagnosis | Next step |
+|---|---|---|
+| HTTP FAIL + WS FAIL | Board offline or wrong IP | `ping 192.168.178.70`; check Serial Monitor for `[WIFI] IP:` |
+| HTTP OK + WS FAIL | HTTP server up, `/ws` route missing | Check `webApi.tick()` in `loop()` |
+| HTTP OK + WS TIMEOUT | WS connected but no frames | Check loop timing; ensure WiFi connected |
+| **SELFCHECK PASSED** | Everything nominal | — |
+
+**Board IP changed?** Open Serial Monitor (`pio device monitor --port COM4 --baud 115200`) and look for `[WIFI] IP: x.x.x.x`, or check the FRITZ!Box device list at `http://192.168.178.1`.
+
+---
+
+## Libraries
+
+| Library | Purpose |
 |---|---|
-| HTTP FAIL | Board offline or still booting – wait 10 s and retry |
-| HTTP OK + WS Write FAIL | WebSocket route broken – check `WebSerial.begin(&server)` is before `server.begin()` |
-| HTTP OK + WS Read TIMEOUT | Board not sending – check `ArduinoOTA.handle()` is in `loop()` |
-| OTA upload timeout | Windows firewall blocking port 3232 – see [initial setup guide](docs/initial_esp32_setup.md#step-5--windows-firewall-ota-port-3232) |
-| **SELFCHECK PASSED** | Everything nominal |
+| `bblanchon/ArduinoJson @ ^7.3.1` | JSON serialization for WS frames |
+| `WiFiS3` | WiFi (bundled with renesas-ra, no lib_deps entry needed) |
+| `EEPROM` | Params + program step persistence (bundled) |
 
 ---
 
 ## Architecture Notes
 
-- **`LOG()` macro** – writes to both USB Serial and WebSerial simultaneously. Use it for all application output instead of bare `Serial.println()`.
-- **`onWebSerialMessage()`** – entry point for all browser commands; extend here for motor control logic.
-- **OTA hostname** – `esp32-motor-control` (also resolvable as `esp32-motor-control.local` via mDNS).
-- **IP change** – if the board gets a new IP, update `upload_port` in `platformio.ini`.
-
----
-
-## Libraries
-
-| Library | Version | Purpose |
-|---|---|---|
-| `ayushsharma82/WebSerial` | ^2.1.2 | Browser-based serial terminal |
-| `me-no-dev/ESPAsyncWebServer` | ^3.6.0 | Async HTTP + WebSocket server |
-| `me-no-dev/AsyncTCP` | ^1.1.1 | Async TCP base |
-| `ArduinoOTA` | built-in | OTA firmware update |
-| `ESPmDNS` | built-in | mDNS hostname resolution |
----
-
-## Architecture Notes
-
-- **All output** goes through the `LOG()` macro – writes to both USB Serial and WebSerial simultaneously. Never use bare `Serial.println()` for application messages.
-- **OTA hostname:** `esp32-motor-control` (resolvable as `esp32-motor-control.local` via mDNS on supported networks)
-- **`onWebSerialMessage()`** in `main.cpp` is the entry point for all browser commands – extend here for motor control.
-- **IP change:** If the board gets a new IP, update `upload_port` in `platformio.ini` and re-run the self-check.
-
----
-
-## Libraries
-
-| Library | Version | Purpose |
-|---|---|---|
-| `ayushsharma82/WebSerial` | ^2.1.2 | Browser-based serial terminal |
-| `me-no-dev/ESPAsyncWebServer` | ^3.6.0 | Async HTTP + WebSocket server |
-| `me-no-dev/AsyncTCP` | ^1.1.1 | Async TCP base for above |
-| `ArduinoOTA` | built-in | OTA firmware update |
-| `ESPmDNS` | built-in | mDNS hostname resolution |
+- **Simulation mode active** — `SimMotorDriver` + `SimRpmSource` are used; no GPIO output until Phase 5 hardware integration.
+- **Single-threaded** — no FreeRTOS, no mutexes. Everything runs in `loop()`.
+- **Web UI is NOT served by the board** — open `data/index.html` from a local dev server; the board only exposes WebSocket + REST.
+- **LOG()** — writes directly to `Serial.println()` (USB CDC). No WebSerial, no FreeRTOS queue.
+- **EEPROM layout** — `MotorParams` at offset 0, magic byte at offset 16, program steps at offset 32.
+- **IP change** — update `upload_port` in `platformio.ini` (OTA section, currently commented out) and re-run the selfcheck.
