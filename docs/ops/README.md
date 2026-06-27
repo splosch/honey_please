@@ -22,14 +22,15 @@ npm run deploy       # compile + flash + selfcheck (see deploy.md)
 npm start            # start local Web UI dev server
 ```
 
-Board IP and COM port are set in `package.json` scripts and `platformio.ini`. Override: `node deploy.js COM5 192.168.1.99`.
+Board IP is set in scripts. Deploy auto-detects the USB port. Optional override: `node deploy.js COM5 192.168.1.99`.
 
 ---
 
 ## Serial Monitor
 
 ```bash
-pio device monitor --port COM4 --baud 115200
+pio device list
+pio device monitor --port <port> --baud 115200
 ```
 
 Expect `[BOOT]` banner within 5 s of power-on. WiFi watchdog prints `[WIFI] IP: x.x.x.x` every 10 s.

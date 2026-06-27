@@ -16,7 +16,7 @@ Developer-PC
   │     └── WS   ws://192.168.178.70/ws          ← 10 Hz bidirectional JSON
   │
   └── VS Code + PlatformIO
-        └── USB flash → COM4  →  Arduino Uno R4 WiFi
+      └── USB flash → auto-detected COM port  →  Arduino Uno R4 WiFi
 
 Arduino Uno R4 WiFi  (192.168.178.70)
   ├── RA4M1 MCU  (Cortex-M4 @ 48 MHz · 256 KB Flash · 32 KB SRAM)

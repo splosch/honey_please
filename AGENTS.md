@@ -231,9 +231,3 @@ Bei `OPTIONS`-Preflight (z.B. für POST-Endpoints): Mit `200 OK` + CORS-Header a
 | Flash: 256 KB | Keine Web-Assets auf dem Board. Sketch + Bibliotheken müssen reinpassen. |
 | SRAM: 32 KB | Alle dynamischen Puffer klein halten. |
 | 5 V GPIO | Motordriver direkt ohne Level-Shifter ansteuerbar. RPM-Sensor max. 5 V Input. |
-
----
-
-## Prompt-Vorgabe für den User
-
-*"Ich möchte [Funktion X] implementieren. Bitte lies zuerst `platformio.ini` und `src/main.cpp`. Schlage eine Architektur vor, die auf dem Arduino Uno R4 WiFi (single-threaded, 32 KB SRAM) funktioniert, und stelle mir Rückfragen zu benötigten Hardware-Pins oder Bibliotheken."*

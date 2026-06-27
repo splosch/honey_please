@@ -8,6 +8,7 @@
     "serve":     "node serve.js",
     "build":       "node deploy.js --build-only",
     "deploy":      "node deploy.js",
+    "deploy-COM3-left": "node deploy.js -- COM3",
     "test":        "node tests/selfcheck.js 192.168.178.70",
     "selfcheck":   "node tests/selfcheck.js 192.168.178.70",
     "demo:build":  "node demo_flash.js --build-only",

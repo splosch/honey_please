@@ -47,7 +47,8 @@ Serves `data/` at `http://localhost:5500`. The UI connects to the board at `ws:/
 ### 5. USB Serial Monitor (debug + commands)
 
 ```bash
-pio device monitor --port COM4 --baud 115200
+pio device list
+pio device monitor --port <port> --baud 115200
 ```
 
 Type `help` to see all available commands. Boot banner starts with `[BOOT]`.
@@ -64,8 +65,9 @@ npm run deploy
 
 This runs three steps automatically:
 1. **Compile** — sanity-checks the sketch (`pio run -e r4wifi`). Aborts on any compiler error.
-2. **Upload** — flashes via USB COM4 (`pio run -e r4wifi --target upload --upload-port COM4`).
-3. **Selfcheck** — waits 12 s for the board to reboot, then verifies HTTP + WebSocket.
+2. **Port detection** — finds the USB upload port automatically.
+3. **Upload** — flashes via USB using the detected port (`pio run -e r4wifi --target upload --upload-port <detected-port>`).
+4. **Selfcheck** — waits 12 s for the board to reboot, then verifies HTTP + WebSocket.
 
 To compile without flashing (e.g. after editing firmware files):
 
@@ -92,7 +94,7 @@ framework = arduino
 
 ## USB Serial Commands
 
-Connect with `pio device monitor --port COM4 --baud 115200` and type:
+Connect with `pio device monitor --port <port> --baud 115200` and type:
 
 | Command | Effect |
 |---|---|
@@ -194,7 +196,7 @@ npm test
 | HTTP OK + WS TIMEOUT | WS connected but no frames | Check loop timing; ensure WiFi connected |
 | **SELFCHECK PASSED** | Everything nominal | — |
 
-**Board IP changed?** Open Serial Monitor (`pio device monitor --port COM4 --baud 115200`) and look for `[WIFI] IP: x.x.x.x`, or check the FRITZ!Box device list at `http://192.168.178.1`.
+**Board IP changed?** Open Serial Monitor (`pio device monitor --port <port> --baud 115200`) and look for `[WIFI] IP: x.x.x.x`, or check the FRITZ!Box device list at `http://192.168.178.1`.
 
 ---
 

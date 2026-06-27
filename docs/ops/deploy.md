@@ -33,9 +33,10 @@ npm run deploy
 
 `deploy.js` executes:
 1. `pio run -e r4wifi` — compile
-2. `pio run -e r4wifi --target upload --upload-port COM4` — USB flash
-3. Wait 12 s (board reboot)
-4. `node tests/selfcheck.js 192.168.178.70` — HTTP + WebSocket check
+2. Detect USB upload port via `pio device list --json-output` (fallback: `pio device list`)
+3. `pio run -e r4wifi --target upload --upload-port <detected-port>` — USB flash
+4. Wait 12 s (board reboot)
+5. `node tests/selfcheck.js 192.168.178.70` — HTTP + WebSocket check
 
 **Custom port/IP:**
 ```bash
@@ -51,7 +52,7 @@ node deploy.js COM5 192.168.1.99
 | HTTP FAIL + WS FAIL | Board not booted / no WiFi | Open Serial Monitor, wait for `[BOOT]` |
 | HTTP OK + WS FAIL | HTTP up, WebSocket route missing | Check `web_api.cpp` WS handler |
 | HTTP OK + WS TIMEOUT | WS connects, board sends nothing | Check `webApi.tick()` in `loop()` |
-| Upload FAILED | COM port wrong / board not connected | Check `device manager`, try `COM5` |
+| Upload FAILED | No USB device found / wrong manual port | Run `pio device list`, reconnect board, retry |
 
 ### Step 5 — Summary Output
 
