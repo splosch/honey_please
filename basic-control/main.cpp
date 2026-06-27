@@ -12,6 +12,9 @@
  *                             npm run basic-control:flash  (Upload via auto-detected USB port)
  *
  * ─── Pin-Belegung (muss mit HTML-Verdrahtungsplan übereinstimmen) ───────────
+ * Hinweis: Diese komplette Zuordnung ist zusaetzlich in basic-control/config.h
+ * als modul-lokale Dokumentation hinterlegt und muss bei Aenderungen dort
+ * mit gepflegt werden (Single Source of Truth fuer extrahierte Konfiguration).
  *  D2  OUTPUT  → Relais 1 IN  (X1 am Treiber – START/STOPP)
  *  D3  OUTPUT  → Relais 2 IN  (X3 am Treiber – Richtung CW/CCW)
  *  D4  OUTPUT  → Relais 3 IN  unused
@@ -29,33 +32,68 @@
  * ⚠️  Relay-Modul-Hinweis:
  *     Dieser Sketch verwendet HIGH = Relais zieht an (aktiv-HIGH).
  *     Gilt für die meisten Standard-5V-Relaismodule mit Optokoppler (z.B. SRD-05VDC-SL-C).
- *     Falls dein Modul aktiv-LOW ist (Relais zieht bei LOW an), musst du die
- *     beiden digitalWrite-Aufrufe für PIN_RELAY_START und PIN_RELAY_DIR invertieren.
+ *     Falls dein Modul aktiv-LOW ist (Relais zieht bei LOW an), setze in
+ *     basic-control/config.h den Wert relayActiveHigh auf false.
  */
 
 #include <Arduino.h>
 #include "Arduino_LED_Matrix.h"
+#include "config.h"
 
-// ── PIN DEFINITIONEN ─────────────────────────────────────────────────────────
-const int PIN_RELAY_START = 2;   // Relais 1 (X1 am Treiber) - START/STOP
-const int PIN_RELAY_DIR   = 3;   // Relais 2 (X3 am Treiber) - CW/CCW
-const int PIN_RELAY_UNUSED_3 = 4;// Relais 3 Unused
-const int PIN_RELAY_UNUSED_4 = 5;// Relais 4 Unused
+// ── ZENTRALE KONFIGURATION ───────────────────────────────────────────────────
+static constexpr BasicControlConfig CFG = BASIC_CONTROL_CONFIG;
 
-// Folientaster 1: Richtung (3-Pin)
-const int PIN_KEY_LINKS   = 6;   // Button Links (CCW)
-const int PIN_KEY_RECHTS  = 7;   // Button Rechts (CW)
+static constexpr uint8_t relayOnLevel() {
+    return CFG.relayActiveHigh ? HIGH : LOW;
+}
 
-// Folientaster 2: Steuerung (5-Pin)
-const int PIN_KEY_STOP    = 8;   // Button Rot: Stopp
-const int PIN_KEY_YEL1    = 9;   // Button Gelb 1: Programm 1 / Preset 1
-const int PIN_KEY_YEL2    = 10;   // Button Gelb 2: Programm 2 / Preset 2
-const int PIN_KEY_START   = 11;   // Button Grün: Start
+static constexpr uint8_t relayOffLevel() {
+    return CFG.relayActiveHigh ? LOW : HIGH;
+}
 
-// ── EINSTELLBARE ZEITEN (MECHANISCHER SCHUTZ) ────────────────────────────────
-const unsigned long ANLAUFRAMPEN_ZEIT = 15000; // Wartezeit Anlauframpe des Treibers [ms]
-const unsigned long BREMSRAMPEN_ZEIT  = 15000; // Wartezeit Bremsrampe des Treibers   [ms]
-const unsigned long SICHERHEITS_PAUSE =  1500; // Zusätzliche Beruhigungszeit          [ms]
+static constexpr uint8_t relayDirLevelFor(bool ccw) {
+    bool highLevel = (ccw == CFG.dirRelayHighMeansCCW);
+    return highLevel ? HIGH : LOW;
+}
+
+static void printBootBanner() {
+    Serial.println(F(""));
+    Serial.println(F("============================================================"));
+    Serial.println(F("  honey_please - BASIC-CONTROL / Wiring Verification Sketch"));
+    Serial.println(F("  Referenz: ErsteInbetriebnahmeMotorundSteuerung.html"));
+    Serial.println(F("============================================================"));
+    Serial.println(F("  Pin-Belegung (aus config.h):"));
+
+    for (size_t i = 0; i < BASIC_CONTROL_WIRING_COUNT; ++i) {
+        const WiringEntry& entry = BASIC_CONTROL_WIRING[i];
+        Serial.print(F("    D"));
+        Serial.print(entry.pin);
+        Serial.print(F(" "));
+        Serial.print(entry.mode);
+        Serial.print(F(" -> "));
+        Serial.print(entry.signal);
+        Serial.print(F(" ("));
+        Serial.print(entry.detail);
+        Serial.println(F(")"));
+    }
+
+    Serial.println(F("------------------------------------------------------------"));
+    Serial.print(F("  Anlauframpe : "));
+    Serial.print(CFG.anlaufRampenZeitMs / 1000);
+    Serial.println(F(" s"));
+    Serial.print(F("  Bremsrampe  : "));
+    Serial.print(CFG.bremsRampenZeitMs / 1000);
+    Serial.println(F(" s"));
+    Serial.print(F("  Sicherheit  : "));
+    Serial.print(CFG.sicherheitsPauseMs / 1000);
+    Serial.println(F(" s"));
+    Serial.println(F("------------------------------------------------------------"));
+    Serial.println(F("  ABLAUF: Richtung waehlen -> START -> laeuft -> STOPP/Richtung"));
+    Serial.println(F("  Richtungswechsel im Betrieb: LINKS/RECHTS druecken"));
+    Serial.println(F("  -> Bremsrampe -> Auto-Neustart in neuer Richtung"));
+    Serial.println(F("============================================================"));
+    Serial.println(F(""));
+}
 
 // ── SYSTEM ZUSTÄNDE (STATE MACHINE) ─────────────────────────────────────────
 enum SystemState {
@@ -122,9 +160,9 @@ static const int ICON_PLAY_N = 9;
 // ── Hilfsfunktion: Relay-Zustand als Text ────────────────────────────────────
 static void printRelayStates() {
     Serial.print(F("  [REL1/X1="));
-    Serial.print(digitalRead(PIN_RELAY_START) ? F("ON") : F("OFF"));
+    Serial.print(digitalRead(CFG.pinRelayStart) == relayOnLevel() ? F("ON") : F("OFF"));
     Serial.print(F(", REL2/X3="));
-    Serial.print(digitalRead(PIN_RELAY_DIR) ? F("CCW") : F("CW"));
+    Serial.print(digitalRead(CFG.pinRelayDir) == relayDirLevelFor(true) ? F("CCW") : F("CW"));
     Serial.println(F("]"));
 }
 
@@ -136,45 +174,29 @@ void setup() {
     unsigned long t0 = millis();
     while (!Serial && (millis() - t0) < 3000) {}
 
-    Serial.println(F(""));
-    Serial.println(F("============================================================"));
-    Serial.println(F("  honey_please – BASIC-CONTROL / Wiring Verification Sketch"));
-    Serial.println(F("  Referenz: ErsteInbetriebnahmeMotorundSteuerung.html"));
-    Serial.println(F("============================================================"));
-    Serial.println(F("  Pin-Belegung (gleich wie HTML-Verdrahtungsplan):"));
-    Serial.println(F("    D2 OUT → Relais 1 IN  (X1 = START/STOPP)"));
-    Serial.println(F("    D3 OUT → Relais 2 IN  (X3 = Richtung CW/CCW)"));
-    Serial.println(F("    D4 IN  ← Folientaster 1: LINKS  (CCW)   [aktiv LOW]"));
-    Serial.println(F("    D5 IN  ← Folientaster 1: RECHTS (CW)    [aktiv LOW]"));
-    Serial.println(F("    D6 IN  ← Folientaster 2: ROT    (Stopp) [aktiv LOW]"));
-    Serial.println(F("    D7 IN  ← Folientaster 2: GELB 1 (Preset 1)"));
-    Serial.println(F("    D8 IN  ← Folientaster 2: GELB 2 (Preset 2)"));
-    Serial.println(F("    D9 IN  ← Folientaster 2: GRÜN   (Start) [aktiv LOW]"));
-    Serial.println(F("------------------------------------------------------------"));
-    Serial.print  (F("  Anlauframpe : ")); Serial.print(ANLAUFRAMPEN_ZEIT / 1000); Serial.println(F(" s"));
-    Serial.print  (F("  Bremsrampe  : ")); Serial.print(BREMSRAMPEN_ZEIT  / 1000); Serial.println(F(" s"));
-    Serial.println(F("------------------------------------------------------------"));
-    Serial.println(F("  ABLAUF: Richtung wählen → START → läuft → STOPP/Richtung"));
-    Serial.println(F("  Richtungswechsel im Betrieb: LINKS/RECHTS drücken"));
-    Serial.println(F("  → Bremsrampe → Auto-Neustart in neuer Richtung"));
-    Serial.println(F("============================================================"));
-    Serial.println(F(""));
+    printBootBanner();
 
     // Relais-Pins als Ausgänge
-    pinMode(PIN_RELAY_START, OUTPUT);
-    pinMode(PIN_RELAY_DIR,   OUTPUT);
+    pinMode(CFG.pinRelayStart, OUTPUT);
+    pinMode(CFG.pinRelayDir,   OUTPUT);
 
     // Sicherer Initialzustand: beide Relais aus
-    digitalWrite(PIN_RELAY_START, LOW);
-    digitalWrite(PIN_RELAY_DIR,   LOW);
+    digitalWrite(CFG.pinRelayStart, relayOffLevel());
+    digitalWrite(CFG.pinRelayDir,   relayDirLevelFor(false));
+
+    // Unused relay outputs are still initialized to safe-off for wiring checks.
+    pinMode(CFG.pinRelayUnused3, OUTPUT);
+    pinMode(CFG.pinRelayUnused4, OUTPUT);
+    digitalWrite(CFG.pinRelayUnused3, relayOffLevel());
+    digitalWrite(CFG.pinRelayUnused4, relayOffLevel());
 
     // Eingänge mit internem Pullup (Taster = aktiv LOW)
-    pinMode(PIN_KEY_LINKS,  INPUT_PULLUP);
-    pinMode(PIN_KEY_RECHTS, INPUT_PULLUP);
-    pinMode(PIN_KEY_STOP,   INPUT_PULLUP);
-    pinMode(PIN_KEY_YEL1,   INPUT_PULLUP);
-    pinMode(PIN_KEY_YEL2,   INPUT_PULLUP);
-    pinMode(PIN_KEY_START,  INPUT_PULLUP);
+    pinMode(CFG.pinKeyLinks,  INPUT_PULLUP);
+    pinMode(CFG.pinKeyRechts, INPUT_PULLUP);
+    pinMode(CFG.pinKeyStop,   INPUT_PULLUP);
+    pinMode(CFG.pinKeyYel1,   INPUT_PULLUP);
+    pinMode(CFG.pinKeyYel2,   INPUT_PULLUP);
+    pinMode(CFG.pinKeyStart,  INPUT_PULLUP);
 
     ledMatrix.begin();
 
@@ -190,14 +212,14 @@ float getCurrentRampProgress() {
     float elapsed = (float)(millis() - stateTimerStart);
     switch (currentState) {
         case STATE_ACCELERATING: {
-            float effDur = max(100.0f, (1.0f - rampStartProgress) * (float)ANLAUFRAMPEN_ZEIT);
+            float effDur = max(100.0f, (1.0f - rampStartProgress) * (float)CFG.anlaufRampenZeitMs);
             return rampStartProgress + min(1.0f, elapsed / effDur) * (1.0f - rampStartProgress);
         }
         case STATE_RUNNING_CW:
         case STATE_RUNNING_CCW:
             return 1.0f;
         case STATE_DECELERATING: {
-            float effDur = max(100.0f, rampStartProgress * (float)BREMSRAMPEN_ZEIT);
+            float effDur = max(100.0f, rampStartProgress * (float)CFG.bremsRampenZeitMs);
             return rampStartProgress * (1.0f - min(1.0f, elapsed / effDur));
         }
         default:
@@ -287,31 +309,31 @@ void loop() {
 
         case STATE_STANDBY:
             // Im Standby kann die Richtung jederzeit gewählt werden
-            if (digitalRead(PIN_KEY_LINKS) == LOW) {
+            if (digitalRead(CFG.pinKeyLinks) == LOW) {
                 targetDirectionCCW = true;
-                digitalWrite(PIN_RELAY_DIR, HIGH);
+                digitalWrite(CFG.pinRelayDir, relayDirLevelFor(true));
                 Serial.println(F("[STANDBY] Richtung gewählt: LINKS (CCW)"));
                 printRelayStates();
-                delay(150);
+                delay(CFG.debounceDirectionMs);
             }
-            else if (digitalRead(PIN_KEY_RECHTS) == LOW) {
+            else if (digitalRead(CFG.pinKeyRechts) == LOW) {
                 targetDirectionCCW = false;
-                digitalWrite(PIN_RELAY_DIR, LOW);
+                digitalWrite(CFG.pinRelayDir, relayDirLevelFor(false));
                 Serial.println(F("[STANDBY] Richtung gewählt: RECHTS (CW)"));
                 printRelayStates();
-                delay(150);
+                delay(CFG.debounceDirectionMs);
             }
 
-            if (digitalRead(PIN_KEY_START) == LOW) {
+            if (digitalRead(CFG.pinKeyStart) == LOW) {
                 rampStartProgress   = 0.0f; // vollständiger Anlauf vom Stillstand
-                digitalWrite(PIN_RELAY_START, HIGH);
+                digitalWrite(CFG.pinRelayStart, relayOnLevel());
                 stateTimerStart     = currentMillis;
                 pendingAutoRestart  = false;
                 currentState        = STATE_ACCELERATING;
                 Serial.print(F("[START] Anlauframpe → "));
                 Serial.println(targetDirectionCCW ? F("LINKS (CCW)") : F("RECHTS (CW)"));
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             }
             break;
 
@@ -319,12 +341,12 @@ void loop() {
             // REL1 ist AN – Motor läuft hoch
             // Richtungswechsel während Anlauf erlaubt (Gegenrichtungs-Taste)
             bool dirChange =
-                (!targetDirectionCCW && digitalRead(PIN_KEY_LINKS)  == LOW) ||
-                ( targetDirectionCCW && digitalRead(PIN_KEY_RECHTS) == LOW);
+                (!targetDirectionCCW && digitalRead(CFG.pinKeyLinks)  == LOW) ||
+                ( targetDirectionCCW && digitalRead(CFG.pinKeyRechts) == LOW);
 
-            if (digitalRead(PIN_KEY_STOP) == LOW || dirChange) {
+            if (digitalRead(CFG.pinKeyStop) == LOW || dirChange) {
                 rampStartProgress = getCurrentRampProgress();
-                digitalWrite(PIN_RELAY_START, LOW);
+                digitalWrite(CFG.pinRelayStart, relayOffLevel());
                 stateTimerStart   = currentMillis;
                 if (dirChange) {
                     targetDirectionCCW = !targetDirectionCCW;
@@ -340,10 +362,10 @@ void loop() {
                 }
                 currentState = STATE_DECELERATING;
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             } else {
                 unsigned long effAccelDur = (unsigned long)max(100.0f,
-                    (1.0f - rampStartProgress) * (float)ANLAUFRAMPEN_ZEIT);
+                    (1.0f - rampStartProgress) * (float)CFG.anlaufRampenZeitMs);
                 if (currentMillis - stateTimerStart >= effAccelDur) {
                     currentState = targetDirectionCCW ? STATE_RUNNING_CCW : STATE_RUNNING_CW;
                     Serial.print(F("[RUNNING] Anlauframpe abgeschlossen → "));
@@ -355,71 +377,71 @@ void loop() {
 
         case STATE_RUNNING_CW:
             // STOPP oder Richtungswechsel nach LINKS
-            if (digitalRead(PIN_KEY_STOP) == LOW) {
+            if (digitalRead(CFG.pinKeyStop) == LOW) {
                 rampStartProgress  = 1.0f; // Vollgas → volle Bremsrampe
-                digitalWrite(PIN_RELAY_START, LOW);
+                digitalWrite(CFG.pinRelayStart, relayOffLevel());
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = false;
                 currentState       = STATE_DECELERATING;
                 Serial.println(F("[STOP] Signal erhalten – Bremsrampe läuft"));
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             }
-            else if (digitalRead(PIN_KEY_LINKS) == LOW) {
+            else if (digitalRead(CFG.pinKeyLinks) == LOW) {
                 rampStartProgress  = 1.0f;
                 targetDirectionCCW = true;
-                digitalWrite(PIN_RELAY_START, LOW);
+                digitalWrite(CFG.pinRelayStart, relayOffLevel());
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = true;
                 currentState       = STATE_DECELERATING;
                 Serial.println(F("[DIR] Richtungswechsel → LINKS (CCW) angefordert"));
                 Serial.println(F("      Bremsrampe läuft, danach Auto-Neustart"));
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             }
             break;
 
         case STATE_RUNNING_CCW:
             // STOPP oder Richtungswechsel nach RECHTS
-            if (digitalRead(PIN_KEY_STOP) == LOW) {
+            if (digitalRead(CFG.pinKeyStop) == LOW) {
                 rampStartProgress  = 1.0f; // Vollgas → volle Bremsrampe
-                digitalWrite(PIN_RELAY_START, LOW);
+                digitalWrite(CFG.pinRelayStart, relayOffLevel());
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = false;
                 currentState       = STATE_DECELERATING;
                 Serial.println(F("[STOP] Signal erhalten – Bremsrampe läuft"));
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             }
-            else if (digitalRead(PIN_KEY_RECHTS) == LOW) {
+            else if (digitalRead(CFG.pinKeyRechts) == LOW) {
                 rampStartProgress  = 1.0f;
                 targetDirectionCCW = false;
-                digitalWrite(PIN_RELAY_START, LOW);
+                digitalWrite(CFG.pinRelayStart, relayOffLevel());
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = true;
                 currentState       = STATE_DECELERATING;
                 Serial.println(F("[DIR] Richtungswechsel → RECHTS (CW) angefordert"));
                 Serial.println(F("      Bremsrampe läuft, danach Auto-Neustart"));
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             }
             break;
 
         case STATE_DECELERATING: {
             // Proportionale Bremsdauer + optional Umkehrung per START-Taste
             unsigned long effDecelDur = (unsigned long)max(100.0f,
-                rampStartProgress * (float)BREMSRAMPEN_ZEIT);
-            if (!pendingAutoRestart && digitalRead(PIN_KEY_START) == LOW) {
+                rampStartProgress * (float)CFG.bremsRampenZeitMs);
+            if (!pendingAutoRestart && digitalRead(CFG.pinKeyStart) == LOW) {
                 // Bremsung umkehren: Anlauf vom aktuellen Rampen-Punkt
                 rampStartProgress = getCurrentRampProgress();
-                digitalWrite(PIN_RELAY_START, HIGH);
+                digitalWrite(CFG.pinRelayStart, relayOnLevel());
                 stateTimerStart   = currentMillis;
                 currentState      = STATE_ACCELERATING;
                 Serial.print(F("[RE-START] Bremsung umgekehrt bei "));
                 Serial.print((int)(rampStartProgress * 100.0f));
                 Serial.println(F("% → Anlauframpe"));
                 printRelayStates();
-                delay(200);
+                delay(CFG.debounceActionMs);
             } else if (currentMillis - stateTimerStart >= effDecelDur) {
                 stateTimerStart = currentMillis;
                 currentState    = STATE_WAITING;
@@ -432,12 +454,12 @@ void loop() {
         }
 
         case STATE_WAITING:
-            if (currentMillis - stateTimerStart >= SICHERHEITS_PAUSE) {
+            if (currentMillis - stateTimerStart >= CFG.sicherheitsPauseMs) {
                 if (pendingAutoRestart) {
                     // Richtungsrelais auf neuen Wert setzen, kurz warten, dann starten
-                    digitalWrite(PIN_RELAY_DIR, targetDirectionCCW ? HIGH : LOW);
-                    delay(100); // Relais-Einschwingzeit
-                    digitalWrite(PIN_RELAY_START, HIGH);
+                    digitalWrite(CFG.pinRelayDir, relayDirLevelFor(targetDirectionCCW));
+                    delay(CFG.relaySettleMs); // Relais-Einschwingzeit
+                    digitalWrite(CFG.pinRelayStart, relayOnLevel());
                     rampStartProgress  = 0.0f; // Motor vollständig gestoppt → voller Anlauf
                     stateTimerStart    = millis();
                     pendingAutoRestart = false;
@@ -448,7 +470,7 @@ void loop() {
                 } else {
                     currentState = STATE_STANDBY;
                     Serial.print(F("[STANDBY] Bereit. Gesamtwartezeit: "));
-                    Serial.print((BREMSRAMPEN_ZEIT + SICHERHEITS_PAUSE) / 1000);
+                    Serial.print((CFG.bremsRampenZeitMs + CFG.sicherheitsPauseMs) / 1000);
                     Serial.println(F(" s abgelaufen."));
                     Serial.println(F(""));
                 }
@@ -458,13 +480,13 @@ void loop() {
 
     // ── Gelbe Tasten (Presets – noch nicht belegt) ───────────────────────────
     if (currentState == STATE_STANDBY) {
-        if (digitalRead(PIN_KEY_YEL1) == LOW) {
+        if (digitalRead(CFG.pinKeyYel1) == LOW) {
             Serial.println(F("[PRESET 1] Gelb-1 gedrückt (noch nicht belegt)"));
-            delay(200);
+            delay(CFG.debounceActionMs);
         }
-        if (digitalRead(PIN_KEY_YEL2) == LOW) {
+        if (digitalRead(CFG.pinKeyYel2) == LOW) {
             Serial.println(F("[PRESET 2] Gelb-2 gedrückt (noch nicht belegt)"));
-            delay(200);
+            delay(CFG.debounceActionMs);
         }
     }
 
