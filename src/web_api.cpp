@@ -167,32 +167,57 @@ void WebApi::_wsSend(WiFiClient& client, const char* payload, size_t len) {
 }
 
 // ─── WebSocket frame decode (client->server, masked text) ─────────────────────
+// Helper: wait up to timeoutMs for n bytes and read them.
+// Returns false on timeout or disconnect; caller must close the client.
+static bool wsAwaitRead(WiFiClient& client, uint8_t* buf, size_t n, uint16_t timeoutMs = 100) {
+    unsigned long t0 = millis();
+    size_t got = 0;
+    while (got < n) {
+        if (!client.connected()) return false;
+        if (client.available()) { buf[got++] = (uint8_t)client.read(); }
+        else if ((millis() - t0) > timeoutMs) return false;
+    }
+    return true;
+}
+
 static bool wsReadFrame(WiFiClient& client, String& out) {
+    // Only enter if at least the 2-byte frame header is available.
+    // Returning false here is safe because we haven't consumed any bytes yet.
     if (client.available() < 2) return false;
-    uint8_t b0 = client.read();
-    uint8_t b1 = client.read();
-    bool masked   = (b1 & 0x80) != 0;
-    uint64_t plen = b1 & 0x7F;
+
+    uint8_t hdr[2];
+    client.readBytes(hdr, 2);
+    uint8_t b0 = hdr[0], b1 = hdr[1];
+    bool    masked = (b1 & 0x80) != 0;
+    uint64_t plen  = b1 & 0x7F;
     uint8_t opcode = b0 & 0x0F;
 
+    // Past this point we have consumed bytes — all early exits must close the
+    // client so the next tick() doesn't parse a mid-frame position as a new header.
+
     if (plen == 126) {
-        if (client.available() < 2) return false;
-        uint8_t p[2]; client.readBytes(p, 2);
+        uint8_t p[2];
+        if (!wsAwaitRead(client, p, 2)) { client.stop(); return false; }
         plen = ((uint64_t)p[0] << 8) | p[1];
     } else if (plen == 127) {
-        if (client.available() < 8) return false;
-        uint8_t p[8]; client.readBytes(p, 8);
+        uint8_t p[8];
+        if (!wsAwaitRead(client, p, 8)) { client.stop(); return false; }
         plen = 0;
         for (int i = 0; i < 8; i++) plen = (plen << 8) | p[i];
     }
 
     uint8_t mask[4] = {};
     if (masked) {
-        if (client.available() < 4) return false;
-        client.readBytes(mask, 4);
+        if (!wsAwaitRead(client, mask, 4)) { client.stop(); return false; }
     }
 
-    if ((size_t)client.available() < (size_t)plen) return false;
+    // Wait for the full payload (short timeout; local network, small commands).
+    {
+        unsigned long t0 = millis();
+        while ((size_t)client.available() < (size_t)plen) {
+            if (!client.connected() || (millis() - t0) > 200) { client.stop(); return false; }
+        }
+    }
 
     if (opcode == 0x08) { while (plen--) client.read(); client.stop(); return false; }
     if (opcode == 0x09) {
@@ -223,6 +248,21 @@ void WebApi::begin() {
 void WebApi::_checkNewConnection() {
     WiFiClient client = _server.available();
     if (!client) return;
+
+    // Arduino WiFiS3 quirk: server.available() can return the already-connected
+    // WS client when it has pending data, instead of only returning new TCP
+    // connections. Detect this by comparing the remote IP+port of the returned
+    // client against the stored WS client — no data is consumed, so the WS frame
+    // remains intact for _wsProcessIncoming() to read in the same tick.
+    if (_wsActive && _wsClient.connected()) {
+        if (client.remoteIP() == _wsClient.remoteIP() &&
+            client.remotePort() == _wsClient.remotePort()) {
+            // This IS the existing WS client, not a new HTTP connection.
+            // Let _wsProcessIncoming() handle the pending frame.
+            // Do NOT call client.stop() — that would kill the WS connection.
+            return;
+        }
+    }
 
     unsigned long t0 = millis();
     String req;

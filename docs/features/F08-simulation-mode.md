@@ -1,6 +1,6 @@
 # F08 – Simulation Mode
 
-**Status:** ⏳ TO BE VERIFIED – SimMotorDriver + SimRpmSource implemented on ESP32. Simulation is still the active default for R4 (no `REAL_HARDWARE` flag set). Verify sim runs correctly on R4 after M6.2 (main.cpp rewrite) and M6.5 (WebSocket alive). Fault injection panel in Web UI verified at M6.14.  
+**Status:** ✅ VERIFIED on R4 WiFi (2026-05-18) – `SimMotorDriver` + `SimRpmSource` confirmed active. Full sim run (RUN/STOP/CCW/Session/E-STOP/Reset) verified via Web UI. Fault injection panel (E06 Driver Fault, E03 RPM Sensor Lost) confirmed working. Env-bar shows `⚠ SIM DRIVER / no GPIO output`.  
 **Depends on:** [F01 – Motor Control Architecture / HAL](./F01-motor-control-architecture.md), [F03 – Ramps](./F03-acceleration-deceleration-ramps.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 

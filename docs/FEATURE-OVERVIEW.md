@@ -11,7 +11,7 @@
 >
 > **All Phase 6 milestones verified on Arduino Uno R4 WiFi.**  
 > Board IP: `192.168.178.70` | Selfcheck: PASSED | USB Serial: OK | WebSocket: OK  
-> Phases 0–2 fully verified on R4 (2026-05-17). Phase 3–4 board-side verified; browser UI + M6.14 sim run pending.
+> Phases 0–4 fully verified on R4 (2026-05-18). M6.14 sim run verified: RUN/STOP/CCW/Session/E-STOP/Reset all confirmed via Web UI.
 >
 > **Legend:**  
 > ✅ Verified on R4 WiFi | ⏳ TO BE VERIFIED (was done on ESP32) | 🔲 Not yet started | ❌ Dropped / not carried to R4 | ⚠️ Optional / partial
@@ -127,7 +127,7 @@ Motor (Honigschleuder)
 
 ---
 
-### ⚠️ Phase 3 – Web UI Schematic (Board-side VERIFIED on R4, 2026-05-17 — browser UI rendering pending)
+### ✅ Phase 3 – Web UI Schematic (Fully VERIFIED on R4, 2026-05-18)
 
 **Goal:** Browser shows live system schematic. Developed without hardware.
 
@@ -139,11 +139,11 @@ Motor (Honigschleuder)
 |---|---|---|---|
 | ✅ M3.1 | Static files (`index.html`, `style.css`, `app.js`) served | F07 | R4: served from local dev server – CORS `Access-Control-Allow-Origin: *` confirmed |
 | ✅ M3.2 | WebSocket `/ws` endpoint, 10 Hz JSON state frames | F01, F07 | Selfcheck PASSED (2026-05-17) – frame received with all fields |
-| ⏳ M3.3 | Three component boxes rendered | F07 | **pending browser verification** |
-| ⏳ M3.4 | GPIO / internal state live in board box | F07 | **pending browser verification** |
-| ⏳ M3.5 | Ramp progress bar + ETA countdown | F03, F07 | **pending browser verification** |
-| ⏳ M3.6 | Direction indicator + basket SVG animation | F04, F07 | **pending browser verification** |
-| ⏳ M3.7 | Large RPM display + 30 s sparkline | F02, F07 | **pending browser verification** |
+| ✅ M3.3 | Three component boxes rendered | F07 | Verified 2026-05-18 |
+| ✅ M3.4 | GPIO / internal state live in board box | F07 | Verified 2026-05-18 – PIN 9/7/8/6/2/A0 live values confirmed |
+| ✅ M3.5 | Ramp progress bar + ETA countdown | F03, F07 | Verified 2026-05-18 – ACCEL/DECEL/ETA displayed correctly |
+| ✅ M3.6 | Direction indicator + basket SVG animation | F04, F07 | Verified 2026-05-18 – CCW/CW toggle, basket reverses |
+| ✅ M3.7 | Large RPM display + 30 s sparkline | F02, F07 | Verified 2026-05-18 |
 | ⚠️ M3.8 | PAUSE button in control bar | F04, F07 | Optional, not yet added |
 | ⚠️ M3.9 | WARNING / ERROR-level banners | F05, F07 | Optional, CRITICAL overlay done |
 | ⚠️ M3.10 | Parameters panel (sliders) | F06, F07 | Optional, `set_param` WS command wired |
@@ -151,7 +151,7 @@ Motor (Honigschleuder)
 
 ---
 
-### ⚠️ Phase 4 – Multi-Step Program & Session Protocol (Logic VERIFIED on R4, 2026-05-17 — browser UI + full sim run pending)
+### ✅ Phase 4 – Multi-Step Program & Session Protocol (Fully VERIFIED on R4, 2026-05-18)
 
 **Goal:** Full extraction workflow end-to-end in simulation. Session log exported and verified.
 
@@ -161,13 +161,13 @@ Motor (Honigschleuder)
 |---|---|---|
 | ✅ M4.1 | Multi-step program (6 default steps) – **R4: EEPROM-stored, `loadSteps()` called in `setup()`** | F09 |
 | ✅ M4.2 | Program runner: step sequencer with direction transitions | F09 |
-| ⏳ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort | F09 | **pending browser verification** |
+| ✅ M4.3 | Program UI: step bubbles, active highlight, skip/pause/abort | F09 | Verified 2026-05-18 |
 | ✅ M4.4 | Session storage – **R4: in-memory ring buffer ≤50 entries (M6.9); LittleFS removed** | F10 |
-| ⏳ M4.5 | Session start/stop on operator command | F10 | **pending browser verification** |
+| ✅ M4.5 | Session start/stop on operator command | F10 | Verified 2026-05-18 – Record/Stop/Export confirmed |
 | ✅ M4.6 | RPM samples every 5 s + program/step/error/direction events | F10 |
 | ✅ M4.7 | Session summary on stop; `GET /sessions` JSON list | F10 |
 | ✅ M4.8 | JSONL export via `GET /sessions?id=N` – R4: ring buffer export, no file | F10 |
-| ⏳ M4.9 | Full 6-step program runs in SIM, session export verified – **pending M6.14** | F08, F09, F10 |
+| ✅ M4.9 | Full 6-step program runs in SIM, session export verified (2026-05-18) | F08, F09, F10 |
 
 ---
 
@@ -194,7 +194,7 @@ Motor (Honigschleuder)
 | ✅ M6.11 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | F11 | Done |
 | ✅ M6.12 | `selfcheck.js` updated: checks `/status` + `/ws` (no `/webserial`) | F11 | Done |
 | ✅ M6.13 | WiFi + USB flash verified on real R4 hardware – IP 192.168.178.70 | F11 | Done |
-| ⏳ M6.14 | Full simulation run verified on R4 (WebSocket + USB Serial + Web UI from local dev server) | F11, F08 | Next — Web UI connects ✅, sim run pending |
+| ✅ M6.14 | Full simulation run verified on R4 (WebSocket + USB Serial + Web UI from local dev server) | F11, F08 | 2026-05-18 — RUN/STOP/CCW/Session/E-STOP/Reset all verified ✅ |
 
 ---
 
@@ -240,20 +240,22 @@ Motor (Honigschleuder)
 
 ## Phase 5 / 6 Prerequisites – Open Questions
 
-| # | Question | Needed before |
-|---|---|---|
-| Q1 | Which motor driver chip? (L298N / DRV8871 / BTS7960 / IBT-2) | M5.3 / real-HW milestone |
-| Q2 | Motor voltage and rated current? | Driver selection |
-| Q3 | RPM sensor type? (Hall / optical / encoder) | M5.6 |
-| Q4 | Gear ratio between motor shaft and basket? | `GEAR_RATIO` constant |
-| Q5 | PWM frequency appropriate for driver? | `motor_config.h` |
-| Q6 | Exact pin wiring (schematic)? | All `PIN_*` defines |
+See also [motor-driver.md](./hardware/motor-driver.md) and [HM-5073-4E.pdf](./hardware/HM-5073-4E.pdf) for detailed answers.
+
+| # | Question | Status | Answer / Notes | Needed before |
+|---|---|---|---|---|
+| Q1 | Which motor driver? | ✅ Resolved | **Oriental Motor BLF Series** — complete integrated BLDC motor+driver package. NOT an H-bridge chip. Photocoupler inputs (internal 14V / 3.3 kΩ). Relay contact to IN-COM is the correct interface. Exact model: read unit nameplate for wattage/voltage suffix. | M5.3 |
+| Q2 | Motor voltage and current? | ✅ Resolved | BLF driver is **AC mains-powered** (100–120 V "A" or 200–240 V "C"/"S" suffix). Arduino supplies NO motor power. Motor output: 30–400 W depending on model. Read nameplate for exact rating. | M5.3 |
+| Q3 | RPM sensor type? | ✅ Resolved | **No external sensor needed.** BLF driver has built-in SPEED-OUT on terminal Y0: 30 pulses/revolution, open-collector, 4.5–26.4 VDC, 50 mA max. Pull-up to 5 V (1–10 kΩ) + Arduino interrupt pin. | M5.6 |
+| Q4 | Gear ratio between motor shaft and basket? | ⏳ Open | Read from unit nameplate or measure. Gearhead ratio suffix in model number (e.g. `-5` = 5:1). Required for `GEAR_RATIO` constant in `src/params.h`. | `GEAR_RATIO` constant |
+| Q5 | Speed control method? | ✅ Resolved | No direct PWM from Arduino. BLF uses analog voltage on VH/VM/VL (0–5 V = 0–rated speed). For Arduino control: filtered PWM → VM. Or use manual internal potentiometer. | `motor_config.h` |
+| Q6 | Exact pin wiring? | ✅ Resolved | X1 → D2 (Relay 1, START/STOP), X2 → Wippschalter (BRAKE/safety lock), X3 → D3 (Relay 2, CW/CCW), Y0 → interrupt pin (RPM). Driver must be set to **3-wire input mode** via digital operator (`inMd` = `3wir`). | All `PIN_*` defines |
 
 ---
 
-## Code Files Needing R4 Rewrite (Phase 6 Scope)
+## Code Files Rewritten for R4 (Phase 6 — All Complete ✅)
 
-These files currently contain ESP32-only code. They will not compile against the R4 toolchain and must be rewritten before M6.14:
+All files below were rewritten as part of Phase 6. The board compiles cleanly and all milestones M6.1–M6.14 are verified:
 
 | File | ESP32-only dependency | R4 replacement | Phase 6 milestone |
 |---|---|---|---|
@@ -267,7 +269,7 @@ These files currently contain ESP32-only code. They will not compile against the
 **Platform-independent (no rewrite needed):**  
 `motor_driver.h`, `sim_motor_driver.h`, `rpm_source.h`, `sim_rpm_source.h`, `ramp_controller.h/.cpp`, `error_handler.h/.cpp`, `program.h`
 
-> **Current build state:** All source files compile cleanly for `[env:r4wifi]`. Board running at 192.168.178.70. Selfcheck PASSED.
+> **Current build state:** All source files compile cleanly for `[env:r4wifi]`. Flash: 90932 bytes (34.7 %), SRAM: 11728 bytes (35.8 %). Board running at 192.168.178.70. Selfcheck PASSED. M6.14 full sim run verified 2026-05-18.
 
 ---
 

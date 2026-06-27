@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verdrahtungsplan Honigschleuder - Erweitertes System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .wire {
+            stroke-dasharray: 4, 4; /* Kürzere Abstände */
+            animation: dash 0.8s linear infinite;
+            animation-play-state: paused;
+        }
+        .wire-active {
+            animation-play-state: running;
+            stroke-width: 2.5;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -8;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col w-full overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 py-3 px-6 shadow-md w-full">
+        <div class="w-full flex flex-col md:flex-row justify-between items-center gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-amber-500">Präziser Verdrahtungsplan: Honigschleuder</h1>
+                <p class="text-xs text-gray-400">Optimiertes Layout · State Machine: 6 Zustände · Anlauf- &amp; Bremsrampen je 15 s</p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <span class="bg-purple-900/50 border border-purple-500 text-purple-400 text-xs px-2.5 py-1 rounded-full font-semibold">
+                    + Folientaster integriert
+                </span>
+                <span class="bg-blue-900/50 border border-blue-500 text-blue-400 text-xs px-2.5 py-1 rounded-full font-semibold">
+                    3-Wire-Sicherheitslogik
+                </span>
+                <span class="bg-green-900/50 border border-green-500 text-green-400 text-xs px-2.5 py-1 rounded-full font-semibold">
+                    ↺ Richtungswechsel im Betrieb
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Grid: Ohne maximale Breitenbegrenzung, 1/4 zu 3/4 Aufteilung -->
+    <main class="flex-grow w-full p-4 grid grid-cols-1 xl:grid-cols-4 gap-6">
+        
+        <!-- Linke Spalte (Interactive Controls): Nimmt 1 von 4 Gridfeldern ein (25%) -->
+        <div class="xl:col-span-1 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col gap-5 h-fit">
+            <div>
+                <h2 class="text-md font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Interaktive Simulation</h2>
+                <p class="text-xs text-gray-400 mb-3">Simulation (Rampen: 3 s statt 15 s). Tasten verhalten sich zustandsabhängig:</p>
+                
+                <div class="space-y-3">
+                    <!-- Folientaster Richtung -->
+                    <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider block mb-1">Folientaster 1: Richtung</span>
+                        <p class="text-[10px] text-gray-500 mb-1.5">Standby: vorwählen · Im Betrieb: Wechsel+Neustart</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-key-links" onclick="pressLinks()" class="bg-gray-800 hover:bg-purple-900/40 border border-gray-700 py-1.5 rounded text-xs font-semibold transition">
+                                ◀ Links (CCW)
+                            </button>
+                            <button id="btn-key-rechts" onclick="pressRechts()" class="bg-gray-800 hover:bg-purple-900/40 border border-gray-700 py-1.5 rounded text-xs font-semibold transition">
+                                Rechts (CW) ▶
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Folientaster Steuerung -->
+                    <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1.5">Folientaster 2: Steuerung</span>
+                        <div class="grid grid-cols-4 gap-1">
+                            <button id="btn-key-rot" onclick="pressRot()" class="bg-red-950 hover:bg-red-900/50 border border-red-800 py-2 rounded text-[10px] font-bold text-red-200">
+                                ROT<br>(Stop)
+                            </button>
+                            <button id="btn-key-gelb1" onclick="pressGelb1()" class="bg-amber-950 hover:bg-amber-900/50 border border-amber-800 py-2 rounded text-[10px] font-bold text-amber-200">
+                                GELB 1<br>(P1)
+                            </button>
+                            <button id="btn-key-gelb2" onclick="pressGelb2()" class="bg-amber-950 hover:bg-amber-900/50 border border-amber-800 py-2 rounded text-[10px] font-bold text-amber-200">
+                                GELB 2<br>(P2)
+                            </button>
+                            <button id="btn-key-gruen" onclick="pressGruen()" class="bg-emerald-950 hover:bg-emerald-900/50 border border-emerald-800 py-2 rounded text-[10px] font-bold text-emerald-200">
+                                GRÜN<br>(Start)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hardware Wippschalter -->
+                    <div class="bg-gray-900 p-3 rounded-lg border border-gray-800">
+                        <div class="flex justify-between items-center gap-2">
+                            <div>
+                                <span class="text-xs font-semibold block text-gray-200">Wippschalter (X2)</span>
+                                <span class="text-[10px] text-gray-500">Hardware Betriebs-Sperre</span>
+                            </div>
+                            <button id="btn-x2" onclick="toggleX2()" class="px-3 py-1.5 rounded-lg text-xs font-medium transition bg-red-600 text-white hover:bg-red-500">
+                                SPERRE (OFF)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operational Status Display -->
+            <div class="bg-gray-950 p-3.5 rounded-lg border border-gray-800">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Motor-Zustand</span>
+                <div id="status-box" class="flex items-center gap-2 text-red-400">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span id="status-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                    </span>
+                    <span id="status-text" class="text-xs font-bold">Gesperrt (X2 aus)</span>
+                </div>
+                <p id="status-desc" class="text-[11px] text-gray-400 mt-1.5">Der Wippschalter an X2 ist geöffnet. Der Motor blockiert sofort.</p>
+                <!-- Ramp progress bar -->
+                <div id="ramp-section" class="hidden mt-2">
+                    <div class="flex justify-between text-[10px] mb-1">
+                        <span id="ramp-label" class="text-gray-400">Anlauframpe</span>
+                        <span id="ramp-pct" class="text-gray-400">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-1.5">
+                        <div id="ramp-bar" class="h-1.5 rounded-full bg-yellow-400" style="width:0%"></div>
+                    </div>
+                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: 3 s · Reales Board: 15 s</span>
+                </div>
+            </div>
+
+            <!-- State machine quick-reference -->
+            <div class="bg-gray-950 rounded-lg border border-gray-800 p-3">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Zustandsmaschine</span>
+                <div class="space-y-1 text-[10px]">
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">GESPERRT</b> – X2 offen</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">STANDBY</b> – Richtung wählen, Start</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – 15 s, Stop oder Richtungswechsel möglich</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">LÄUFT</b> – Stop/Richtungswechsel</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – 15 s, gesperrt</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 1.5 s Sicherheitspause</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte (Schematic Canvas): Nimmt 3 von 4 Gridfeldern ein (75%) -->
+        <div class="xl:col-span-3 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col justify-between overflow-x-auto">
+            <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-3">
+                <h2 class="text-md font-bold text-gray-200">Elektrischer Verdrahtungsplan</h2>
+                <span class="text-xs text-amber-500 font-semibold bg-amber-950/40 border border-amber-900/60 px-2 py-0.5 rounded">
+                    Komponenten-Abstand erhöht (+60%) für klare Leitungsführung
+                </span>
+            </div>
+
+            <div class="relative w-full bg-gray-950 rounded-lg p-2 overflow-x-auto">
+                <!-- SVG Diagram (1200x820 aspect ratio - vergrößert für sauberen Platz und 60% mehr Komponenten-Abstand) -->
+                <svg id="schematic" viewBox="0 0 1200 820" class="w-full h-auto min-w-[1000px]">
+                    <!-- GRID BACKDROP -->
+                    <g opacity="0.02">
+                        <path d="M 0,50 L 1200,50 M 0,100 L 1200,100 M 0,150 L 1200,150 M 0,200 L 1200,200 M 0,250 L 1200,250 M 0,300 L 1200,300 M 0,350 L 1200,350 M 0,400 L 1200,400 M 0,450 L 1200,450 M 0,500 L 1200,500 M 0,550 L 1200,550 M 0,600 L 1200,600 M 0,650 L 1200,650 M 0,700 L 1200,700 M 0,750 L 1200,750 M 0,800 L 1200,800" stroke="#FFF" stroke-width="1"/>
+                        <path d="M 50,0 L 50,820 M 100,0 L 100,820 M 150,0 L 150,820 M 200,0 L 200,820 M 250,0 L 250,820 M 300,0 L 300,820 M 350,0 L 350,820 M 400,0 L 400,820 M 450,0 L 450,820 M 500,0 L 500,820 M 550,0 L 550,820 M 600,0 L 600,820 M 650,0 L 650,820 M 700,0 L 700,820 M 750,0 L 750,820 M 800,0 L 800,820 M 850,0 L 850,820 M 900,0 L 900,820 M 950,0 L 950,820 M 1000,0 L 1000,820 M 1050,0 L 1050,820 M 1100,0 L 1100,820 M 1150,0 L 1150,820" stroke="#FFF" stroke-width="1"/>
+                    </g>
+
+                    <!-- ================= ARDUINO UNO R4 WIFI ================= -->
+                    <!-- Platziert weit links oben -->
+                    <g transform="translate(30, 40)">
+                        <rect width="210" height="280" rx="10" fill="#1E293B" fill-opacity="0.35" stroke="#0EA5E9" stroke-width="2.5"/>
+                        <text x="105" y="25" fill="#0EA5E9" font-weight="bold" font-size="12" text-anchor="middle">ARDUINO UNO R4 WIFI</text>
+                        
+                        <!-- Left Power Rail Pins -->
+                        <g transform="translate(0, 50)">
+                            <rect x="0" y="0" width="10" height="12" fill="#EF4444"/>
+                            <circle id="pin-ard-5v" cx="5" cy="6" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="10" fill="#FFF" font-size="9" text-anchor="start">5V OUT</text>
+
+                            <rect x="0" y="30" width="10" height="12" fill="#4B5563"/>
+                            <circle id="pin-ard-gnd" cx="5" cy="36" r="3.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="40" fill="#FFF" font-size="9" text-anchor="start">GND</text>
+                        </g>
+
+                        <!-- Right Digital IO Pins -->
+                        <g transform="translate(200, 50)">
+                            <!-- D2 -->
+                            <rect x="0" y="10" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d2" cx="5" cy="16" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="20" fill="#FFF" font-size="9" text-anchor="end">D2 (Rel 1 / X1)</text>
+                            
+                            <!-- D3 -->
+                            <rect x="0" y="35" width="10" height="12" fill="#3B82F6"/>
+                            <circle id="pin-ard-d3" cx="5" cy="41" r="3.5" fill="#3B82F6" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="45" fill="#FFF" font-size="9" text-anchor="end">D3 (Rel 2 / X3)</text>
+
+                            <!-- D4 unused -->
+                            
+                            
+                            <!-- D5 unused -->
+                            
+                            
+                            <!-- D6 -->
+                            <rect x="0" y="70" width="10" height="12" fill="#A855F7"/>
+                            <circle id="pin-ard-d4" cx="5" cy="76" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="80" fill="#FFF" font-size="9" text-anchor="end">D6 (Rot / Links / 3)</text>
+                            
+                            <!-- D7 -->
+                            <rect x="0" y="95" width="10" height="12" fill="#A855F7"/>
+                            <circle id="pin-ard-d5" cx="5" cy="101" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="105" fill="#FFF" font-size="9" text-anchor="end">D7 (Gelb / Rechts / 2)</text>
+                            
+                            <!-- D8 -->
+                            <rect x="0" y="130" width="10" height="12" fill="#EF4444"/>
+                            <circle id="pin-ard-d6" cx="5" cy="136" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="140" fill="#FFF" font-size="9" text-anchor="end">D8 (Key Rot-Stop)</text>
+                            
+                            <!-- D9 -->
+                            <rect x="0" y="155" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d7" cx="5" cy="161" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="165" fill="#FFF" font-size="9" text-anchor="end">D9 (Key Gelb 1)</text>
+                            
+                            <!-- D10 -->
+                            <rect x="0" y="180" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d8" cx="5" cy="186" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="190" fill="#FFF" font-size="9" text-anchor="end">D10 (Key Gelb 2)</text>
+                            
+                            <!-- D11 -->
+                            <rect x="0" y="205" width="10" height="12" fill="#10B981"/>
+                            <circle id="pin-ard-d9" cx="5" cy="211" r="3.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="215" fill="#FFF" font-size="9" text-anchor="end">11 (Key Grn-Start)</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= RELAISBOARD 1 (START) ================= -->
+                    <!-- Deutlich nach rechts gerückt -->
+                    <g transform="translate(480, 40)">
+                        <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#F59E0B" stroke-width="2.5"/>
+                        <text x="120" y="22" fill="#F59E0B" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 1 (START)</text>
+                        
+                        <!-- High Jumper -->
+                        <rect x="15" y="30" width="40" height="20" rx="3" fill="#111827"/>
+                        <rect x="29" y="33" width="12" height="14" fill="#EF4444" rx="1"/>
+                        <text x="35" y="43" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
+
+                        <!-- Inputs (Schaltpins) -->
+                        <g transform="translate(5, 70)">
+                            <circle id="pin-r1-vcc" cx="5" cy="10" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="13" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
+                            
+                            <circle id="pin-r1-gnd" cx="5" cy="35" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="38" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
+                            
+                            <circle id="pin-r1-in" cx="5" cy="60" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="63" fill="#F59E0B" font-size="9" font-weight="bold">IN</text>
+                        </g>
+
+                        <!-- Terminal Block Switching Side -->
+                        <g transform="translate(170, 40)">
+                            <rect width="55" height="100" rx="4" fill="#0284C7"/>
+                            <circle id="pin-r1-no" cx="27.5" cy="20" r="5" fill="#EF4444" stroke="#FFF" stroke-width="1"/>
+                            <text x="15" y="24" fill="#FFF" font-size="9" text-anchor="end">NO</text>
+                            
+                            <circle id="pin-r1-com" cx="27.5" cy="50" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"/>
+                            <text x="15" y="54" fill="#FFF" font-size="9" text-anchor="end">COM</text>
+                            
+                            <circle cx="27.5" cy="80" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"/>
+                            <text x="15" y="84" fill="#FFF" font-size="9" text-anchor="end">NC</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= RELAISBOARD 2 (DIRECTION) ================= -->
+                    <!-- Unter Relais 1, ebenfalls weit rechts -->
+                    <g transform="translate(480, 260)">
+                        <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#3B82F6" stroke-width="2.5"/>
+                        <text x="120" y="22" fill="#3B82F6" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 2 (CW/CCW)</text>
+                        
+                        <!-- High Jumper -->
+                        <rect x="15" y="30" width="40" height="20" rx="3" fill="#111827"/>
+                        <rect x="29" y="33" width="12" height="14" fill="#EF4444" rx="1"/>
+                        <text x="35" y="43" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
+
+                        <!-- Inputs -->
+                        <g transform="translate(5, 70)">
+                            <circle id="pin-r2-vcc" cx="5" cy="10" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="13" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
+                            
+                            <circle id="pin-r2-gnd" cx="5" cy="35" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="38" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
+                            
+                            <circle id="pin-r2-in" cx="5" cy="60" r="4.5" fill="#3B82F6" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="63" fill="#3B82F6" font-size="9" font-weight="bold">IN</text>
+                        </g>
+
+                        <!-- Terminal Block Switching Side -->
+                        <g transform="translate(170, 40)">
+                            <rect width="55" height="100" rx="4" fill="#0284C7"/>
+                            <circle id="pin-r2-no" cx="27.5" cy="20" r="5" fill="#3B82F6" stroke="#FFF" stroke-width="1"/>
+                            <text x="15" y="24" fill="#FFF" font-size="9" text-anchor="end">NO</text>
+                            
+                            <circle id="pin-r2-com" cx="27.5" cy="50" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"/>
+                            <text x="15" y="54" fill="#FFF" font-size="9" text-anchor="end">COM</text>
+                            
+                            <circle cx="27.5" cy="80" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"/>
+                            <text x="15" y="84" fill="#FFF" font-size="9" text-anchor="end">NC</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= FOLIENTASTER 1: RICHTUNG (3 PIN) ================= -->
+                    <!-- Tief platziert für klare Kabelwege nach oben -->
+                    <g transform="translate(30, 400)">
+                        <rect width="180" height="110" rx="6" fill="#111827" fill-opacity="0.35" stroke="#A855F7" stroke-width="2"/>
+                        <text x="90" y="20" fill="#A855F7" font-weight="bold" font-size="10" text-anchor="middle">FOLIEN-RICHTUNGSTASTER</text>
+                        
+                        <!-- Buttons -->
+                        <circle cx="45" cy="50" r="14" fill="#3B82F6" stroke="#93C5FD" stroke-width="1.2"/>
+                        <text x="45" y="53" fill="#FFF" font-weight="bold" font-size="9" text-anchor="middle">◀</text>
+                        <circle cx="135" cy="50" r="14" fill="#3B82F6" stroke="#93C5FD" stroke-width="1.2"/>
+                        <text x="135" y="53" fill="#FFF" font-weight="bold" font-size="9" text-anchor="middle">▶</text>
+
+                        <!-- Terminal Pins -->
+                        <g transform="translate(45, 95)">
+                            <circle id="pin-f1-gnd" cx="0" cy="0" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="0" y="-10" fill="#9CA3AF" font-size="8" text-anchor="middle">GND</text>
+                            
+                            <circle id="pin-f1-links" cx="45" cy="0" r="4.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="45" y="-10" fill="#A855F7" font-size="8" text-anchor="middle">LINKS</text>
+                            
+                            <circle id="pin-f1-rechts" cx="90" cy="0" r="4.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="90" y="-10" fill="#A855F7" font-size="8" text-anchor="middle">RECHTS</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= FOLIENTASTER 2: STEUERUNG (5 PIN) ================= -->
+                    <g transform="translate(30, 560)">
+                        <rect width="210" height="120" rx="6" fill="#111827" fill-opacity="0.35" stroke="#10B981" stroke-width="2"/>
+                        <text x="105" y="20" fill="#10B981" font-weight="bold" font-size="10" text-anchor="middle">FOLIEN-PROG-TASTER (5 PIN)</text>
+                        
+                        <!-- Colored Buttons -->
+                        <circle cx="35" cy="52" r="11" fill="#EF4444"/>
+                        <text x="35" y="55" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">ROT</text>
+                        
+                        <circle cx="80" cy="52" r="11" fill="#F59E0B"/>
+                        <text x="80" y="55" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">Y1</text>
+                        
+                        <circle cx="125" cy="52" r="11" fill="#F59E0B"/>
+                        <text x="125" y="55" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">Y2</text>
+                        
+                        <circle cx="170" cy="52" r="11" fill="#10B981"/>
+                        <text x="170" y="55" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">GRN</text>
+
+                        <!-- Connector Pins -->
+                        <g transform="translate(25, 105)">
+                            <circle id="pin-f2-gnd" cx="0" cy="0" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="0" y="-10" fill="#9CA3AF" font-size="8" text-anchor="middle">GND</text>
+                            
+                            <circle id="pin-f2-rot" cx="40" cy="0" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="40" y="-10" fill="#EF4444" font-size="8" text-anchor="middle">R</text>
+                            
+                            <circle id="pin-f2-yel1" cx="80" cy="0" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="80" y="-10" fill="#F59E0B" font-size="8" text-anchor="middle">Y1</text>
+                            
+                            <circle id="pin-f2-yel2" cx="120" cy="0" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="120" y="-10" fill="#F59E0B" font-size="8" text-anchor="middle">Y2</text>
+                            
+                            <circle id="pin-f2-grn" cx="160" cy="0" r="4.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="160" y="-10" fill="#10B981" font-size="8" text-anchor="middle">G</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= WAGO KLEMME (C0 BUS) ================= -->
+                    <!-- In die geometrische Mitte gerückt für saubere Sternverdrahtung -->
+                    <g transform="translate(480, 480)">
+                        <rect width="240" height="90" rx="6" fill="#F97316" fill-opacity="0.35" stroke="#C2410C" stroke-width="2"/>
+                        <text x="120" y="24" fill="#FFF" font-weight="bold" font-size="11" text-anchor="middle">C0-BUS (WAGO 5-fach)</text>
+                        <!-- Lever Contacts -->
+                        <g transform="translate(20, 52)">
+                            <circle id="wago-contact-1" cx="20" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"/>
+                            <circle id="wago-contact-2" cx="60" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"/>
+                            <circle id="wago-contact-3" cx="100" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"/>
+                            <circle id="wago-contact-4" cx="140" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"/>
+                            <circle id="wago-contact-5" cx="180" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"/>
+                        </g>
+                    </g>
+
+                    <!-- ================= MANUAL SWITCH (WIPPSCHALTER) ================= -->
+                    <g id="switch-graphic" class="cursor-pointer" onclick="toggleX2()" transform="translate(860, 480)">
+                        <rect width="240" height="80" rx="6" fill="#111827" fill-opacity="0.35" stroke="#9CA3AF" stroke-width="2"/>
+                        <text x="120" y="22" fill="#9CA3AF" font-weight="bold" font-size="11" text-anchor="middle">MANUELLER WIPPSCHALTER (X2)</text>
+                        
+                        <circle id="switch-contact-1" cx="50" cy="50" r="8" fill="#374151" stroke="#FFF"/>
+                        <circle id="switch-contact-2" cx="190" cy="50" r="8" fill="#374151" stroke="#FFF"/>
+                        <!-- Switch Lever line -->
+                        <line id="switch-lever" x1="50" y1="50" x2="190" y2="50" stroke="#EF4444" stroke-width="3"/>
+                        <text id="switch-text-val" x="120" y="55" fill="#EF4444" font-weight="bold" font-size="12" text-anchor="middle">AUS (Gesperrt)</text>
+                    </g>
+
+                    <!-- ================= ORIENTAL MOTOR DRIVER ================= -->
+                    <!-- Weit rechts platziert, separiert durch großen Freiraum -->
+                    <g transform="translate(860, 40)">
+                        <rect width="300" height="300" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"/>
+                        <text x="150" y="25" fill="#10B981" font-weight="bold" font-size="13" text-anchor="middle">ORIENTAL MOTOR BLF</text>
+                        <text x="150" y="42" fill="#86EFAC" font-size="10" text-anchor="middle">Steuerungsklemmen (Control I/O)</text>
+                        
+                        <!-- Terminal Slots -->
+                        <g transform="translate(30, 75)" fill="#374151">
+                            <!-- X1 -->
+                            <rect x="0" y="0" width="60" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-x1" cx="15" cy="17.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="35" y="22" fill="#FFF" font-weight="bold" font-size="12">X1</text>
+                            <text x="75" y="22" fill="#9CA3AF" font-size="10">START/STOP</text>
+
+                            <!-- X2 -->
+                            <rect x="0" y="55" width="60" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-x2" cx="15" cy="72.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="35" y="77" fill="#FFF" font-weight="bold" font-size="12">X2</text>
+                            <text x="75" y="77" fill="#9CA3AF" font-size="10">RUN/BRAKE</text>
+
+                            <!-- X3 -->
+                            <rect x="0" y="110" width="60" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-x3" cx="15" cy="127.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="35" y="132" fill="#FFF" font-weight="bold" font-size="12">X3</text>
+                            <text x="75" y="132" fill="#9CA3AF" font-size="10">CW/CCW</text>
+
+                            <!-- IN-COM -->
+                            <rect x="0" y="165" width="85" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-incom" cx="15" cy="182.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="32" y="187" fill="#FFF" font-weight="bold" font-size="11">IN-COM</text>
+                            <text x="95" y="187" fill="#9CA3AF" font-size="10">MASSE</text>
+
+                            <!-- X0 -->
+                            <rect x="0" y="220" width="85" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-incom" cx="15" cy="237.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="32" y="242" fill="#FFF" font-weight="bold" font-size="11">X0</text>
+                            <text x="95" y="242" fill="#9CA3AF" font-size="10">Error Port</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= WIRES (STRINGS) - EXAKTE ZENTRIERUNG ================= -->
+                    <!-- Power Bus (VCC) Daisy-Chain to Relays -->
+                    <!-- Von Arduino Pin (35, 96) zu Relais 1 DC+ (485, 120) -->
+                    <path class="wire" d="M 35,96 L 250,96 L 250,120 L 485,120" fill="none" stroke="#EF4444" stroke-width="1.5" />
+                    <!-- Brücke zu Relais 2 DC+ (485, 340) -->
+                    <path class="wire" d="M 250,120 L 250,340 L 485,340" fill="none" stroke="#EF4444" stroke-width="1.5" />
+                    <circle cx="250" cy="120" r="3.5" fill="#EF4444" />
+                    
+                    <!-- Ground Rail (GND) to Relays -->
+                    <!-- Von Arduino Pin (35, 126) zu Relais 1 DC- (485, 145) -->
+                    <path class="wire" d="M 35,126 L 265,126 L 265,145 L 485,145" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    <!-- Brücke zu Relais 2 DC- (485, 365) -->
+                    <path class="wire" d="M 265,145 L 265,365 L 485,365" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    <circle cx="265" cy="145" r="3.5" fill="#4B5563" />
+
+                    <!-- GND to Membrane Keypads -->
+                    <!-- Leitung vom Massestützpunkt (265, 365) runter zu Keypad 1 GND (75, 495) -->
+                    <path class="wire" d="M 265,365 L 265,385 L 75,385 L 75,495" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    <circle cx="265" cy="365" r="3.5" fill="#4B5563" />
+                    <!-- Brücke von Keypad 1 GND (75, 495) zu Keypad 2 GND (55, 665) -->
+                    <path class="wire" d="M 75,495 L 55,495 L 55,665" fill="none" stroke="#4B5563" stroke-width="1.5" />
+
+                    <!-- Trigger D2 -> Relais 1 IN -->
+                    <!-- Von Pin D2 (230, 106) direkt zu Relais 1 IN (485, 170) -->
+                    <path class="wire" d="M 230,106 L 285,106 L 285,170 L 485,170" fill="none" stroke="#F59E0B" stroke-width="1.8" />
+                    
+                    <!-- Trigger D3 -> Relais 2 IN -->
+                    <!-- Von Pin D3 (230, 131) direkt zu Relais 2 IN (485, 390) -->
+                    <path class="wire" d="M 230,131 L 295,131 L 295,390 L 485,390" fill="none" stroke="#3B82F6" stroke-width="1.8" />
+
+                    <!-- Keypad 1 -> Arduino Digital Pins -->
+                    <!-- Pin D4 (230, 166) zu Keypad 1 Links (120, 495) -->
+                    <path class="wire" d="M 230,166 L 315,166 L 315,375 L 120,375 L 120,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+                    <!-- Pin D5 (230, 191) zu Keypad 1 Rechts (165, 495) -->
+                    <path class="wire" d="M 230,191 L 325,191 L 325,365 L 165,365 L 165,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+
+                    <!-- Keypad 2 -> Arduino Digital Pins -->
+                    <!-- Pin D6 (230, 226) zu Keypad 2 Rot (95, 665) -->
+                    <path class="wire" d="M 230,226 L 335,226 L 335,610 L 95,610 L 95,665" fill="none" stroke="#EF4444" stroke-width="1.5"/>
+                    <!-- Pin D7 (230, 251) zu Keypad 2 Gelb 1 (135, 665) -->
+                    <path class="wire" d="M 230,251 L 345,251 L 345,620 L 135,620 L 135,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+                    <!-- Pin D8 (230, 276) zu Keypad 2 Gelb 2 (175, 665) -->
+                    <path class="wire" d="M 230,276 L 355,276 L 355,630 L 175,630 L 175,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+                    <!-- Pin D9 (230, 301) zu Keypad 2 Grün (215, 665) -->
+                    <path class="wire" d="M 230,301 L 365,301 L 365,640 L 215,640 L 215,665" fill="none" stroke="#10B981" stroke-width="1.5"/>
+
+                    <!-- SWITCHING TERMINALS TO C0 BUS (WAGO) -->
+                    <!-- Relais COM 1 (707.5, 130) zu Wago Contact 1 (520, 547) -->
+                    <path id="wire-rel1-com" class="wire" d="M 707.5,130 L 760,130 L 760,450 L 520,450 L 520,547" fill="none" stroke="#F97316" stroke-width="2"/>
+                    <!-- Relais COM 2 (707.5, 350) zu Wago Contact 2 (560, 547) -->
+                    <path id="wire-rel2-com" class="wire" d="M 707.5,350 L 750,350 L 750,460 L 560,460 L 560,547" fill="none" stroke="#F97316" stroke-width="2"/>
+                    <!-- Wippschalter Contact 1 (910, 530) zu Wago Contact 3 (600, 547) -->
+                    <path id="wire-switch-com" class="wire" d="M 910,530 L 800,530 L 800,470 L 600,470 L 600,547" fill="none" stroke="#F97316" stroke-width="2"/>
+                    
+                    <!-- Main Return Loop: Driver IN-COM (890, 297.5) zu Wago Contact 5 (680, 547) -->
+                    <path class="wire" d="M 890,297.5 L 815,297.5 L 815,480 L 680,480 L 680,547" fill="none" stroke="#10B981" stroke-width="2.5"/>
+
+                    <!-- RELAIS NO CONTACTS TO DRIVER -->
+                    <!-- Relais 1 NO (707.5, 100) zu Driver X1 (890, 132.5) -->
+                    <path id="wire-x1" class="wire" d="M 707.5,100 L 825,100 L 825,132.5 L 890,132.5" fill="none" stroke="#EF4444" stroke-width="2.5"/>
+                    <!-- Relais 2 NO (707.5, 320) zu Driver X3 (890, 242.5) -->
+                    <path id="wire-x3" class="wire" d="M 707.5,320 L 780,320 L 780,242.5 L 890,242.5" fill="none" stroke="#3B82F6" stroke-width="2.5"/>
+                    <!-- Wippschalter Contact 2 (1050, 530) zu Driver X2 (890, 187.5) -->
+                    <path id="wire-x2" class="wire" d="M 1050,530 L 1110,530 L 1110,187.5 L 890,187.5" fill="none" stroke="#10B981" stroke-width="2.5"/>
+
+                    <!-- X0 Error (1050, 282.5) zu IN-COM (890, 297.5) -->
+                    <path id="wire-x2" class="wire" d="M 1050,282.5 L 1110,282.5 L 1110,297.5 L 890,297.5" fill="none" stroke="#10B981" stroke-width="2.5"/>
+
+                </svg>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
+                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (15 s):</strong> Die Rampenzeiten entsprechen den Treiber-Parametern (dEC/ACC). Der Arduino wartet diese Zeit ab, bevor er den nächsten Zustand einleitet.</p>
+                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (1,5 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
+                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D4–D9 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
+                <p><strong class="text-amber-500">Verteilte Positionen:</strong> Steuerungsmodule (links) → Relais (Mitte) → Motor-Treiber (rechts) – keine Kabelkreuzungen.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Pin Out tables / Documentation -->
+    <section class="w-full px-4 pb-8">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg">
+            <h2 class="text-sm font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Verkabelungsliste mit den neuen Keypads</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-gray-300">
+                    <thead class="bg-gray-900 uppercase text-gray-400">
+                        <tr>
+                            <th class="p-2">Quelle (Arduino / Bauteil)</th>
+                            <th class="p-2">Schnittstelle (Pin)</th>
+                            <th class="p-2">Zielort</th>
+                            <th class="p-2">Zweck / Logik</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <tr>
+                            <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Richtung)</td>
+                            <td class="p-2">Pin 1 (Masse)</td>
+                            <td class="p-2">Arduino <strong class="text-gray-300">GND</strong> (Masserückleitung)</td>
+                            <td class="p-2">Gemeinsame Masse für den Richtungsschalter</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Links)</td>
+                            <td class="p-2">Pin 2</td>
+                            <td class="p-2">Arduino <strong class="text-purple-300">D4</strong></td>
+                            <td class="p-2">Standby: Linkslauf (CCW) vorwählen · Im Betrieb (CW): Richtungswechsel → Bremsrampe → Auto-Neustart CCW</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Rechts)</td>
+                            <td class="p-2">Pin 3</td>
+                            <td class="p-2">Arduino <strong class="text-purple-300">D5</strong></td>
+                            <td class="p-2">Standby: Rechtslauf (CW) vorwählen · Im Betrieb (CCW): Richtungswechsel → Bremsrampe → Auto-Neustart CW</td>
+                        </tr>
+                        <tr class="bg-gray-900/30">
+                            <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Steuerung)</td>
+                            <td class="p-2">Pin 1 (Masse)</td>
+                            <td class="p-2">Folientaster 1 <strong class="text-gray-300">GND Pin 1</strong></td>
+                            <td class="p-2">Masseweiterleitung (Daisy-Chain)</td>
+                        </tr>
+                        <tr class="bg-gray-900/30">
+                            <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Rot)</td>
+                            <td class="p-2">Pin 2</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D6</strong></td>
+                            <td class="p-2">STOP – aktiv in ANLAUFEN &amp; LÄUFT: Bremsrampe (15 s) → Standby</td>
+                        </tr>
+                        <tr class="bg-gray-900/30">
+                            <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 1)</td>
+                            <td class="p-2">Pin 3</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D7</strong></td>
+                            <td class="p-2">Programmtaster 1 / Geschwindigkeit 1</td>
+                        </tr>
+                        <tr class="bg-gray-900/30">
+                            <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 2)</td>
+                            <td class="p-2">Pin 4</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D8</strong></td>
+                            <td class="p-2">Programmtaster 2 / Geschwindigkeit 2</td>
+                        </tr>
+                        <tr class="bg-gray-900/30">
+                            <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Grün)</td>
+                            <td class="p-2">Pin 5</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D9</strong></td>
+                            <td class="p-2">START – nur in STANDBY: REL1 (X1) AN → Anlauframpe 15 s → LÄUFT</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Simulation Script – 6-state machine matching demo/main.cpp -->
+    <script>
+        // ── Ramp durations (scaled for simulation: 3 s instead of real 15 s) ────
+        const SIM_ANLAUF_MS = 3000;
+        const SIM_BREMS_MS  = 3000;
+        const SIM_WARTE_MS  = 600;
+
+        // ── State ────────────────────────────────────────────────────────────────
+        // LOCKED | STANDBY | ACCELERATING | RUNNING_CW | RUNNING_CCW | DECELERATING | WAITING
+        let simState    = 'LOCKED';
+        let targetDir   = 'CW';    // 'CW' or 'CCW'
+        let pendingAuto = false;
+        let rampHandle  = null;
+        let rampStartMs = 0;
+        let rampTotalMs = 0;
+        let rafHandle   = null;
+
+        function clearTimers() {
+            if (rampHandle) { clearTimeout(rampHandle); rampHandle = null; }
+            if (rafHandle)  { cancelAnimationFrame(rafHandle); rafHandle = null; }
+        }
+
+        function startRamp(durationMs, onDone) {
+            clearTimers();
+            rampStartMs = Date.now();
+            rampTotalMs = durationMs;
+            rampHandle  = setTimeout(() => { rampHandle = null; onDone(); }, durationMs);
+            animateBar();
+        }
+
+        function animateBar() {
+            const elapsed = Math.min(Date.now() - rampStartMs, rampTotalMs);
+            const pct = Math.round((elapsed / rampTotalMs) * 100);
+            const bar  = document.getElementById('ramp-bar');
+            const pctEl = document.getElementById('ramp-pct');
+            if (bar)   bar.style.width = pct + '%';
+            if (pctEl) pctEl.textContent = pct + '%';
+            if (rampHandle) rafHandle = requestAnimationFrame(animateBar);
+        }
+
+        // ── Wire helpers ─────────────────────────────────────────────────────────
+        function setWire(id, on, colorOn, colorOff) {
+            const w = document.getElementById(id);
+            if (!w) return;
+            if (on) { w.classList.add('wire-active');    w.setAttribute('stroke', colorOn); }
+            else    { w.classList.remove('wire-active'); w.setAttribute('stroke', colorOff || '#4B5563'); }
+        }
+
+        // ── State → UI config ────────────────────────────────────────────────────
+        const STATE_UI = {
+            LOCKED:       { color:'red',    ping:true,  text:'Gesperrt (X2 aus)',     desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' },
+            STANDBY:      { color:'amber',  ping:false, text:'Standby – Bereit',       desc:'Richtung wählen (LINKS/RECHTS), dann GRÜN drücken.' },
+            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft (15 s). STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
+            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW.' },
+            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW.' },
+            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft (15 s). Alle Eingaben gesperrt.' },
+            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (1,5 s).' },
+        };
+        const COLOR_MAP = {
+            red:    { box:'text-red-500',    ping:'bg-red-400',    dot:'bg-red-500',    bar:'bg-red-400'    },
+            amber:  { box:'text-amber-500',  ping:'',              dot:'bg-amber-500',  bar:'bg-amber-400'  },
+            yellow: { box:'text-yellow-400', ping:'bg-yellow-400', dot:'bg-yellow-400', bar:'bg-yellow-400' },
+            green:  { box:'text-green-500',  ping:'bg-green-400',  dot:'bg-green-500',  bar:'bg-green-400'  },
+            orange: { box:'text-orange-400', ping:'bg-orange-400', dot:'bg-orange-400', bar:'bg-orange-400' },
+        };
+
+        function updateUI() {
+            const ui = STATE_UI[simState] || STATE_UI.LOCKED;
+            const c  = COLOR_MAP[ui.color];
+
+            document.getElementById('status-box').className  = 'flex items-center gap-2 ' + c.box;
+            document.getElementById('status-ping').className = ui.ping
+                ? 'animate-ping absolute inline-flex h-full w-full rounded-full ' + c.ping + ' opacity-75' : '';
+            document.getElementById('status-dot').className  = 'relative inline-flex rounded-full h-2.5 w-2.5 ' + c.dot;
+            document.getElementById('status-text').textContent = ui.text;
+            document.getElementById('status-desc').textContent = ui.desc;
+
+            // Ramp progress bar
+            const rs = document.getElementById('ramp-section');
+            const isRamping = ['ACCELERATING','DECELERATING','WAITING'].includes(simState);
+            rs.classList.toggle('hidden', !isRamping);
+            if (isRamping) {
+                const labels = { ACCELERATING:'Anlauframpe (15 s)', DECELERATING:'Bremsrampe (15 s)', WAITING:'Sicherheitspause' };
+                document.getElementById('ramp-label').textContent = labels[simState];
+                document.getElementById('ramp-bar').className = 'h-1.5 rounded-full ' + c.bar;
+            }
+
+            // Wires
+            const x2on = (simState !== 'LOCKED');
+            setWire('wire-x2', x2on, '#10B981');
+            const x1on = ['ACCELERATING','RUNNING_CW','RUNNING_CCW'].includes(simState);
+            setWire('wire-x1', x1on, '#EF4444');
+            setWire('wire-x3', targetDir === 'CCW', '#3B82F6');
+
+            // X2 hardware switch visual
+            const btnX2   = document.getElementById('btn-x2');
+            const swLever = document.getElementById('switch-lever');
+            const swTxt   = document.getElementById('switch-text-val');
+            if (simState === 'LOCKED') {
+                btnX2.textContent = 'SPERRE (OFF)';
+                btnX2.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition bg-red-600 text-white hover:bg-red-500';
+                swLever.setAttribute('y1','50'); swLever.setAttribute('y2','50'); swLever.setAttribute('stroke','#EF4444');
+                swTxt.textContent = 'AUS (Gesperrt)'; swTxt.setAttribute('fill','#EF4444');
+            } else {
+                btnX2.textContent = 'FREIGABE (ON)';
+                btnX2.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition bg-green-600 text-white hover:bg-green-500';
+                swLever.setAttribute('y1','50'); swLever.setAttribute('y2','30'); swLever.setAttribute('stroke','#10B981');
+                swTxt.textContent = 'EIN (Freigegeben)'; swTxt.setAttribute('fill','#10B981');
+            }
+        }
+
+        // ── Transitions ──────────────────────────────────────────────────────────
+        function goDecelerating(autoRestart) {
+            clearTimers();
+            pendingAuto = autoRestart;
+            simState    = 'DECELERATING';
+            updateUI();
+            startRamp(SIM_BREMS_MS, () => {
+                document.getElementById('ramp-bar').style.width = '100%';
+                simState = 'WAITING'; updateUI();
+                startRamp(SIM_WARTE_MS, () => {
+                    if (pendingAuto) {
+                        simState = 'ACCELERATING'; pendingAuto = false; updateUI();
+                        startRamp(SIM_ANLAUF_MS, () => {
+                            simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
+                            updateUI();
+                        });
+                    } else {
+                        simState = 'STANDBY'; updateUI();
+                    }
+                });
+            });
+        }
+
+        function goAccelerating() {
+            clearTimers(); pendingAuto = false;
+            simState = 'ACCELERATING'; updateUI();
+            startRamp(SIM_ANLAUF_MS, () => {
+                simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
+                updateUI();
+            });
+        }
+
+        // ── Button handlers ──────────────────────────────────────────────────────
+        function toggleX2() {
+            clearTimers();
+            simState = (simState === 'LOCKED') ? 'STANDBY' : 'LOCKED';
+            updateUI();
+        }
+        function pressLinks() {
+            if      (simState === 'STANDBY')                          { targetDir = 'CCW'; updateUI(); }
+            else if (simState === 'RUNNING_CW')                       { targetDir = 'CCW'; goDecelerating(true); }
+            else if (simState === 'ACCELERATING' && targetDir === 'CW') { targetDir = 'CCW'; goDecelerating(true); }
+            // RUNNING_CCW / already-CCW-ramp / decel/wait → no-op
+        }
+        function pressRechts() {
+            if      (simState === 'STANDBY')                            { targetDir = 'CW'; updateUI(); }
+            else if (simState === 'RUNNING_CCW')                        { targetDir = 'CW'; goDecelerating(true); }
+            else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true); }
+        }
+        function pressGruen() {
+            if (simState === 'STANDBY') { goAccelerating(); }
+        }
+        function pressRot() {
+            if (['RUNNING_CW','RUNNING_CCW','ACCELERATING'].includes(simState)) { goDecelerating(false); }
+        }
+        function pressGelb1() { if (simState !== 'LOCKED') console.log('[SIM] Preset 1 – noch nicht belegt'); }
+        function pressGelb2() { if (simState !== 'LOCKED') console.log('[SIM] Preset 2 – noch nicht belegt'); }
+
+        window.onload = function() { updateUI(); };
+    </script>
+</body>
+</html>

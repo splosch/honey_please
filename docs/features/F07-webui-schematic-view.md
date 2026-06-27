@@ -1,6 +1,6 @@
 # F07 – Web UI Schematic View
 
-**Status:** ⏳ TO BE VERIFIED – Web UI files (`data/index.html`, `data/style.css`, `data/app.js`) carry over from ESP32 unchanged. Board-side WebSocket server and HTTP endpoints (`web_api.cpp` / `main.cpp`) need complete rewrite for R4 (M6.4–M6.7). No UI milestone is considered done until `[SELFCHECK PASSED]` on R4 and Web UI connects from local dev server.  
+**Status:** ✅ VERIFIED on R4 WiFi (2026-05-18) – All three component boxes render correctly. Live GPIO state (PIN 9/7/8/6/2/A0), ramp progress + ETA, direction indicator + basket animation, RPM display + sparkline all confirmed. 3-pill env-bar added (DEV SERVER / BOARD ONLINE / SIM DRIVER). Web UI served from local dev server via `node serve.js` or VS Code Live Server.  
 **Depends on:** [F01](./F01-motor-control-architecture.md), [F02](./F02-rpm-monitoring.md), [F03](./F03-acceleration-deceleration-ramps.md), [F04](./F04-direction-control.md), [F05](./F05-error-states.md), [F06](./F06-rpm-limits-and-params.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
@@ -22,12 +22,12 @@ The Web UI is a **live system schematic**, not a control panel. The operator sho
 │    [ R4 WiFi ]       │  [ MOTOR CTRL ]      │   [ HONIGSCHLEUDER ]  │  ← Component row
 │                      │        │             │                       │
 │  Pin Diagram         │  PWM ══╗             │    ↺  LEFT / CCW     │
-│  GPIO 18 ▪ PWM       │  DIR ══╝             │                       │
-│  GPIO 19 ▪ DIR_A     │                      │    ████  45 RPM       │
-│  GPIO 21 ▪ DIR_B     │  STATUS: OK ●        │    ████  → 80 RPM    │
-│  GPIO 22 ▪ ENABLE    │  Temp: 42°C (est.)   │    [=========░░░] ▲  │
-│  GPIO 34 ▪ RPM IN    │                      │    ETA: 3.5 s         │
-│  GPIO 35 ▪ FAULT IN  │                      │                       │
+│  PIN 9  ▪ PWM        │  DIR ══╝             │                       │
+│  PIN 7  ▪ DIR_A      │                      │    ████  45 RPM       │
+│  PIN 8  ▪ DIR_B      │  STATUS: OK ●        │    ████  → 80 RPM    │
+│  PIN 6  ▪ ENABLE     │                      │    [=========░░░] ▲  │
+│  PIN 2  ▪ RPM IN     │                      │    ETA: 3.5 s         │
+│  PIN A0 ▪ FAULT IN   │                      │                       │
 │                      │                      │    ○──────────○       │  ← wire connectors
 │  WiFi: 192.168.x.x   │                      │                       │
 │  Uptime: 00:42:17    │                      │                       │
@@ -62,21 +62,20 @@ Each component is rendered as an SVG or HTML panel with a colored status ring:
 
 ### 3.1 R4 WiFi Component Box
 
-Shows the pin diagram of all motor-relevant GPIOs (pin numbers are TBD placeholders until schematic confirmed):
+Shows the pin diagram of all motor-relevant GPIOs (R4 WiFi confirmed pin assignments):
 
 ```
 ┌─────────────────────────┐
-│ ⬡ R4 WiFi / RA4M1    │ ● GREEN
+│ ⬡ RA4M1 / R4 WiFi  │ ● GREEN
 ├─────────────────────────┤
-│ Pin 5   PWM     ██░░░░ │  ← duty cycle bar (live)
+│ Pin 9   PWM     ██░░░░ │  ← duty cycle bar (live)
 │ Pin 7   DIR_A   [HIGH] │  ← live HIGH/LOW badge
 │ Pin 8   DIR_B   [LOW]  │
 │ Pin 6   ENABLE  [HIGH] │
 │ Pin 2   RPM IN  ~~~~   │  ← waveform indicator (pulse activity)
-│ Pin 4   FAULT   [HIGH] │  ← HIGH = OK, LOW = FAULT
+│ Pin A0  FAULT   [HIGH] │  ← HIGH = OK, LOW = FAULT
 ├─────────────────────────┤
 │ IP: <board-ip>         │
-│ WiFi: ████ -65 dBm      │
 │ Uptime: 00:42:17       │
 │ Free SRAM: ~20 kB      │
 └─────────────────────────┘

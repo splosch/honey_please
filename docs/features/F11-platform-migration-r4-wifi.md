@@ -1,7 +1,8 @@
 # F11 – Platform Migration: Arduino Uno R4 WiFi
 
-**Status:** 🔄 In Progress – Phase 6  
+**Status:** ✅ COMPLETE – All Phase 6 milestones M6.1–M6.14 verified on R4 WiFi (2026-05-18)  
 **Decision date:** 2026-05-16  
+**Completed:** 2026-05-18  
 **Replaces:** ESP32-D0WDQ6 (retired)  
 **Referenced by:** [Feature Overview](../FEATURE-OVERVIEW.md)
 
@@ -258,19 +259,19 @@ These questions from Phase 5 remain valid. The platform change does not answer t
 | ID | Milestone | Depends on | Status |
 |---|---|---|---|
 | ✅ M6.1 | `[env:r4wifi]` only env in `platformio.ini`; ESP32 envs removed | — | Done |
-| 🔲 M6.2 | `main.cpp` rewritten for R4: `WiFiS3.h`, ArduinoOTA, no FreeRTOS, USB Serial | M6.1 | Next |
-| 🔲 M6.3 | USB Serial command interface: `help`, `status`, `target`, `stop`, `estop`, `resetfault` | M6.2 | |
-| 🔲 M6.4 | `web_api.cpp` rewritten: sync `WiFiServer`/`WiFiClient` replaces `ESPAsyncWebServer` | M6.2 | |
-| 🔲 M6.5 | WebSocket `/ws` alive on R4 (10 Hz JSON state frames) | M6.4 | |
-| 🔲 M6.6 | **CORS** – `Access-Control-Allow-Origin: *` on all HTTP responses + OPTIONS preflight | M6.4 | Critical |
-| 🔲 M6.7 | `GET /status` JSON endpoint | M6.4 | |
-| 🔲 M6.8 | EEPROM params persistence (replaces NVS `Preferences`) | M6.1 | |
-| 🔲 M6.9 | In-memory session ring buffer ≤50 entries (replaces LittleFS JSONL) | M6.1 | |
-| 🔲 M6.10 | `log.h` rewritten: direct `Serial.println()`, no FreeRTOS queue, no WebSerial | M6.2 | |
-| 🔲 M6.11 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | M6.2 | |
-| 🔲 M6.12 | `selfcheck.js` updated: checks `/status` + `/ws`, no `/webserial` | M6.7 | |
-| 🔲 M6.13 | WiFi + OTA verified on real R4 hardware (USB-flash first, then OTA) | M6.2 | |
-| 🔲 M6.14 | Full sim run: WebSocket + USB Serial + Web UI from local dev server end-to-end | M6.3–M6.12 | |
+| ✅ M6.2 | `main.cpp` rewritten for R4: `WiFiS3.h`, ArduinoOTA, no FreeRTOS, USB Serial | M6.1 | Done |
+| ✅ M6.3 | USB Serial command interface: `help`, `status`, `target`, `stop`, `estop`, `resetfault` | M6.2 | Done |
+| ✅ M6.4 | `web_api.cpp` rewritten: sync `WiFiServer`/`WiFiClient` replaces `ESPAsyncWebServer` | M6.2 | Done |
+| ✅ M6.5 | WebSocket `/ws` alive on R4 (10 Hz JSON state frames) | M6.4 | Done |
+| ✅ M6.6 | **CORS** – `Access-Control-Allow-Origin: *` on all HTTP responses + OPTIONS preflight | M6.4 | Done |
+| ✅ M6.7 | `GET /status` JSON endpoint | M6.4 | Done |
+| ✅ M6.8 | EEPROM params persistence (replaces NVS `Preferences`) | M6.1 | Done |
+| ✅ M6.9 | In-memory session ring buffer ≤50 entries (replaces LittleFS JSONL) | M6.1 | Done |
+| ✅ M6.10 | `log.h` rewritten: direct `Serial.println()`, no FreeRTOS queue, no WebSerial | M6.2 | Done |
+| ✅ M6.11 | Status LED on `LED_BUILTIN` (GPIO 13, active-HIGH) | M6.2 | Done |
+| ✅ M6.12 | `selfcheck.js` updated: checks `/status` + `/ws`, no `/webserial` | M6.7 | Done |
+| ✅ M6.13 | WiFi + USB flash verified on real R4 hardware – IP 192.168.178.70 | M6.2 | Done |
+| ✅ M6.14 | Full sim run: WebSocket + USB Serial + Web UI from local dev server end-to-end | M6.3–M6.12 | 2026-05-18 — RUN/STOP/CCW/Session/E-STOP/Reset all verified ✅ |
 
 ---
 

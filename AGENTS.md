@@ -6,6 +6,42 @@ Deine Aufgabe: agentische Unterstützung mit höchster Stabilität und minimalen
 
 ---
 
+## ARCHITECTURE.md – Zentraler Navigationspunkt
+
+> **Pflicht vor jeder Implementierung:** Lies zuerst [`ARCHITECTURE.md`](ARCHITECTURE.md).
+> Dort findest du die Domain-Index-Tabelle, die genau angibt, welche Sub-Dokumente für deine Aufgabe relevant sind.
+
+### Scope-Kontrolle für AI-Agenten
+
+Das Projekt ist in Domänen aufgeteilt. Lade **nur** die Dokumente, die für die aktuelle Aufgabe benötigt werden:
+
+| Aufgabe / Domäne | Relevante Sub-Dokumente (aus ARCHITECTURE.md Domain-Index) |
+|---|---|
+| Hardware, Pins, Verdrahtung | `docs/hardware/` |
+| WebSocket-Protokoll, HTTP, CORS | `docs/webui/` |
+| Simulation, HAL, Fault Injection | `docs/simulation/` |
+| Motor-Logik, Rampen, Fehlerbehandlung | `docs/features/F01–F05` |
+| Parameter, EEPROM | `docs/features/F06` |
+| Extraction-Programm, Session | `docs/features/F09, F10` |
+| Build, Flash, Selfcheck, Deploy | `docs/ops/` |
+| Milestone-Status prüfen/aktualisieren | `docs/FEATURE-OVERVIEW.md` |
+| Aktuelle Task-Planung | `docs/current_task.md` |
+
+**Regel:** Nie alle Feature-Docs gleichzeitig laden. Den Scope gezielt begrenzen.
+
+### Pflichten nach Milestones und strukturellen Änderungen
+
+Nach **jedem** abgeschlossenen Milestone oder strukturellen Änderungen (neue Datei, neuer Endpoint, neues Verzeichnis):
+
+1. `ARCHITECTURE.md` aktualisieren — Ordnerstruktur, Domain-Index, Milestone-Status-Tabelle.
+2. `docs/FEATURE-OVERVIEW.md` aktualisieren — Milestone-Status (⏳ → ✅).
+3. `docs/current_task.md` mit aktuellem Stand aktualisieren.
+4. Bei IP/Protokoll/Deploy-Änderung: `README.md` und `docs/ops/deploy.md` aktualisieren.
+
+---
+
+---
+
 ## Systemarchitektur – Überblick
 
 ```
@@ -71,68 +107,67 @@ RPM-Sensor    →  Pin 2 (INT0, 5 V tolerant)
 
 7. **Dokumentations-Pflege nach jedem Milestone:**
    - Nach Abschluss eines Feature-Milestones (Mx.y) **immer** prüfen und ggf. aktualisieren:
+     - `ARCHITECTURE.md` — Ordnerstruktur, Domain-Index, Milestone-Status-Tabelle, Architecture Decisions
      - `README.md` — Board-IP, Firmware-Version, Befehle, Projektstruktur, Quick-Start-Anleitung
      - `docs/FEATURE-OVERVIEW.md` — Milestone-Status (⏳ → ✅/⚠️), Phase-Header, Notizen
-   - Faustregel: Wenn sich IP, Protokoll, Dateistruktur oder ein Workflow ändert, ist README.md veraltet.
-   - **README.md darf nie auf veraltete IPs, Protokolle oder entfernte Features verweisen.**
+     - `docs/current_task.md` — Fortschrittsprotokoll aktualisieren
+   - Faustregel: Wenn sich IP, Protokoll, Dateistruktur oder ein Workflow ändert, ist README.md und ARCHITECTURE.md veraltet.
+   - **README.md und ARCHITECTURE.md dürfen nie auf veraltete IPs, Protokolle oder entfernte Features verweisen.**
+
+8. **Deploy-Sanity-Workflow – Pflicht nach jeder Firmware-Änderung:**
+   - **Niemals** direkt flashen, ohne vorher einen Compile-Check gemacht zu haben.
+   - Workflow (zwingend in dieser Reihenfolge):
+     1. `npm run build` — Kompiliert ohne zu flashen. Bei Compiler-Fehlern: zuerst beheben.
+     2. Kurze Code-Review: Überprüfe auf offensichtliche Probleme (Magic Numbers, fehlende Null-Checks, Stack-Verbrauch).
+     3. `npm run deploy` — Kompiliert, flasht via USB COM4, wartet 12 s, führt Selfcheck aus.
+     4. Selfcheck-Ergebnis auswerten: `[SELFCHECK PASSED]` = fertig. `FAIL` = Serial Monitor öffnen und debuggen.
+   - Der `npm run deploy`-Befehl ist die **einzige** autorisierte Flash-Methode (OTA ist auf R4 WiFi / renesas-ra nicht verfügbar).
+   - Bei abweichendem COM-Port: `node deploy.js COM5` oder `node deploy.js COM5 <board-ip>`.
 
 ---
 
-## OTA Deploy & Verify Workflow (Automatisch)
+## Deploy & Verify Workflow (Automatisch)
 
-Nach **jeder** Codeänderung führst du eigenständig diesen Workflow aus:
+Nach **jeder** Firmware-Änderung führst du eigenständig diesen Workflow aus:
 
-### Schritt 1: Board-Konfiguration prüfen
+> ⚠️ **OTA ist auf R4 WiFi / renesas-ra nicht verfügbar.** Flash ausschließlich via USB.
 
-Lies `platformio.ini` und ermittle:
-- `board` → muss `uno_r4_wifi` sein
-- `upload_protocol` → muss `arduinoota` sein (nicht `espota`)
-- `upload_port` → IP-Adresse des R4 WiFi Boards
-
-Ist `upload_protocol` nicht `arduinoota` oder `upload_port` nicht gesetzt:
-→ Frage den User nach der Board-IP und weise darauf hin, dass die OTA-Zeilen in `platformio.ini` einkommentiert werden müssen (nach M6.2).
-
-PlatformIO CLI-Pfad automatisch erkennen:
-```
-where pio 2>&1 || powershell -Command "Get-Command pio -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source"
-```
-
-### Schritt 2: OTA Upload ausführen
+### Schritt 1: Compile-Check (Sanity)
 
 ```
-<pio_path> run -e r4wifi --target upload
+npm run build
 ```
 
-Erwartetes Erfolgskriterium:
-```
-Uploading: [============================================================] 100%
-```
+Kompiliert den Sketch ohne zu flashen. Bei Compiler-Fehlern: **zuerst beheben, dann weiter.**
 
-Bei Fehler (Timeout, Connection refused, Exit Code ≠ 0):
-- Gib den genauen Fehlertext aus.
-- Frage: "Ist das Board erreichbar? Bitte `ping <upload_port>` ausführen."
-- Fallback: USB-Flash anbieten (`pio run -e r4wifi --target upload --upload-port COMx`).
-
-### Schritt 3: Verify – Self-Check ausführen
-
-Nach erfolgreichem Upload: **10 Sekunden warten** (R4 Neustart), dann:
+### Schritt 2: Upload + Selfcheck
 
 ```
-node tests/selfcheck.js <upload_port>
+npm run deploy
 ```
 
-Das Skript prüft:
-1. **HTTP** – `GET /status` → erwartet HTTP 200 + JSON-Body
-2. **WebSocket Connect** – verbindet `/ws`
-3. **WebSocket Read** – empfängt mindestens einen JSON-Frame vom Board
+`deploy.js` führt automatisch aus:
+1. Compile (nochmal zur Sicherheit)
+2. USB-Flash via `pio run -e r4wifi --target upload --upload-port COM4`
+3. 12 s warten (Board-Neustart)
+4. `node tests/selfcheck.js 192.168.178.70` — prüft HTTP `/status` + WebSocket `/ws`
 
-Voraussetzung (einmalig):
+Bei abweichendem COM-Port oder Board-IP:
 ```
-cd tests && npm install ws
+node deploy.js COM5 192.168.1.99
 ```
+
+### Schritt 3: Ergebnis auswerten
+
+| Selfcheck-Output | Bedeutung | Nächster Schritt |
+|---|---|---|
+| `[SELFCHECK PASSED]` | Alles OK | Fertig |
+| HTTP FAIL + WS FAIL | Board nicht gebootet | Serial Monitor öffnen (`[BOOT]` abwarten) |
+| HTTP OK + WS FAIL | WebSocket-Route fehlt | `web_api.cpp` prüfen |
+| Upload FAILED | COM-Port falsch / Board nicht verbunden | Port prüfen |
 
 Erwartete Erfolgsausgabe:
-```
+
 [SELFCHECK PASSED] IP: <board-ip>
 ```
 
@@ -163,7 +198,7 @@ oder entsprechend mit FAIL + konkretem Fehler.
 |---|---|---|
 | HTTP FAIL + WS FAIL | Board nicht erreichbar | `ping <IP>`, ggf. USB-Flash |
 | HTTP OK + WS FAIL | HTTP-Server läuft, `/ws`-Route fehlt | `WebSocket`-Handler in `web_api.cpp` prüfen |
-| HTTP OK + WS TIMEOUT | Verbindet, Board sendet nichts | `loop()` prüfen: `webApi.tick()` und `ArduinoOTA.handle()` vorhanden? |
+| HTTP OK + WS TIMEOUT | Verbindet, Board sendet nichts | `loop()` prüfen: `webApi.tick()` vorhanden? |
 | HTTP TIMEOUT | Port 80 blockiert / Server nicht gestartet | `server.begin()` in `setup()` vorhanden? WiFi verbunden? |
 | **SELFCHECK PASSED** | Alles in Ordnung | Kein Handlungsbedarf |
 

@@ -9,12 +9,44 @@
 }
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
-/* ── SIM banner ───────────────────────────────────────────────────────────── */
-#sim-banner{
-  background:var(--sim-banner);color:#fff;text-align:center;padding:5px;
-  font-weight:700;font-size:13px;letter-spacing:.5px;display:none
+/* ── Environment bar (3-pill status) ──────────────────────────────────────── */
+#env-bar{
+  display:flex;align-items:center;gap:8px;padding:5px 16px;
+  background:#090d12;border-bottom:1px solid var(--border);flex-shrink:0
 }
-#sim-banner.visible{display:block}
+.env-pill{
+  display:flex;align-items:center;gap:7px;padding:3px 10px;border-radius:5px;
+  background:var(--surface);border:1px solid var(--border);white-space:nowrap
+}
+.ep-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s
+}
+.ep-icon{font-size:12px;line-height:1}
+.ep-text{display:flex;flex-direction:column;line-height:1.3}
+.ep-label{font-weight:700;font-size:10px;letter-spacing:.4px;color:var(--text)}
+.ep-detail{font-size:10px;color:var(--muted)}
+.env-sep{color:var(--muted);font-size:11px}
+
+/* Pill 1: UI origin (always blue-tinted) */
+#env-ui{border-color:#1a3a5a}
+#env-ui .ep-icon{color:var(--blue)}
+#env-ui .ep-label{color:var(--blue)}
+
+/* Pill 2: Board connection */
+#env-board[data-state=ok] .ep-dot{background:var(--green)}
+#env-board[data-state=ok] .ep-label{color:var(--green)}
+#env-board[data-state=err] .ep-dot{background:var(--red);animation:flash-red .8s infinite}
+#env-board[data-state=err] .ep-label{color:var(--orange)}
+#env-board[data-state=err]{border-color:#4a1a1a}
+
+/* Pill 3: Driver mode */
+#env-driver[data-state=sim]{border-color:#4a3a00}
+#env-driver[data-state=sim] .ep-icon{color:var(--yellow)}
+#env-driver[data-state=sim] .ep-label{color:var(--yellow)}
+#env-driver[data-state=hw]{border-color:#1a4a1a}
+#env-driver[data-state=hw] .ep-icon{color:var(--green)}
+#env-driver[data-state=hw] .ep-label{color:var(--green)}
+#env-driver[data-state=unknown] .ep-label{color:var(--muted)}
 
 /* ── Top bar ──────────────────────────────────────────────────────────────── */
 #topbar{
@@ -22,9 +54,6 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
   background:var(--surface);border-bottom:1px solid var(--border)
 }
 #topbar h1{font-size:16px;font-weight:700;letter-spacing:1px}
-#conn-dot{width:10px;height:10px;border-radius:50%;background:var(--red)}
-#conn-dot.ok{background:var(--green)}
-#conn-label{font-size:12px;color:var(--muted)}
 #firmware-ver{margin-left:auto;font-size:11px;color:var(--muted)}
 
 /* ── Main layout ──────────────────────────────────────────────────────────── */

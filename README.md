@@ -56,16 +56,27 @@ Type `help` to see all available commands. Boot banner starts with `[BOOT]`.
 
 ## Deploying Code Changes
 
-Flash via USB (COM4) — OTA WiFi upload is not available in the renesas-ra PlatformIO toolchain:
+Flash via USB — OTA WiFi upload is not available in the renesas-ra PlatformIO toolchain.
 
 ```bash
-pio run -e r4wifi --target upload --upload-port COM4
+npm run deploy
 ```
 
-After upload the board reboots (~5 s). Verify:
+This runs three steps automatically:
+1. **Compile** — sanity-checks the sketch (`pio run -e r4wifi`). Aborts on any compiler error.
+2. **Upload** — flashes via USB COM4 (`pio run -e r4wifi --target upload --upload-port COM4`).
+3. **Selfcheck** — waits 12 s for the board to reboot, then verifies HTTP + WebSocket.
+
+To compile without flashing (e.g. after editing firmware files):
 
 ```bash
-npm test
+npm run build
+```
+
+Override port or board IP if needed:
+
+```bash
+node deploy.js COM5 192.168.1.99
 ```
 
 `platformio.ini` is already configured for the R4 WiFi board:

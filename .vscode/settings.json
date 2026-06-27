@@ -1,0 +1,32 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^C:\\\\Users\\\\sploscho\\\\\\.platformio\\\\penv\\\\Scripts\\\\pio\\.exe run -e r4wifi_demo 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cmd /c \"C:\\\\Users\\\\sploscho\\\\\\.platformio\\\\penv\\\\Scripts\\\\pio\\.exe run -e r4wifi_demo\" 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node demo_flash\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node demo_flash\\.js --build-only$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /d d:\\\\code\\\\honey_please && node demo_flash\\.js --build-only 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node demo_flash\\.js --build-only 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /d d:\\\\code\\\\honey_please && node -e \"\nconst fs = require\\('fs'\\);\nconst path = require\\('path'\\);\n\n// Collect all markdown links from ARCHITECTURE\\.md\nconst arch = fs\\.readFileSync\\('ARCHITECTURE\\.md', 'utf8'\\);\nconst links = \\[\\.\\.\\.arch\\.matchAll\\(/\\\\\\[\\(\\[\\^\\\\\\]\\]\\+\\)\\\\\\]\\\\\\(\\(\\[\\^\\)\\]\\+\\)\\\\\\)/g\\)\\]\\.map\\(m => m\\[2\\]\\);\n\nlet ok = 0, missing = \\[\\];\nfor \\(const link of links\\) \\{\n  // strip anchors\n  const filePart = link\\.split\\('#'\\)\\[0\\];\n  if \\(!filePart \\|\\| filePart\\.startsWith\\('http'\\)\\) continue;\n  const full = path\\.resolve\\('d:/code/honey_please', filePart\\);\n  if \\(fs\\.existsSync\\(full\\)\\) \\{ ok\\+\\+; \\} else \\{ missing\\.push\\(filePart\\); \\}\n\\}\nconsole\\.log\\('OK:', ok, '  MISSING:', missing\\.length\\);\nif \\(missing\\.length\\) missing\\.forEach\\(m => console\\.log\\('  MISSING:', m\\)\\);\nelse console\\.log\\('All links resolve\\.'\\);\n\"\n$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

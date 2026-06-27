@@ -10,6 +10,71 @@ const WS_URL = `ws://${BOARD_HOST}/ws`;
 let ws = null, reconnectTimer = null;
 let state = {};
 
+// ─── Environment bar ─────────────────────────────────────────────────────────
+// Three independent status pills: UI origin | Board connection | Driver mode.
+// Pill 1 (UI origin) is static and set once on load.
+// Pills 2+3 are dynamic and driven by WebSocket state + received frames.
+
+const _isDevServer = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const _isFileProt  = location.protocol === 'file:';
+let   _simMode     = null;  // null = unknown (no frame received yet)
+
+(function initUiPill() {
+  const label  = document.getElementById('env-ui-label');
+  const detail = document.getElementById('env-ui-detail');
+  if (_isFileProt) {
+    label.textContent  = 'LOCAL FILE';
+    detail.textContent = 'no server';
+  } else if (_isDevServer) {
+    label.textContent  = 'DEV SERVER';
+    detail.textContent = location.host;
+  } else {
+    label.textContent  = 'REMOTE';
+    detail.textContent = location.host;
+  }
+})();
+
+function updateEnvBar(wsOk) {
+  // Pill 2: Board connection
+  const boardPill   = document.getElementById('env-board');
+  const boardLabel  = document.getElementById('env-board-label');
+  const boardDetail = document.getElementById('env-board-detail');
+  boardDetail.textContent = BOARD_HOST;
+  if (wsOk) {
+    boardPill.dataset.state   = 'ok';
+    boardLabel.textContent    = 'BOARD ONLINE';
+  } else {
+    boardPill.dataset.state   = 'err';
+    boardLabel.textContent    = 'RECONNECTING\u2026';
+  }
+
+  // Pill 3: Motor driver mode
+  const driverPill   = document.getElementById('env-driver');
+  const driverIcon   = document.getElementById('env-driver-icon');
+  const driverLabel  = document.getElementById('env-driver-label');
+  const driverDetail = document.getElementById('env-driver-detail');
+  if (!wsOk || _simMode === null) {
+    driverPill.dataset.state  = 'unknown';
+    driverIcon.textContent    = '\u2014';
+    driverLabel.textContent   = 'DRIVER';
+    driverDetail.textContent  = 'unknown';
+  } else if (_simMode) {
+    driverPill.dataset.state  = 'sim';
+    driverIcon.textContent    = '\u26a0';
+    driverLabel.textContent   = 'SIM DRIVER';
+    driverDetail.textContent  = 'no GPIO output';
+  } else {
+    driverPill.dataset.state  = 'hw';
+    driverIcon.textContent    = '\u2713';
+    driverLabel.textContent   = 'REAL DRIVER';
+    driverDetail.textContent  = 'GPIO active';
+  }
+}
+
+function updateConnUI(ok) {
+  updateEnvBar(ok);
+}
+
 function connect() {
   ws = new WebSocket(WS_URL);
   ws.onopen    = () => { clearTimeout(reconnectTimer); updateConnUI(true); };
@@ -18,11 +83,6 @@ function connect() {
   ws.onmessage = (e) => { try { state = JSON.parse(e.data); render(state); } catch(_){} };
 }
 connect();
-
-function updateConnUI(ok) {
-  document.getElementById('conn-dot').className    = ok ? 'ok' : '';
-  document.getElementById('conn-label').textContent = ok ? 'CONNECTED' : 'RECONNECTING…';
-}
 
 function send(obj) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
@@ -109,8 +169,11 @@ function render(s) {
   const en       = s.enabled;
   const cw       = s.dir === 'CW';
 
-  // SIM banner + badges + fault panel
-  document.getElementById('sim-banner').classList.toggle('visible', sim);
+  // Update env-bar driver pill with latest sim flag from frame
+  _simMode = sim;
+  updateEnvBar(true);
+
+  // SIM badges + fault panel (per-component box indicators)
   document.getElementById('fault-panel').classList.toggle('visible', sim);
   ['esp32', 'mc', 'mot'].forEach(id =>
     document.getElementById('sim-badge-' + id).style.display = sim ? '' : 'none'

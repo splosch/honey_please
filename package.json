@@ -6,8 +6,12 @@
   "scripts": {
     "start":     "node serve.js",
     "serve":     "node serve.js",
-    "test":      "node tests/selfcheck.js 192.168.178.70",
-    "selfcheck": "node tests/selfcheck.js 192.168.178.70"
+    "build":       "node deploy.js --build-only",
+    "deploy":      "node deploy.js",
+    "test":        "node tests/selfcheck.js 192.168.178.70",
+    "selfcheck":   "node tests/selfcheck.js 192.168.178.70",
+    "demo:build":  "node demo_flash.js --build-only",
+    "demo:flash":  "node demo_flash.js"
   },
   "devDependencies": {
     "ws": "^8.20.0"

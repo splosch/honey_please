@@ -1,6 +1,6 @@
 # F10 – Honey Extraction Session
 
-**Status:** ⏳ TO BE VERIFIED – Logic complete on ESP32 (v1.4.0). **Blocked by M6.9:** `session.cpp` still uses LittleFS which does not exist on R4. Session recording will not work until in-memory ring buffer rewrite is done. Full end-to-end session export re-verified at M6.14.  
+**Status:** ✅ VERIFIED on R4 WiFi (2026-05-18) – Logic complete. In-memory ring buffer active (M6.9 done, LittleFS removed). Session start/stop/export confirmed: `⏺ Record` → run motor → `■ Stop` → `⬇ Export` link appears. `GET /sessions?id=N` returns JSONL.  
 **Depends on:** [F02 – RPM Monitoring](./F02-rpm-monitoring.md), [F04 – Direction Control](./F04-direction-control.md), [F05 – Error States](./F05-error-states.md), [F09 – Multi-Step Program](./F09-multistep-program.md)  
 **Referenced by:** [Feature Overview](./FEATURE-OVERVIEW.md)
 
