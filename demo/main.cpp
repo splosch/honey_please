@@ -9,7 +9,7 @@
  * Referenz-Verdrahtungsplan : docs/ErsteInbetriebnahmeMotorundSteuerung.html
  * PlatformIO-Umgebung       : r4wifi_demo
  * Flash-Befehl              : npm run demo:build  (Compile-Check)
- *                             npm run demo:flash  (Upload via USB COM4)
+ *                             npm run demo:flash  (Upload via auto-detected USB port)
  *
  * ─── Pin-Belegung (muss mit HTML-Verdrahtungsplan übereinstimmen) ───────────
  *  D2  OUTPUT  → Relais 1 IN  (X1 am Treiber – START/STOPP)

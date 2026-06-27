@@ -52,7 +52,7 @@ A standalone simulation demo (`demo/main.cpp`) mirrors the state machine from `s
 
 ```bash
 npm run demo:build    # compile only
-npm run demo:flash    # compile + flash via COM4
+npm run demo:flash    # compile + flash via auto-detected USB port
 ```
 
 The demo uses env `r4wifi_demo` (see `platformio.ini`).

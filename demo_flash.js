@@ -7,7 +7,7 @@
  *
  * Usage:
  *   node demo_flash.js --build-only    # compile only (no upload)
- *   node demo_flash.js                 # compile + flash via COM4
+ *   node demo_flash.js                 # compile + flash via auto-detected USB port
  *   node demo_flash.js COM5            # compile + flash via custom port
  *   npm run demo:build
  *   npm run demo:flash
@@ -18,7 +18,10 @@ const path = require('path');
 const os   = require('os');
 
 const BUILD_ONLY = process.argv.includes('--build-only');
-const PORT       = (!BUILD_ONLY && process.argv[2]) ? process.argv[2] : 'COM4';
+const POSITIONAL_ARGS = process.argv
+  .slice(2)
+  .filter(arg => arg !== '--' && arg !== '--build-only');
+const MANUAL_PORT = POSITIONAL_ARGS[0] || null;
 
 // ── Locate pio (mirrors deploy.js) ───────────────────────────────────────────
 function findPio() {
@@ -41,16 +44,59 @@ function run(label, cmd, args) {
   if (r.status !== 0) { console.error(`[DEMO] FAILED (exit ${r.status})`); process.exit(r.status); }
 }
 
+function parsePortsFromPlainList(stdout) {
+  const ports = [];
+  for (const line of stdout.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (/^COM\d+$/i.test(trimmed) || /^\/dev\/.+/.test(trimmed)) {
+      ports.push(trimmed);
+    }
+  }
+  return ports;
+}
+
+function detectUploadPort(pio) {
+  const jsonList = spawnSync(pio, ['device', 'list', '--json-output'], {
+    encoding: 'utf8',
+  });
+
+  if (jsonList.status === 0 && jsonList.stdout) {
+    try {
+      const devices = JSON.parse(jsonList.stdout);
+      if (Array.isArray(devices) && devices.length > 0) {
+        const preferred = devices.find(d =>
+          String(d.hwid || '').toUpperCase().includes('VID:PID=2341:1002')
+        );
+        if (preferred && preferred.port) return preferred.port;
+
+        if (devices.length === 1 && devices[0].port) return devices[0].port;
+
+        const likely = devices.find(d =>
+          /(arduino|usb|serial|seriell)/i.test(`${d.description || ''} ${d.hwid || ''}`)
+        );
+        if (likely && likely.port) return likely.port;
+      }
+    } catch {
+      // Fall back to plain output parsing below.
+    }
+  }
+
+  const plainList = spawnSync(pio, ['device', 'list'], { encoding: 'utf8' });
+  if (plainList.status === 0 && plainList.stdout) {
+    const ports = parsePortsFromPlainList(plainList.stdout);
+    if (ports.length === 1) return ports[0];
+    if (ports.length > 1) return ports[0];
+  }
+
+  return null;
+}
+
 async function main() {
   console.log('\x1b[1m\x1b[33m═══ honey_please – DEMO flash ═══\x1b[0m');
   console.log('  Sketch  : demo/main.cpp');
   console.log('  Env     : r4wifi_demo');
   if (BUILD_ONLY) {
     console.log('  Mode    : compile-only');
-  } else {
-    console.log(`  Port    : ${PORT}`);
-    console.log('  After flash: open Serial Monitor at 115200 baud');
-    console.log('  Command : pio device monitor -e r4wifi_demo');
   }
   console.log('');
 
@@ -58,6 +104,19 @@ async function main() {
   if (!pio) {
     console.error('[DEMO] ERROR: pio not found. Install PlatformIO or add it to PATH.');
     process.exit(1);
+  }
+
+  const uploadPort = BUILD_ONLY ? null : (MANUAL_PORT || detectUploadPort(pio));
+  if (!BUILD_ONLY && !uploadPort) {
+    console.error('[DEMO] ERROR: No upload port detected. Connect the board and run "pio device list".');
+    process.exit(1);
+  }
+
+  if (!BUILD_ONLY) {
+    console.log(`  Port    : ${uploadPort}${MANUAL_PORT ? ' (manual)' : ' (auto-detected)'}`);
+    console.log('  After flash: open Serial Monitor at 115200 baud');
+    console.log('  Command : pio device monitor -e r4wifi_demo');
+    console.log('');
   }
 
   // Step 1: Compile
@@ -69,10 +128,10 @@ async function main() {
   }
 
   // Step 2: Upload
-  run(`Flashing to ${PORT}...`, pio, [
+  run(`Flashing to ${uploadPort}...`, pio, [
     'run', '-e', 'r4wifi_demo',
     '--target', 'upload',
-    '--upload-port', PORT,
+    '--upload-port', uploadPort,
   ]);
 
   console.log('\n\x1b[32m[DEMO] Upload complete.\x1b[0m');
