@@ -21,7 +21,7 @@ No additional USB driver is needed — the R4 uses native USB CDC.
 
 ## Step 1 – WiFi Credentials
 
-Create `src/secrets.h` — **this file is `.gitignore`d, never commit it**:
+Create `advanced-control/secrets.h` — **this file is `.gitignore`d, never commit it**:
 
 ```cpp
 #define WIFI_SSID     "your-network-name"

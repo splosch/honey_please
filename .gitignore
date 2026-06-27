@@ -5,7 +5,7 @@
 .vscode/ipch
 
 # Secrets – niemals committen!
-src/secrets.h
+advanced-control/secrets.h
 
 tests/node_modules
 

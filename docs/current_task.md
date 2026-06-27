@@ -79,3 +79,4 @@ docs/
 | 2026-05-26 | Step 7 | ARCHITECTURE.md created |
 | 2026-05-26 | Step 8 | AGENTS.md updated |
 | 2026-05-26 | Step 9 | Links verified |
+| 2026-06-27 | Structural cleanup | Renamed `demo/` → `basic-control/`, `src/` → `advanced-control/`; updated build scripts and architecture docs |

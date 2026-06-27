@@ -42,20 +42,20 @@ No `#ifdef REAL_HARDWARE` is needed in control logic — the HAL interfaces are 
 
 ## Fault Injection (Simulation Only)
 
-`SimMotorDriver` supports fault injection for testing the `ErrorHandler`. See `src/sim_rpm_source.h` for the current API. Also available via USB serial command: `inject_fault <code>`.
+`SimMotorDriver` supports fault injection for testing the `ErrorHandler`. See `advanced-control/sim_rpm_source.h` for the current API. Also available via USB serial command: `inject_fault <code>`.
 
 ---
 
 ## Demo Sketch
 
-A standalone simulation demo (`demo/main.cpp`) mirrors the state machine from `src/` but is self-contained for quick hardware-free demos. Build and flash via:
+A standalone simulation demo (`basic-control/main.cpp`) mirrors the state machine from `advanced-control/` but is self-contained for quick hardware-free demos. Build and flash via:
 
 ```bash
-npm run demo:build    # compile only
-npm run demo:flash    # compile + flash via auto-detected USB port
+npm run basic-control:build    # compile only
+npm run basic-control:flash    # compile + flash via auto-detected USB port
 ```
 
-The demo uses env `r4wifi_demo` (see `platformio.ini`).
+The basic-control sketch uses env `r4wifi_basic_control` (see `platformio.ini`).
 
 ---
 

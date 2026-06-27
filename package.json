@@ -4,15 +4,16 @@
   "description": "Honigschleuder motor control – Web UI dev server + board selfcheck",
   "private": true,
   "scripts": {
+    "basic-control:build":  "node basic_control_flash.js --build-only",
+    "basic-control:flash":  "node basic_control_flash.js",
+    "-- unused scribts below -- " : "TBD for advanced WebUI Control",
     "start":     "node serve.js",
     "serve":     "node serve.js",
     "build":       "node deploy.js --build-only",
     "deploy":      "node deploy.js",
     "deploy-COM3-left": "node deploy.js -- COM3",
     "test":        "node tests/selfcheck.js 192.168.178.70",
-    "selfcheck":   "node tests/selfcheck.js 192.168.178.70",
-    "demo:build":  "node demo_flash.js --build-only",
-    "demo:flash":  "node demo_flash.js"
+    "selfcheck":   "node tests/selfcheck.js 192.168.178.70"
   },
   "devDependencies": {
     "ws": "^8.20.0"

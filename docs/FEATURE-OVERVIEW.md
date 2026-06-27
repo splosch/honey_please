@@ -16,6 +16,8 @@
 > **Legend:**  
 > ✅ Verified on R4 WiFi | ⏳ TO BE VERIFIED (was done on ESP32) | 🔲 Not yet started | ❌ Dropped / not carried to R4 | ⚠️ Optional / partial
 
+> **Naming update (2026-06-27):** The repository now uses two explicit development chains: `basic-control/` (working baseline) and `advanced-control/` (target architecture, not yet working end-to-end). Legacy references to `demo/` and `src/` in historical milestone notes are archival context.
+
 ---
 
 ## Quick Links

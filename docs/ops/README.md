@@ -43,7 +43,7 @@ Expect `[BOOT]` banner within 5 s of power-on. WiFi watchdog prints `[WIFI] IP: 
 
 **DHCP IP changed:** Check `[WIFI] IP: x.x.x.x` in Serial Monitor. Update the IP in `package.json` (`test`/`selfcheck` scripts) and in the repo memory (`/memories/repo/honey_please.md`).
 
-**`[ERROR] WiFi connect timeout` in Serial Monitor:** Check `src/secrets.h` — SSID/password must match your network.
+**`[ERROR] WiFi connect timeout` in Serial Monitor:** Check `advanced-control/secrets.h` — SSID/password must match your network.
 
 **Upload FAILED:** Press the white RESET button **twice rapidly** — board enters bootloader (orange LED breathes). Then retry `npm run deploy`.
 
@@ -54,6 +54,6 @@ Expect `[BOOT]` banner within 5 s of power-on. WiFi watchdog prints `[WIFI] IP: 
 | Script | Purpose |
 |---|---|
 | `deploy.js` | PlatformIO build + USB flash + post-flash selfcheck |
-| `demo_flash.js` | Build/flash `demo/main.cpp` (env `r4wifi_demo`) |
+| `basic_control_flash.js` | Build/flash `basic-control/main.cpp` (env `r4wifi_basic_control`) |
 | `serve.js` | Local static file server for `data/` (Web UI) |
 | `tests/selfcheck.js` | HTTP + WebSocket health check against board IP |

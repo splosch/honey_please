@@ -1,6 +1,6 @@
 # ARCHITECTURE.md – honey_please Project Map
 
-**Version:** 1.5.0 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-05-26
+**Version:** 1.5.0 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-06-27
 
 > This is the **single entry point** for all architectural, structural, and design knowledge in this project.  
 > AI agents: read this file first, then load only the sub-documents listed under the relevant domain.
@@ -43,6 +43,11 @@ Membrane Keypads  →  Pins D4–D9 (INPUT_PULLUP)
 
 ## Project Folder Map
 
+### Development Chains
+
+- `basic-control/` = current working chain (wiring verification + basic control).
+- `advanced-control/` = target architecture chain (currently not working end-to-end).
+
 ```
 honey_please/
   ARCHITECTURE.md           ← you are here
@@ -51,11 +56,11 @@ honey_please/
   platformio.ini            ← build environments, pin comments, library deps
   package.json              ← npm scripts (build, deploy, serve, test)
   deploy.js                 ← compile + USB flash + selfcheck orchestrator
-  demo_flash.js             ← demo sketch build/flash
+  basic_control_flash.js    ← basic-control sketch build/flash
   serve.js                  ← local Web UI dev server (port 3000)
   secrets.h.template        ← WiFi credentials template (not committed)
   │
-  src/                      ← PRODUCTION FIRMWARE (env: r4wifi)
+  advanced-control/         ← ADVANCED CONTROL CHAIN (env: r4wifi, not yet stable)
   │   main.cpp              ← setup(), loop(), HAL wiring
   │   web_api.cpp/h         ← HTTP + WebSocket server
   │   motor_driver.h        ← IMotorDriver interface
@@ -73,7 +78,7 @@ honey_please/
   │   style.css
   │   app.js                ← WS client, state rendering, control commands
   │
-  demo/                     ← DEMO SKETCH (env: r4wifi_demo)
+  basic-control/            ← BASIC CONTROL CHAIN (env: r4wifi_basic_control)
   │   main.cpp              ← standalone state machine, no WiFi
   │
   verify_sketch/            ← BOARD HEALTH CHECK (env: r4wifi_verify)
@@ -100,7 +105,7 @@ honey_please/
       │   websocket-protocol.md ← WS/HTTP message schema, commands, error codes
       │
       simulation/           ← SIMULATION DOMAIN
-      │   README.md         ← HAL pattern, sim drivers, fault injection, demo sketch
+      │   README.md         ← HAL pattern, sim drivers, fault injection, basic-control sketch
       │
       ops/                  ← OPERATIONS DOMAIN
       │   README.md         ← quick-ref scripts, serial monitor, when-things-go-wrong
@@ -150,7 +155,7 @@ _Use when:_ WebSocket protocol, HTTP endpoints, CORS, `data/app.js`, `web_api.cp
 
 ### Simulation & HAL
 
-_Use when:_ simulation drivers, fault injection, HAL interfaces, `SimMotorDriver`, `SimRpmSource`, demo sketch.
+_Use when:_ simulation drivers, fault injection, HAL interfaces, `SimMotorDriver`, `SimRpmSource`, basic-control sketch.
 
 | Document | Load for |
 |---|---|

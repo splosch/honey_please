@@ -2,6 +2,13 @@
 
 Motor control system for a honey extractor with a browser-accessible Web UI. Built with PlatformIO + Arduino framework.
 
+## Development Chains
+
+- `basic-control/` (working): current stable wiring-verification and control baseline.
+- `advanced-control/` (not working end-to-end): future architecture with Web UI, sessions, and advanced control flow.
+
+`npm run basic-control:build` and `npm run basic-control:flash` target the working chain. `npm run build` / `npm run deploy` target `advanced-control/` and are intended for ongoing development, not production usage yet.
+
 > **Hardware:** Arduino Uno R4 WiFi (RA4M1 @ 48 MHz) · IP `192.168.178.70` · Firmware v1.5.0  
 > **Status:** Phase 0–2 fully verified on R4. Phase 3–4 board-side verified. M6.14 (full sim run) pending.  
 > **ESP32 board:** retired — replaced by R4 WiFi (see [F11](docs/features/F11-platform-migration-r4-wifi.md))
@@ -58,6 +65,8 @@ Type `help` to see all available commands. Boot banner starts with `[BOOT]`.
 ## Deploying Code Changes
 
 Flash via USB — OTA WiFi upload is not available in the renesas-ra PlatformIO toolchain.
+
+This section applies to the `advanced-control/` chain.
 
 ```bash
 npm run deploy
@@ -120,7 +129,7 @@ Connect with `pio device monitor --port <port> --baud 115200` and type:
 
 ```
 honey_please/
-├── src/
+├── advanced-control/
 │   ├── main.cpp              # Firmware entry point (R4 WiFi, v1.5.0)
 │   ├── web_api.cpp/.h        # HTTP + WebSocket server (synchronous WiFiServer)
 │   ├── motor_driver.h        # IMotorDriver HAL + SimMotorDriver
@@ -133,6 +142,8 @@ honey_please/
 │   ├── session.cpp/.h        # In-memory session ring buffer (≤50 entries)
 │   ├── log.h                 # LOG() macro → Serial.println()
 │   └── secrets.h             # Wi-Fi credentials – NOT committed
+├── basic-control/
+│   └── main.cpp              # Working wiring-verification + basic control sketch
 ├── data/
 │   ├── index.html            # Web UI – served from local dev server, NOT the board
 │   ├── style.css
@@ -146,7 +157,8 @@ honey_please/
 │   └── features/             # Per-feature design docs (F01–F11)
 ├── verify_sketch/
 │   └── main.cpp              # Standalone board health check (env:r4wifi_verify)
-├── package.json              # npm scripts: start (Web UI), test (selfcheck)
+├── package.json              # npm scripts for basic-control and advanced-control flows
+├── basic_control_flash.js    # Build/flash helper for basic-control (env:r4wifi_basic_control)
 ├── serve.js                  # Built-in static dev server for data/ (port 5500)
 ├── platformio.ini            # Board config, build flags, library deps
 └── AGENTS.md                 # Copilot agent instructions

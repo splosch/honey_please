@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * demo_flash.js – Build and optionally flash the demo / wiring-verification sketch.
+ * basic_control_flash.js – Build and optionally flash the basic-control sketch.
  *
- * Source  : demo/main.cpp  (from docs/base_honey_extractor_controller.ino)
+ * Source  : basic-control/main.cpp  (from docs/base_honey_extractor_controller.ino)
  * Purpose : Verify relay + keypad wiring BEFORE connecting the motor driver.
  *
  * Usage:
- *   node demo_flash.js --build-only    # compile only (no upload)
- *   node demo_flash.js                 # compile + flash via auto-detected USB port
- *   node demo_flash.js COM5            # compile + flash via custom port
- *   npm run demo:build
- *   npm run demo:flash
+ *   node basic_control_flash.js --build-only    # compile only (no upload)
+ *   node basic_control_flash.js                 # compile + flash via auto-detected USB port
+ *   node basic_control_flash.js COM5            # compile + flash via custom port
+ *   npm run basic-control:build
+ *   npm run basic-control:flash
  */
 
 const { spawnSync, execSync } = require('child_process');
@@ -37,11 +37,11 @@ function findPio() {
 }
 
 function run(label, cmd, args) {
-  console.log(`\n\x1b[36m[DEMO] ${label}\x1b[0m`);
+  console.log(`\n\x1b[36m[BASIC] ${label}\x1b[0m`);
   console.log(`  > ${[cmd, ...args].join(' ')}\n`);
   const r = spawnSync(cmd, args, { stdio: 'inherit' });
-  if (r.error) { console.error(`[DEMO] Error: ${r.error.message}`); process.exit(1); }
-  if (r.status !== 0) { console.error(`[DEMO] FAILED (exit ${r.status})`); process.exit(r.status); }
+  if (r.error) { console.error(`[BASIC] Error: ${r.error.message}`); process.exit(1); }
+  if (r.status !== 0) { console.error(`[BASIC] FAILED (exit ${r.status})`); process.exit(r.status); }
 }
 
 function parsePortsFromPlainList(stdout) {
@@ -92,9 +92,9 @@ function detectUploadPort(pio) {
 }
 
 async function main() {
-  console.log('\x1b[1m\x1b[33m═══ honey_please – DEMO flash ═══\x1b[0m');
-  console.log('  Sketch  : demo/main.cpp');
-  console.log('  Env     : r4wifi_demo');
+  console.log('\x1b[1m\x1b[33m═══ honey_please – basic-control flash ═══\x1b[0m');
+  console.log('  Sketch  : basic-control/main.cpp');
+  console.log('  Env     : r4wifi_basic_control');
   if (BUILD_ONLY) {
     console.log('  Mode    : compile-only');
   }
@@ -102,40 +102,40 @@ async function main() {
 
   const pio = findPio();
   if (!pio) {
-    console.error('[DEMO] ERROR: pio not found. Install PlatformIO or add it to PATH.');
+    console.error('[BASIC] ERROR: pio not found. Install PlatformIO or add it to PATH.');
     process.exit(1);
   }
 
   const uploadPort = BUILD_ONLY ? null : (MANUAL_PORT || detectUploadPort(pio));
   if (!BUILD_ONLY && !uploadPort) {
-    console.error('[DEMO] ERROR: No upload port detected. Connect the board and run "pio device list".');
+    console.error('[BASIC] ERROR: No upload port detected. Connect the board and run "pio device list".');
     process.exit(1);
   }
 
   if (!BUILD_ONLY) {
     console.log(`  Port    : ${uploadPort}${MANUAL_PORT ? ' (manual)' : ' (auto-detected)'}`);
     console.log('  After flash: open Serial Monitor at 115200 baud');
-    console.log('  Command : pio device monitor -e r4wifi_demo');
+    console.log('  Command : pio device monitor -e r4wifi_basic_control');
     console.log('');
   }
 
   // Step 1: Compile
-  run('Compiling demo/main.cpp...', pio, ['run', '-e', 'r4wifi_demo']);
+  run('Compiling basic-control/main.cpp...', pio, ['run', '-e', 'r4wifi_basic_control']);
 
   if (BUILD_ONLY) {
-    console.log('\n\x1b[32m[DEMO] Compile OK. Run "npm run demo:flash" to upload.\x1b[0m\n');
+    console.log('\n\x1b[32m[BASIC] Compile OK. Run "npm run basic-control:flash" to upload.\x1b[0m\n');
     return;
   }
 
   // Step 2: Upload
   run(`Flashing to ${uploadPort}...`, pio, [
-    'run', '-e', 'r4wifi_demo',
+    'run', '-e', 'r4wifi_basic_control',
     '--target', 'upload',
     '--upload-port', uploadPort,
   ]);
 
-  console.log('\n\x1b[32m[DEMO] Upload complete.\x1b[0m');
-  console.log('\x1b[33m[DEMO] Next steps:\x1b[0m');
+  console.log('\n\x1b[32m[BASIC] Upload complete.\x1b[0m');
+  console.log('\x1b[33m[BASIC] Next steps:\x1b[0m');
   console.log('  1. Open Serial Monitor (115200 baud)');
   console.log('  2. Press each button and watch Serial output');
   console.log('  3. Verify relay click sounds match [REL1/X1] and [REL2/X3] states');

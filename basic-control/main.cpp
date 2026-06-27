@@ -1,15 +1,15 @@
 /**
- * @file demo/main.cpp
- * @brief Honigschleuder – Demo / Wiring-Verification Sketch
+ * @file basic-control/main.cpp
+ * @brief Honigschleuder – Basic-Control / Wiring-Verification Sketch
  *
  * Quelle: docs/base_honey_extractor_controller.ino (erstellt mit Google Gemini)
  * Zweck : Verdrahtungscheck OHNE angeschlossenen Motor-Treiber.
  *         Relais klicken, Serial-Monitor zeigt alle Zustandsübergänge.
  *
  * Referenz-Verdrahtungsplan : docs/ErsteInbetriebnahmeMotorundSteuerung.html
- * PlatformIO-Umgebung       : r4wifi_demo
- * Flash-Befehl              : npm run demo:build  (Compile-Check)
- *                             npm run demo:flash  (Upload via auto-detected USB port)
+ * PlatformIO-Umgebung       : r4wifi_basic_control
+ * Flash-Befehl              : npm run basic-control:build  (Compile-Check)
+ *                             npm run basic-control:flash  (Upload via auto-detected USB port)
  *
  * ─── Pin-Belegung (muss mit HTML-Verdrahtungsplan übereinstimmen) ───────────
  *  D2  OUTPUT  → Relais 1 IN  (X1 am Treiber – START/STOPP)
@@ -138,7 +138,7 @@ void setup() {
 
     Serial.println(F(""));
     Serial.println(F("============================================================"));
-    Serial.println(F("  honey_please – DEMO / Wiring Verification Sketch"));
+    Serial.println(F("  honey_please – BASIC-CONTROL / Wiring Verification Sketch"));
     Serial.println(F("  Referenz: ErsteInbetriebnahmeMotorundSteuerung.html"));
     Serial.println(F("============================================================"));
     Serial.println(F("  Pin-Belegung (gleich wie HTML-Verdrahtungsplan):"));
