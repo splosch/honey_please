@@ -86,7 +86,7 @@ static constexpr BasicControlConfig BASIC_CONTROL_CONFIG = {
 
     15000UL,  // anlaufRampenZeitMs
     15000UL,  // bremsRampenZeitMs
-    1500UL,   // sicherheitsPauseMs
+    150UL,   // sicherheitsPauseMs
 
     150UL,    // debounceDirectionMs
     200UL,    // debounceActionMs

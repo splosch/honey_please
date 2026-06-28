@@ -141,7 +141,11 @@ honey_please/
 │   ├── program.cpp/.h        # Multi-step extraction program (ProgramRunner)
 │   ├── session.cpp/.h        # In-memory session ring buffer (≤50 entries)
 │   ├── log.h                 # LOG() macro → Serial.println()
-│   └── secrets.h             # Wi-Fi credentials – NOT committed
+│   ├── secrets.h             # Wi-Fi credentials – NOT committed
+│   └── docs/
+│      ├── FEATURE-OVERVIEW.md   # Milestone tracker + architecture
+│      ├── r4wifi_onboarding.md  # First flash, selfcheck, Web UI dev server
+│      └── features/             # Per-feature design docs (F01–F11)
 ├── basic-control/
 │   └── main.cpp              # Working wiring-verification + basic control sketch
 ├── data/
@@ -151,10 +155,7 @@ honey_please/
 ├── tests/
 │   ├── selfcheck.js          # Connectivity check: GET /status + WS /ws
 │   └── package.json          # ws dependency (also installed via root npm install)
-├── docs/
-│   ├── FEATURE-OVERVIEW.md   # Milestone tracker + architecture
-│   ├── r4wifi_onboarding.md  # First flash, selfcheck, Web UI dev server
-│   └── features/             # Per-feature design docs (F01–F11)
+
 ├── verify_sketch/
 │   └── main.cpp              # Standalone board health check (env:r4wifi_verify)
 ├── package.json              # npm scripts for basic-control and advanced-control flows
