@@ -56,6 +56,91 @@ static constexpr uint8_t relayDirLevelFor(bool ccw) {
     return highLevel ? HIGH : LOW;
 }
 
+enum ButtonId {
+    BUTTON_DIR_LEFT,
+    BUTTON_DIR_RIGHT,
+    BUTTON_STOP,
+    BUTTON_PRESET_1,
+    BUTTON_PRESET_2,
+    BUTTON_START
+};
+
+struct InputSnapshot {
+    bool dirLeftPressed;
+    bool dirRightPressed;
+    bool stopPressed;
+    bool preset1Pressed;
+    bool preset2Pressed;
+    bool startPressed;
+};
+
+static bool isButtonPressedOnPin(uint8_t pin) {
+    return digitalRead(pin) == LOW;
+}
+
+static uint8_t pinForButton(ButtonId button) {
+    switch (button) {
+        case BUTTON_DIR_LEFT:  return CFG.pinKeyLinks;
+        case BUTTON_DIR_RIGHT: return CFG.pinKeyRechts;
+        case BUTTON_STOP:      return CFG.pinKeyStop;
+        case BUTTON_PRESET_1:  return CFG.pinKeyYel1;
+        case BUTTON_PRESET_2:  return CFG.pinKeyYel2;
+        case BUTTON_START:     return CFG.pinKeyStart;
+        default:               return CFG.pinKeyStart;
+    }
+}
+
+static bool isButtonPressed(ButtonId button) {
+    return isButtonPressedOnPin(pinForButton(button));
+}
+
+static InputSnapshot readInputs() {
+    InputSnapshot snapshot;
+    snapshot.dirLeftPressed = isButtonPressed(BUTTON_DIR_LEFT);
+    snapshot.dirRightPressed = isButtonPressed(BUTTON_DIR_RIGHT);
+    snapshot.stopPressed = isButtonPressed(BUTTON_STOP);
+    snapshot.preset1Pressed = isButtonPressed(BUTTON_PRESET_1);
+    snapshot.preset2Pressed = isButtonPressed(BUTTON_PRESET_2);
+    snapshot.startPressed = isButtonPressed(BUTTON_START);
+    return snapshot;
+}
+
+static void setStartRelayEnabled(bool enabled) {
+    digitalWrite(CFG.pinRelayStart, enabled ? relayOnLevel() : relayOffLevel());
+}
+
+static void setDirectionRelay(bool ccw) {
+    digitalWrite(CFG.pinRelayDir, relayDirLevelFor(ccw));
+}
+
+static bool isStartRelayEnabled() {
+    return digitalRead(CFG.pinRelayStart) == relayOnLevel();
+}
+
+static bool isDirectionRelayCCW() {
+    return digitalRead(CFG.pinRelayDir) == relayDirLevelFor(true);
+}
+
+static void initializeHardwareIo() {
+    pinMode(CFG.pinRelayStart, OUTPUT);
+    pinMode(CFG.pinRelayDir, OUTPUT);
+    pinMode(CFG.pinRelayUnused3, OUTPUT);
+    pinMode(CFG.pinRelayUnused4, OUTPUT);
+
+    // Safe startup state for all relay outputs.
+    setStartRelayEnabled(false);
+    setDirectionRelay(false);
+    digitalWrite(CFG.pinRelayUnused3, relayOffLevel());
+    digitalWrite(CFG.pinRelayUnused4, relayOffLevel());
+
+    pinMode(CFG.pinKeyLinks, INPUT_PULLUP);
+    pinMode(CFG.pinKeyRechts, INPUT_PULLUP);
+    pinMode(CFG.pinKeyStop, INPUT_PULLUP);
+    pinMode(CFG.pinKeyYel1, INPUT_PULLUP);
+    pinMode(CFG.pinKeyYel2, INPUT_PULLUP);
+    pinMode(CFG.pinKeyStart, INPUT_PULLUP);
+}
+
 static void printBootBanner() {
     Serial.println(F(""));
     Serial.println(F("============================================================"));
@@ -160,9 +245,9 @@ static const int ICON_PLAY_N = 9;
 // ── Hilfsfunktion: Relay-Zustand als Text ────────────────────────────────────
 static void printRelayStates() {
     Serial.print(F("  [REL1/X1="));
-    Serial.print(digitalRead(CFG.pinRelayStart) == relayOnLevel() ? F("ON") : F("OFF"));
+    Serial.print(isStartRelayEnabled() ? F("ON") : F("OFF"));
     Serial.print(F(", REL2/X3="));
-    Serial.print(digitalRead(CFG.pinRelayDir) == relayDirLevelFor(true) ? F("CCW") : F("CW"));
+    Serial.print(isDirectionRelayCCW() ? F("CCW") : F("CW"));
     Serial.println(F("]"));
 }
 
@@ -176,27 +261,7 @@ void setup() {
 
     printBootBanner();
 
-    // Relais-Pins als Ausgänge
-    pinMode(CFG.pinRelayStart, OUTPUT);
-    pinMode(CFG.pinRelayDir,   OUTPUT);
-
-    // Sicherer Initialzustand: beide Relais aus
-    digitalWrite(CFG.pinRelayStart, relayOffLevel());
-    digitalWrite(CFG.pinRelayDir,   relayDirLevelFor(false));
-
-    // Unused relay outputs are still initialized to safe-off for wiring checks.
-    pinMode(CFG.pinRelayUnused3, OUTPUT);
-    pinMode(CFG.pinRelayUnused4, OUTPUT);
-    digitalWrite(CFG.pinRelayUnused3, relayOffLevel());
-    digitalWrite(CFG.pinRelayUnused4, relayOffLevel());
-
-    // Eingänge mit internem Pullup (Taster = aktiv LOW)
-    pinMode(CFG.pinKeyLinks,  INPUT_PULLUP);
-    pinMode(CFG.pinKeyRechts, INPUT_PULLUP);
-    pinMode(CFG.pinKeyStop,   INPUT_PULLUP);
-    pinMode(CFG.pinKeyYel1,   INPUT_PULLUP);
-    pinMode(CFG.pinKeyYel2,   INPUT_PULLUP);
-    pinMode(CFG.pinKeyStart,  INPUT_PULLUP);
+    initializeHardwareIo();
 
     ledMatrix.begin();
 
@@ -304,29 +369,30 @@ void updateLedAnimation() {
 // ── loop ─────────────────────────────────────────────────────────────────────
 void loop() {
     unsigned long currentMillis = millis();
+    InputSnapshot inputs = readInputs();
 
     switch (currentState) {
 
         case STATE_STANDBY:
             // Im Standby kann die Richtung jederzeit gewählt werden
-            if (digitalRead(CFG.pinKeyLinks) == LOW) {
+            if (inputs.dirLeftPressed) {
                 targetDirectionCCW = true;
-                digitalWrite(CFG.pinRelayDir, relayDirLevelFor(true));
+                setDirectionRelay(true);
                 Serial.println(F("[STANDBY] Richtung gewählt: LINKS (CCW)"));
                 printRelayStates();
                 delay(CFG.debounceDirectionMs);
             }
-            else if (digitalRead(CFG.pinKeyRechts) == LOW) {
+            else if (inputs.dirRightPressed) {
                 targetDirectionCCW = false;
-                digitalWrite(CFG.pinRelayDir, relayDirLevelFor(false));
+                setDirectionRelay(false);
                 Serial.println(F("[STANDBY] Richtung gewählt: RECHTS (CW)"));
                 printRelayStates();
                 delay(CFG.debounceDirectionMs);
             }
 
-            if (digitalRead(CFG.pinKeyStart) == LOW) {
+            if (inputs.startPressed) {
                 rampStartProgress   = 0.0f; // vollständiger Anlauf vom Stillstand
-                digitalWrite(CFG.pinRelayStart, relayOnLevel());
+                setStartRelayEnabled(true);
                 stateTimerStart     = currentMillis;
                 pendingAutoRestart  = false;
                 currentState        = STATE_ACCELERATING;
@@ -341,12 +407,12 @@ void loop() {
             // REL1 ist AN – Motor läuft hoch
             // Richtungswechsel während Anlauf erlaubt (Gegenrichtungs-Taste)
             bool dirChange =
-                (!targetDirectionCCW && digitalRead(CFG.pinKeyLinks)  == LOW) ||
-                ( targetDirectionCCW && digitalRead(CFG.pinKeyRechts) == LOW);
+                (!targetDirectionCCW && inputs.dirLeftPressed) ||
+                ( targetDirectionCCW && inputs.dirRightPressed);
 
-            if (digitalRead(CFG.pinKeyStop) == LOW || dirChange) {
+            if (inputs.stopPressed || dirChange) {
                 rampStartProgress = getCurrentRampProgress();
-                digitalWrite(CFG.pinRelayStart, relayOffLevel());
+                setStartRelayEnabled(false);
                 stateTimerStart   = currentMillis;
                 if (dirChange) {
                     targetDirectionCCW = !targetDirectionCCW;
@@ -377,9 +443,9 @@ void loop() {
 
         case STATE_RUNNING_CW:
             // STOPP oder Richtungswechsel nach LINKS
-            if (digitalRead(CFG.pinKeyStop) == LOW) {
+            if (inputs.stopPressed) {
                 rampStartProgress  = 1.0f; // Vollgas → volle Bremsrampe
-                digitalWrite(CFG.pinRelayStart, relayOffLevel());
+                setStartRelayEnabled(false);
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = false;
                 currentState       = STATE_DECELERATING;
@@ -387,10 +453,10 @@ void loop() {
                 printRelayStates();
                 delay(CFG.debounceActionMs);
             }
-            else if (digitalRead(CFG.pinKeyLinks) == LOW) {
+            else if (inputs.dirLeftPressed) {
                 rampStartProgress  = 1.0f;
                 targetDirectionCCW = true;
-                digitalWrite(CFG.pinRelayStart, relayOffLevel());
+                setStartRelayEnabled(false);
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = true;
                 currentState       = STATE_DECELERATING;
@@ -403,9 +469,9 @@ void loop() {
 
         case STATE_RUNNING_CCW:
             // STOPP oder Richtungswechsel nach RECHTS
-            if (digitalRead(CFG.pinKeyStop) == LOW) {
+            if (inputs.stopPressed) {
                 rampStartProgress  = 1.0f; // Vollgas → volle Bremsrampe
-                digitalWrite(CFG.pinRelayStart, relayOffLevel());
+                setStartRelayEnabled(false);
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = false;
                 currentState       = STATE_DECELERATING;
@@ -413,10 +479,10 @@ void loop() {
                 printRelayStates();
                 delay(CFG.debounceActionMs);
             }
-            else if (digitalRead(CFG.pinKeyRechts) == LOW) {
+            else if (inputs.dirRightPressed) {
                 rampStartProgress  = 1.0f;
                 targetDirectionCCW = false;
-                digitalWrite(CFG.pinRelayStart, relayOffLevel());
+                setStartRelayEnabled(false);
                 stateTimerStart    = currentMillis;
                 pendingAutoRestart = true;
                 currentState       = STATE_DECELERATING;
@@ -431,10 +497,10 @@ void loop() {
             // Proportionale Bremsdauer + optional Umkehrung per START-Taste
             unsigned long effDecelDur = (unsigned long)max(100.0f,
                 rampStartProgress * (float)CFG.bremsRampenZeitMs);
-            if (!pendingAutoRestart && digitalRead(CFG.pinKeyStart) == LOW) {
+            if (!pendingAutoRestart && inputs.startPressed) {
                 // Bremsung umkehren: Anlauf vom aktuellen Rampen-Punkt
                 rampStartProgress = getCurrentRampProgress();
-                digitalWrite(CFG.pinRelayStart, relayOnLevel());
+                setStartRelayEnabled(true);
                 stateTimerStart   = currentMillis;
                 currentState      = STATE_ACCELERATING;
                 Serial.print(F("[RE-START] Bremsung umgekehrt bei "));
@@ -457,9 +523,9 @@ void loop() {
             if (currentMillis - stateTimerStart >= CFG.sicherheitsPauseMs) {
                 if (pendingAutoRestart) {
                     // Richtungsrelais auf neuen Wert setzen, kurz warten, dann starten
-                    digitalWrite(CFG.pinRelayDir, relayDirLevelFor(targetDirectionCCW));
+                    setDirectionRelay(targetDirectionCCW);
                     delay(CFG.relaySettleMs); // Relais-Einschwingzeit
-                    digitalWrite(CFG.pinRelayStart, relayOnLevel());
+                    setStartRelayEnabled(true);
                     rampStartProgress  = 0.0f; // Motor vollständig gestoppt → voller Anlauf
                     stateTimerStart    = millis();
                     pendingAutoRestart = false;
@@ -480,11 +546,11 @@ void loop() {
 
     // ── Gelbe Tasten (Presets – noch nicht belegt) ───────────────────────────
     if (currentState == STATE_STANDBY) {
-        if (digitalRead(CFG.pinKeyYel1) == LOW) {
+        if (inputs.preset1Pressed) {
             Serial.println(F("[PRESET 1] Gelb-1 gedrückt (noch nicht belegt)"));
             delay(CFG.debounceActionMs);
         }
-        if (digitalRead(CFG.pinKeyYel2) == LOW) {
+        if (inputs.preset2Pressed) {
             Serial.println(F("[PRESET 2] Gelb-2 gedrückt (noch nicht belegt)"));
             delay(CFG.debounceActionMs);
         }

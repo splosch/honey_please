@@ -9,10 +9,10 @@
 
 ## Milestone 2: Hardware Access Cleanup
 
-- [ ] Introduce small helper functions or a thin HAL for relay writes, relay state reads, and button reads.
-- [ ] Centralize active-HIGH versus active-LOW relay behavior behind the hardware abstraction.
-- [ ] Normalize button handling so the state machine works with named logical inputs instead of raw `digitalRead()` calls.
-- [ ] Keep initialization of pins and safe startup states grouped in one hardware setup path.
+- [x] Introduce small helper functions or a thin HAL for relay writes, relay state reads, and button reads.
+- [x] Centralize active-HIGH versus active-LOW relay behavior behind the hardware abstraction.
+- [x] Normalize button handling so the state machine works with named logical inputs instead of raw `digitalRead()` calls.
+- [x] Keep initialization of pins and safe startup states grouped in one hardware setup path.
 
 ## Milestone 3: State Model Separation
 
@@ -49,7 +49,7 @@
 
 ## Milestone 7: Validation
 
-- [ ] Run `npm run basic-control:build` after each milestone.
+- [x] Run `npm run basic-control:build` after each milestone.
 - [ ] Flash with `npm run basic-control:flash` after hardware-facing changes.
 - [ ] Confirm boot output, button behavior, relay switching, and LED animation still match the wiring-verification intent.
 - [ ] Record any behavior differences before moving to the next milestone.
