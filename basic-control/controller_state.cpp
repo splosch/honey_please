@@ -6,6 +6,7 @@ ControllerState makeInitialControllerState() {
     state.targetDirection = SpinDirection::CW;
     state.runningDirection = SpinDirection::CW;
     state.selectedRunDataset = BinarySpeedDataset::DATASET_2;
+    state.decelFromDataset = BinarySpeedDataset::DATASET_2;
     state.restartIntent = RestartIntent::NONE;
     state.stateTimerStartMs = 0;
     state.rampStartProgress = 0.0f;
@@ -33,13 +34,15 @@ float getRampProgress(
     const ControllerState& state,
     unsigned long nowMs,
     const BasicControlConfig& config) {
+    (void)config;
     float elapsed = (float)(nowMs - state.stateTimerStartMs);
 
     switch (state.id) {
         case ControllerStateId::ACCELERATING: {
             float effDur = max(
                 100.0f,
-                (1.0f - state.rampStartProgress) * (float)config.anlaufRampenZeitMs);
+                (1.0f - state.rampStartProgress)
+                    * (float)dynamicsProfileForDataset(state.selectedRunDataset).accelerationMs);
             return state.rampStartProgress
                 + min(1.0f, elapsed / effDur) * (1.0f - state.rampStartProgress);
         }
@@ -49,7 +52,8 @@ float getRampProgress(
         case ControllerStateId::DECELERATING: {
             float effDur = max(
                 100.0f,
-                state.rampStartProgress * (float)config.bremsRampenZeitMs);
+                state.rampStartProgress
+                    * (float)dynamicsProfileForDataset(state.decelFromDataset).decelerationMs);
             return state.rampStartProgress * (1.0f - min(1.0f, elapsed / effDur));
         }
         default:
@@ -60,17 +64,21 @@ float getRampProgress(
 unsigned long getEffectiveAccelerationDurationMs(
     const ControllerState& state,
     const BasicControlConfig& config) {
+    (void)config;
     return (unsigned long)max(
         100.0f,
-        (1.0f - state.rampStartProgress) * (float)config.anlaufRampenZeitMs);
+        (1.0f - state.rampStartProgress)
+            * (float)dynamicsProfileForDataset(state.selectedRunDataset).accelerationMs);
 }
 
 unsigned long getEffectiveDecelerationDurationMs(
     const ControllerState& state,
     const BasicControlConfig& config) {
+    (void)config;
     return (unsigned long)max(
         100.0f,
-        state.rampStartProgress * (float)config.bremsRampenZeitMs);
+        state.rampStartProgress
+            * (float)dynamicsProfileForDataset(state.decelFromDataset).decelerationMs);
 }
 
 void beginAcceleration(ControllerState& state, unsigned long nowMs, float fromProgress) {
@@ -90,9 +98,11 @@ void beginDeceleration(
     ControllerState& state,
     unsigned long nowMs,
     float fromProgress,
+    BinarySpeedDataset decelFromDataset,
     SpinDirection runningDirection,
     RestartIntent intent) {
     state.rampStartProgress = fromProgress;
+    state.decelFromDataset = decelFromDataset;
     state.runningDirection = runningDirection;
     state.stateTimerStartMs = nowMs;
     state.restartIntent = intent;

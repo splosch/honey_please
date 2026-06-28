@@ -22,6 +22,7 @@ static void setSelectedRunDataset(
     const BasicControlConfig& cfg,
     BinarySpeedDataset dataset,
     const __FlashStringHelper* sourceText) {
+    BinarySpeedDataset previousDataset = currentSpeedDataset(cfg);
     controller.selectedRunDataset = dataset;
 
     // If motor is not running, keep relays at standby profile until start.
@@ -32,6 +33,18 @@ static void setSelectedRunDataset(
     Serial.print(sourceText);
     Serial.print(F(" -> Modus gesetzt: "));
     Serial.println(datasetText(dataset));
+
+    if (isStartRelayEnabled(cfg) && previousDataset != dataset) {
+        unsigned long switchMs = computeSwitchDurationMs(previousDataset, dataset);
+        Serial.print(F("      Profilwechsel "));
+        Serial.print(datasetText(previousDataset));
+        Serial.print(F(" -> "));
+        Serial.print(datasetText(dataset));
+        Serial.print(F("; berechnete Uebergangszeit: "));
+        Serial.print(switchMs);
+        Serial.println(F(" ms"));
+    }
+
     printRelayStates(cfg);
 }
 
@@ -47,6 +60,7 @@ static void requestDirectionChange(
         controller,
         nowMs,
         1.0f,
+        currentSpeedDataset(cfg),
         runningDirection,
         RestartIntent::AUTO_RESTART);
 
@@ -78,7 +92,8 @@ static void completeWaitingPeriod(
     completeWaitingToStandby(controller);
     applySpeedDataset(cfg, kStandbyDataset);
     Serial.print(F("[STANDBY] Bereit. Gesamtwartezeit: "));
-    Serial.print((cfg.bremsRampenZeitMs + cfg.sicherheitsPauseMs) / 1000);
+    Serial.print((dynamicsProfileForDataset(controller.decelFromDataset).decelerationMs
+        + cfg.sicherheitsPauseMs) / 1000);
     Serial.println(F(" s abgelaufen."));
     Serial.println(F(""));
 }
@@ -169,6 +184,7 @@ static void handleAccelerating(
                 controller,
                 nowMs,
                 currentProgress,
+                currentSpeedDataset(cfg),
                 runningDirection,
                 RestartIntent::AUTO_RESTART);
             Serial.print(F("[DIR] Richtungswechsel im Anlauf -> "));
@@ -180,6 +196,7 @@ static void handleAccelerating(
                 controller,
                 nowMs,
                 currentProgress,
+                currentSpeedDataset(cfg),
                 controller.targetDirection,
                 RestartIntent::NONE);
             Serial.print(F("[STOP] Anlauf abgebrochen bei "));
@@ -229,6 +246,7 @@ static void handleRunning(
             controller,
             nowMs,
             1.0f,
+            currentSpeedDataset(cfg),
             runningDirection,
             RestartIntent::NONE);
         Serial.println(F("[STOP] Signal erhalten - Bremsrampe laeuft"));

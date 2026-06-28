@@ -72,12 +72,10 @@ struct WiringEntry {
     const char* detail;
 };
 
-// Motor-driver oriented values in natural units for easier tuning.
-// The state machine uses milliseconds, so second-based values are converted below.
-static constexpr unsigned long kMode1TargetSpeedRpm = 1500UL;  // dAtA 2 (slower run mode)
-static constexpr unsigned long kMode2TargetSpeedRpm = 2250UL;  // dAtA 4 (faster run mode)
-static constexpr unsigned long kAccelerationSeconds = 15UL;    // Purpose: soft spool-up to protect mechanics
-static constexpr unsigned long kDecelerationSeconds = 15UL;    // Purpose: smooth stop to reduce honeycomb stress
+// Global ramp defaults retained for compatibility-only paths.
+// Dataset-specific target speeds and Ac/dc values are defined in speed_dataset.cpp.
+static constexpr unsigned long kAccelerationSeconds = 10UL;    // dAtA 2 baseline Ac
+static constexpr unsigned long kDecelerationSeconds = 2UL;     // dAtA 2 baseline dc
 static constexpr unsigned long kSafetyPauseMilliseconds = 150UL;
 
 static constexpr BasicControlConfig BASIC_CONTROL_CONFIG = {

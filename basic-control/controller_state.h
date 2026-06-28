@@ -28,6 +28,7 @@ struct ControllerState {
     SpinDirection targetDirection;
     SpinDirection runningDirection;
     BinarySpeedDataset selectedRunDataset;
+    BinarySpeedDataset decelFromDataset;
     RestartIntent restartIntent;
     unsigned long stateTimerStartMs;
     float rampStartProgress;
@@ -61,6 +62,7 @@ void beginDeceleration(
     ControllerState& state,
     unsigned long nowMs,
     float fromProgress,
+    BinarySpeedDataset decelFromDataset,
     SpinDirection runningDirection,
     RestartIntent intent);
 

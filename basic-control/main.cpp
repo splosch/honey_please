@@ -24,6 +24,7 @@
 #include "controller_state.h"
 #include "hardware_io.h"
 #include "led_animation.h"
+#include "speed_dataset.h"
 
 // ── ZENTRALE KONFIGURATION ───────────────────────────────────────────────────
 static constexpr BasicControlConfig CFG = BASIC_CONTROL_CONFIG;
@@ -50,18 +51,26 @@ static void printBootBanner() {
     }
 
     Serial.println(F("------------------------------------------------------------"));
-    Serial.print(F("  Anlauframpe : "));
-    Serial.print(CFG.anlaufRampenZeitMs / 1000);
-    Serial.println(F(" s"));
-    Serial.print(F("  Bremsrampe  : "));
-    Serial.print(CFG.bremsRampenZeitMs / 1000);
-    Serial.println(F(" s"));
-    Serial.print(F("  Modus 1 Ziel: "));
-    Serial.print(kMode1TargetSpeedRpm);
-    Serial.println(F(" rpm"));
-    Serial.print(F("  Modus 2 Ziel: "));
-    Serial.print(kMode2TargetSpeedRpm);
-    Serial.println(F(" rpm"));
+    const BinarySpeedDataset datasets[] = {
+        BinarySpeedDataset::DATASET_0,
+        BinarySpeedDataset::DATASET_2,
+        BinarySpeedDataset::DATASET_4,
+        BinarySpeedDataset::DATASET_6
+    };
+
+    Serial.println(F("  dAtA-Profile (Ziel/Ac/dc):"));
+    for (size_t i = 0; i < sizeof(datasets) / sizeof(datasets[0]); ++i) {
+        const BinarySpeedDynamicsProfile& p = dynamicsProfileForDataset(datasets[i]);
+        Serial.print(F("    "));
+        Serial.print(datasetText(p.dataset));
+        Serial.print(F(": "));
+        Serial.print(p.targetRpm);
+        Serial.print(F(" rpm, Ac="));
+        Serial.print(p.accelerationMs);
+        Serial.print(F(" ms, dc="));
+        Serial.print(p.decelerationMs);
+        Serial.println(F(" ms"));
+    }
     Serial.print(F("  Sicherheit  : "));
     Serial.print(CFG.sicherheitsPauseMs / 1000);
     Serial.println(F(" s"));
