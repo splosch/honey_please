@@ -21,107 +21,10 @@
 #include "Arduino_LED_Matrix.h"
 #include "config.h"
 #include "controller_state.h"
+#include "hardware_io.h"
 
 // ── ZENTRALE KONFIGURATION ───────────────────────────────────────────────────
 static constexpr BasicControlConfig CFG = BASIC_CONTROL_CONFIG;
-
-static constexpr uint8_t relayOnLevel() {
-    return CFG.relayActiveHigh ? HIGH : LOW;
-}
-
-static constexpr uint8_t relayOffLevel() {
-    return CFG.relayActiveHigh ? LOW : HIGH;
-}
-
-static constexpr uint8_t relayDirLevelFor(bool ccw) {
-    bool highLevel = (ccw == CFG.dirRelayHighMeansCCW);
-    return highLevel ? HIGH : LOW;
-}
-
-enum ButtonId {
-    BUTTON_DIR_LEFT,
-    BUTTON_DIR_RIGHT,
-    BUTTON_STOP,
-    BUTTON_PRESET_1,
-    BUTTON_PRESET_2,
-    BUTTON_START
-};
-
-struct InputSnapshot {
-    bool dirLeftPressed;
-    bool dirRightPressed;
-    bool stopPressed;
-    bool preset1Pressed;
-    bool preset2Pressed;
-    bool startPressed;
-};
-
-static bool isButtonPressedOnPin(uint8_t pin) {
-    return digitalRead(pin) == LOW;
-}
-
-static uint8_t pinForButton(ButtonId button) {
-    switch (button) {
-        case BUTTON_DIR_LEFT:  return CFG.pinKeyLinks;
-        case BUTTON_DIR_RIGHT: return CFG.pinKeyRechts;
-        case BUTTON_STOP:      return CFG.pinKeyStop;
-        case BUTTON_PRESET_1:  return CFG.pinKeyYel1;
-        case BUTTON_PRESET_2:  return CFG.pinKeyYel2;
-        case BUTTON_START:     return CFG.pinKeyStart;
-        default:               return CFG.pinKeyStart;
-    }
-}
-
-static bool isButtonPressed(ButtonId button) {
-    return isButtonPressedOnPin(pinForButton(button));
-}
-
-static InputSnapshot readInputs() {
-    InputSnapshot snapshot;
-    snapshot.dirLeftPressed = isButtonPressed(BUTTON_DIR_LEFT);
-    snapshot.dirRightPressed = isButtonPressed(BUTTON_DIR_RIGHT);
-    snapshot.stopPressed = isButtonPressed(BUTTON_STOP);
-    snapshot.preset1Pressed = isButtonPressed(BUTTON_PRESET_1);
-    snapshot.preset2Pressed = isButtonPressed(BUTTON_PRESET_2);
-    snapshot.startPressed = isButtonPressed(BUTTON_START);
-    return snapshot;
-}
-
-static void setStartRelayEnabled(bool enabled) {
-    digitalWrite(CFG.pinRelayStart, enabled ? relayOnLevel() : relayOffLevel());
-}
-
-static void setDirectionRelay(bool ccw) {
-    digitalWrite(CFG.pinRelayDir, relayDirLevelFor(ccw));
-}
-
-static bool isStartRelayEnabled() {
-    return digitalRead(CFG.pinRelayStart) == relayOnLevel();
-}
-
-static bool isDirectionRelayCCW() {
-    return digitalRead(CFG.pinRelayDir) == relayDirLevelFor(true);
-}
-
-static void initializeHardwareIo() {
-    pinMode(CFG.pinRelayStart, OUTPUT);
-    pinMode(CFG.pinRelayDir, OUTPUT);
-    pinMode(CFG.pinRelayUnused3, OUTPUT);
-    pinMode(CFG.pinRelayUnused4, OUTPUT);
-
-    // Safe startup state for all relay outputs.
-    setStartRelayEnabled(false);
-    setDirectionRelay(false);
-    digitalWrite(CFG.pinRelayUnused3, relayOffLevel());
-    digitalWrite(CFG.pinRelayUnused4, relayOffLevel());
-
-    pinMode(CFG.pinKeyLinks, INPUT_PULLUP);
-    pinMode(CFG.pinKeyRechts, INPUT_PULLUP);
-    pinMode(CFG.pinKeyStop, INPUT_PULLUP);
-    pinMode(CFG.pinKeyYel1, INPUT_PULLUP);
-    pinMode(CFG.pinKeyYel2, INPUT_PULLUP);
-    pinMode(CFG.pinKeyStart, INPUT_PULLUP);
-}
 
 static void printBootBanner() {
     Serial.println(F(""));
@@ -212,9 +115,9 @@ static const int ICON_PLAY_N = 9;
 // ── Hilfsfunktion: Relay-Zustand als Text ────────────────────────────────────
 static void printRelayStates() {
     Serial.print(F("  [REL1/X1="));
-    Serial.print(isStartRelayEnabled() ? F("ON") : F("OFF"));
+    Serial.print(isStartRelayEnabled(CFG) ? F("ON") : F("OFF"));
     Serial.print(F(", REL2/X3="));
-    Serial.print(isDirectionRelayCCW() ? F("CCW") : F("CW"));
+    Serial.print(isDirectionRelayCCW(CFG) ? F("CCW") : F("CW"));
     Serial.println(F("]"));
 }
 
@@ -232,7 +135,7 @@ void setup() {
 
     printBootBanner();
 
-    initializeHardwareIo();
+    initializeHardwareIo(CFG);
 
     ledMatrix.begin();
 
@@ -329,7 +232,7 @@ void updateLedAnimation() {
 // ── loop ─────────────────────────────────────────────────────────────────────
 void loop() {
     unsigned long currentMillis = millis();
-    InputSnapshot inputs = readInputs();
+    InputSnapshot inputs = readInputs(CFG);
 
     switch (controller.id) {
 
@@ -337,21 +240,21 @@ void loop() {
             // Im Standby kann die Richtung jederzeit gewählt werden
             if (inputs.dirLeftPressed) {
                 setTargetDirection(controller, SpinDirection::CCW);
-                setDirectionRelay(true);
+                setDirectionRelay(CFG, true);
                 Serial.println(F("[STANDBY] Richtung gewählt: LINKS (CCW)"));
                 printRelayStates();
                 delay(CFG.debounceDirectionMs);
             }
             else if (inputs.dirRightPressed) {
                 setTargetDirection(controller, SpinDirection::CW);
-                setDirectionRelay(false);
+                setDirectionRelay(CFG, false);
                 Serial.println(F("[STANDBY] Richtung gewählt: RECHTS (CW)"));
                 printRelayStates();
                 delay(CFG.debounceDirectionMs);
             }
 
             if (inputs.startPressed) {
-                setStartRelayEnabled(true);
+                setStartRelayEnabled(CFG, true);
                 beginAcceleration(controller, currentMillis, 0.0f);
                 Serial.print(F("[START] Anlauframpe → "));
                 Serial.println(directionText(controller.targetDirection));
@@ -369,7 +272,7 @@ void loop() {
 
             if (inputs.stopPressed || dirChange) {
                 float currentProgress = getRampProgress(controller, currentMillis, CFG);
-                setStartRelayEnabled(false);
+                setStartRelayEnabled(CFG, false);
                 if (dirChange) {
                     SpinDirection runningDirection = controller.targetDirection;
                     flipTargetDirection(controller);
@@ -410,7 +313,7 @@ void loop() {
         case ControllerStateId::RUNNING_CW:
             // STOPP oder Richtungswechsel nach LINKS
             if (inputs.stopPressed) {
-                setStartRelayEnabled(false);
+                setStartRelayEnabled(CFG, false);
                 beginDeceleration(
                     controller,
                     currentMillis,
@@ -423,7 +326,7 @@ void loop() {
             }
             else if (inputs.dirLeftPressed) {
                 setTargetDirection(controller, SpinDirection::CCW);
-                setStartRelayEnabled(false);
+                setStartRelayEnabled(CFG, false);
                 beginDeceleration(
                     controller,
                     currentMillis,
@@ -440,7 +343,7 @@ void loop() {
         case ControllerStateId::RUNNING_CCW:
             // STOPP oder Richtungswechsel nach RECHTS
             if (inputs.stopPressed) {
-                setStartRelayEnabled(false);
+                setStartRelayEnabled(CFG, false);
                 beginDeceleration(
                     controller,
                     currentMillis,
@@ -453,7 +356,7 @@ void loop() {
             }
             else if (inputs.dirRightPressed) {
                 setTargetDirection(controller, SpinDirection::CW);
-                setStartRelayEnabled(false);
+                setStartRelayEnabled(CFG, false);
                 beginDeceleration(
                     controller,
                     currentMillis,
@@ -473,7 +376,7 @@ void loop() {
             if (!hasAutoRestart(controller) && inputs.startPressed) {
                 // Bremsung umkehren: Anlauf vom aktuellen Rampen-Punkt
                 float currentProgress = getRampProgress(controller, currentMillis, CFG);
-                setStartRelayEnabled(true);
+                setStartRelayEnabled(CFG, true);
                 beginAcceleration(controller, currentMillis, currentProgress);
                 Serial.print(F("[RE-START] Bremsung umgekehrt bei "));
                 Serial.print((int)(currentProgress * 100.0f));
@@ -494,9 +397,9 @@ void loop() {
             if (currentMillis - controller.stateTimerStartMs >= CFG.sicherheitsPauseMs) {
                 if (hasAutoRestart(controller)) {
                     // Richtungsrelais auf neuen Wert setzen, kurz warten, dann starten
-                    setDirectionRelay(isDirectionCCW(controller.targetDirection));
+                    setDirectionRelay(CFG, isDirectionCCW(controller.targetDirection));
                     delay(CFG.relaySettleMs); // Relais-Einschwingzeit
-                    setStartRelayEnabled(true);
+                    setStartRelayEnabled(CFG, true);
                     beginAcceleration(controller, millis(), 0.0f);
                     consumeAutoRestart(controller);
                     Serial.print(F("[AUTO-START] Richtung gesetzt → Anlauframpe → "));

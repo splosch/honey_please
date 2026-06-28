@@ -13,6 +13,7 @@
 - [x] Centralize active-HIGH versus active-LOW relay behavior behind the hardware abstraction.
 - [x] Normalize button handling so the state machine works with named logical inputs instead of raw `digitalRead()` calls.
 - [x] Keep initialization of pins and safe startup states grouped in one hardware setup path.
+- [x] Extract hardware/input helpers from `main.cpp` into dedicated files (`hardware_io.h/.cpp`) to keep control flow and IO concerns separated.
 
 ## Milestone 3: State Model Separation
 
