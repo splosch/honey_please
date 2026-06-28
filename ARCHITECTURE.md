@@ -72,6 +72,39 @@ honey_please/
   │   session.cpp/h         ← extraction session ring buffer
   │   params.cpp/h          ← EEPROM-persisted params
   │   log.h                 ← Serial.println wrapper
+  └── docs/                 ← ALL DOCUMENTATION
+  │   FEATURE-OVERVIEW.md   ← milestone tracker (Phase 0–6, open items)
+  │   r4wifi_onboarding.md  ← first flash, WiFi setup, dev server
+  │   current_task.md       ← active task plan & progress log
+  │   base_honey_extractor_controller.ino        ← legacy reference sketch
+  │   │
+  │   hardware/             ← HARDWARE DOMAIN
+  │   │   README.md         ← constraints, relay isolation rationale, Phase 5 blockers
+  │   │   motor-driver.md   ← BLF driver: 3-wire relay logic rationale, relay config
+  │   │
+  │   webui/                ← WEB UI DOMAIN
+  │   │   README.md         ← UI architecture, CORS, dev server setup
+  │   │   websocket-protocol.md ← WS/HTTP message schema, commands, error codes
+  │   │
+  │   simulation/           ← SIMULATION DOMAIN
+  │   │   README.md         ← HAL pattern, sim drivers, fault injection, basic-control sketch
+  │   │
+  │   ops/                  ← OPERATIONS DOMAIN
+  │   │   README.md         ← quick-ref scripts, serial monitor, when-things-go-wrong
+  │   │   deploy.md         ← full deploy workflow + failure decision tree
+  │   │
+  │   features/             ← FEATURE SPECIFICATIONS
+  │       F01-motor-control-architecture.md
+  │       F02-rpm-monitoring.md
+  │       F03-acceleration-deceleration-ramps.md
+  │       F04-direction-control.md
+  │       F05-error-states.md
+  │       F06-rpm-limits-and-params.md
+  │       F07-webui-schematic-view.md
+  │       F08-simulation-mode.md
+  │       F09-multistep-program.md
+  │       F10-extraction-session.md
+  │       F11-platform-migration-r4-wifi.md
   │
   data/                     ← WEB UI (served from dev-PC, NOT the board)
   │   index.html
@@ -80,6 +113,7 @@ honey_please/
   │
   basic-control/            ← BASIC CONTROL CHAIN (env: r4wifi_basic_control)
   │   main.cpp              ← standalone state machine, no WiFi
+  │   ErsteInbetriebnahmeMotorundSteuerung.html  ← interactive wiring diagram
   │
   verify_sketch/            ← BOARD HEALTH CHECK (env: r4wifi_verify)
   │   main.cpp              ← USB CDC, WiFi co-processor probe, echo test
@@ -87,42 +121,6 @@ honey_please/
   tests/
   │   selfcheck.js          ← HTTP /status + WebSocket /ws health check
   │   package.json
-  │
-  docs/                     ← ALL DOCUMENTATION
-      ARCHITECTURE.md       ← (this file — lives in project root)
-      FEATURE-OVERVIEW.md   ← milestone tracker (Phase 0–6, open items)
-      r4wifi_onboarding.md  ← first flash, WiFi setup, dev server
-      current_task.md       ← active task plan & progress log
-      ErsteInbetriebnahmeMotorundSteuerung.html  ← interactive wiring diagram
-      base_honey_extractor_controller.ino        ← legacy reference sketch
-      │
-      hardware/             ← HARDWARE DOMAIN
-      │   README.md         ← constraints, relay isolation rationale, Phase 5 blockers
-      │   motor-driver.md   ← BLF driver: 3-wire relay logic rationale, relay config
-      │
-      webui/                ← WEB UI DOMAIN
-      │   README.md         ← UI architecture, CORS, dev server setup
-      │   websocket-protocol.md ← WS/HTTP message schema, commands, error codes
-      │
-      simulation/           ← SIMULATION DOMAIN
-      │   README.md         ← HAL pattern, sim drivers, fault injection, basic-control sketch
-      │
-      ops/                  ← OPERATIONS DOMAIN
-      │   README.md         ← quick-ref scripts, serial monitor, when-things-go-wrong
-      │   deploy.md         ← full deploy workflow + failure decision tree
-      │
-      features/             ← FEATURE SPECIFICATIONS
-          F01-motor-control-architecture.md
-          F02-rpm-monitoring.md
-          F03-acceleration-deceleration-ramps.md
-          F04-direction-control.md
-          F05-error-states.md
-          F06-rpm-limits-and-params.md
-          F07-webui-schematic-view.md
-          F08-simulation-mode.md
-          F09-multistep-program.md
-          F10-extraction-session.md
-          F11-platform-migration-r4-wifi.md
 ```
 
 ---
