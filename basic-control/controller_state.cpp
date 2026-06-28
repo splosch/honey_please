@@ -39,10 +39,12 @@ float getRampProgress(
 
     switch (state.id) {
         case ControllerStateId::ACCELERATING: {
+            const unsigned long accelFromStopMs =
+                computeAccelerationDurationFromStopMs(state.selectedRunDataset);
             float effDur = max(
                 100.0f,
                 (1.0f - state.rampStartProgress)
-                    * (float)dynamicsProfileForDataset(state.selectedRunDataset).accelerationMs);
+                    * (float)accelFromStopMs);
             return state.rampStartProgress
                 + min(1.0f, elapsed / effDur) * (1.0f - state.rampStartProgress);
         }
@@ -50,10 +52,12 @@ float getRampProgress(
         case ControllerStateId::RUNNING_CCW:
             return 1.0f;
         case ControllerStateId::DECELERATING: {
+            const unsigned long decelToStopMs =
+                computeDecelerationDurationToStopMs(state.decelFromDataset);
             float effDur = max(
                 100.0f,
                 state.rampStartProgress
-                    * (float)dynamicsProfileForDataset(state.decelFromDataset).decelerationMs);
+                    * (float)decelToStopMs);
             return state.rampStartProgress * (1.0f - min(1.0f, elapsed / effDur));
         }
         default:
@@ -65,20 +69,24 @@ unsigned long getEffectiveAccelerationDurationMs(
     const ControllerState& state,
     const BasicControlConfig& config) {
     (void)config;
+    const unsigned long accelFromStopMs =
+        computeAccelerationDurationFromStopMs(state.selectedRunDataset);
     return (unsigned long)max(
         100.0f,
         (1.0f - state.rampStartProgress)
-            * (float)dynamicsProfileForDataset(state.selectedRunDataset).accelerationMs);
+            * (float)accelFromStopMs);
 }
 
 unsigned long getEffectiveDecelerationDurationMs(
     const ControllerState& state,
     const BasicControlConfig& config) {
     (void)config;
+    const unsigned long decelToStopMs =
+        computeDecelerationDurationToStopMs(state.decelFromDataset);
     return (unsigned long)max(
         100.0f,
         state.rampStartProgress
-            * (float)dynamicsProfileForDataset(state.decelFromDataset).decelerationMs);
+            * (float)decelToStopMs);
 }
 
 void beginAcceleration(ControllerState& state, unsigned long nowMs, float fromProgress) {

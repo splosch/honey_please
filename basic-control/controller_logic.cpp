@@ -91,9 +91,10 @@ static void completeWaitingPeriod(
 
     completeWaitingToStandby(controller);
     applySpeedDataset(cfg, kStandbyDataset);
+    const unsigned long decelToStopMs =
+        computeDecelerationDurationToStopMs(controller.decelFromDataset);
     Serial.print(F("[STANDBY] Bereit. Gesamtwartezeit: "));
-    Serial.print((dynamicsProfileForDataset(controller.decelFromDataset).decelerationMs
-        + cfg.sicherheitsPauseMs) / 1000);
+    Serial.print((decelToStopMs + cfg.sicherheitsPauseMs) / 1000);
     Serial.println(F(" s abgelaufen."));
     Serial.println(F(""));
 }

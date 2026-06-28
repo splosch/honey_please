@@ -9,13 +9,14 @@ static constexpr BinarySpeedRelayProfile kDatasetProfiles[] = {
 
 static constexpr BinarySpeedDynamicsProfile kDynamicsProfiles[] = {
     // BLFD120 3-wire profiles from MultiSpeedSaftyBreak.md.
+    // Ac/dc values are configured relative to 3000 rpm max speed.
     // Safety brake is intentionally two-stage:
     // 1) DATASET_0 (dc=2500 ms) for a gentle 2250->750 rpm decel (~1250 ms).
     // 2) DATASET_6 (dc=200 ms) for final lock to 0 rpm (code uses +margin, e.g. 150 ms).
     // Row format: {     dataset,   targetRpm,  accelerationMs, decelerationMs}
     {BinarySpeedDataset::DATASET_0, 750UL,      15000UL,        2500UL},
-    {BinarySpeedDataset::DATASET_2, 1500UL,     15000UL,        15000UL},
-    {BinarySpeedDataset::DATASET_4, 2250UL,     15000UL,        15000UL},
+    {BinarySpeedDataset::DATASET_2, 1250UL,     15000UL,        15000UL},
+    {BinarySpeedDataset::DATASET_4, 2500UL,     15000UL,        15000UL},
     {BinarySpeedDataset::DATASET_6, 0UL,        2000UL,         2000UL}
 };
 
@@ -94,7 +95,12 @@ unsigned long computeAccelerationDurationMs(
     }
 
     unsigned long deltaRpm = to.targetRpm - from.targetRpm;
-    return scaleTimeByDelta(to.accelerationMs, to.targetRpm, deltaRpm);
+    return scaleTimeByDelta(to.accelerationMs, kRampReferenceMaxRpm, deltaRpm);
+}
+
+unsigned long computeAccelerationDurationFromStopMs(BinarySpeedDataset toDataset) {
+    const BinarySpeedDynamicsProfile& to = dynamicsProfileForDataset(toDataset);
+    return scaleTimeByDelta(to.accelerationMs, kRampReferenceMaxRpm, to.targetRpm);
 }
 
 unsigned long computeDecelerationDurationMs(
@@ -108,7 +114,12 @@ unsigned long computeDecelerationDurationMs(
     }
 
     unsigned long deltaRpm = from.targetRpm - to.targetRpm;
-    return scaleTimeByDelta(from.decelerationMs, from.targetRpm, deltaRpm);
+    return scaleTimeByDelta(from.decelerationMs, kRampReferenceMaxRpm, deltaRpm);
+}
+
+unsigned long computeDecelerationDurationToStopMs(BinarySpeedDataset fromDataset) {
+    const BinarySpeedDynamicsProfile& from = dynamicsProfileForDataset(fromDataset);
+    return scaleTimeByDelta(from.decelerationMs, kRampReferenceMaxRpm, from.targetRpm);
 }
 
 unsigned long computeSwitchDurationMs(

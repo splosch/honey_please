@@ -22,6 +22,9 @@ struct BinarySpeedDynamicsProfile {
     unsigned long decelerationMs;
 };
 
+// Ramp times in Ac/dc are configured against this maximum VFD speed.
+static constexpr unsigned long kRampReferenceMaxRpm = 3000UL;
+
 const BinarySpeedRelayProfile& relayProfileForDataset(BinarySpeedDataset dataset);
 const BinarySpeedDynamicsProfile& dynamicsProfileForDataset(BinarySpeedDataset dataset);
 const __FlashStringHelper* datasetText(BinarySpeedDataset dataset);
@@ -31,9 +34,13 @@ unsigned long computeAccelerationDurationMs(
     BinarySpeedDataset fromDataset,
     BinarySpeedDataset toDataset);
 
+unsigned long computeAccelerationDurationFromStopMs(BinarySpeedDataset toDataset);
+
 unsigned long computeDecelerationDurationMs(
     BinarySpeedDataset fromDataset,
     BinarySpeedDataset toDataset);
+
+unsigned long computeDecelerationDurationToStopMs(BinarySpeedDataset fromDataset);
 
 unsigned long computeSwitchDurationMs(
     BinarySpeedDataset fromDataset,
