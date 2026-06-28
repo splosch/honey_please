@@ -1,10 +1,6 @@
 /**
  * @file basic-control/main.cpp
- * @brief Honigschleuder – Basic-Control / Wiring-Verification Sketch
- *
- * Quelle: docs/base_honey_extractor_controller.ino (erstellt mit Google Gemini)
- * Zweck : Verdrahtungscheck OHNE angeschlossenen Motor-Treiber.
- *         Relais klicken, Serial-Monitor zeigt alle Zustandsübergänge.
+ * @brief Honigschleuder – Basic-Control
  *
  * Referenz-Verdrahtungsplan : docs/ErsteInbetriebnahmeMotorundSteuerung.html
  * PlatformIO-Umgebung       : r4wifi_basic_control
@@ -14,31 +10,17 @@
  * ─── Pin-Belegung (muss mit HTML-Verdrahtungsplan übereinstimmen) ───────────
  * Hinweis: Diese komplette Zuordnung ist zusaetzlich in basic-control/config.h
  * als modul-lokale Dokumentation hinterlegt und muss bei Aenderungen dort
- * mit gepflegt werden (Single Source of Truth fuer extrahierte Konfiguration).
- *  D2  OUTPUT  → Relais 1 IN  (X1 am Treiber – START/STOPP)
- *  D3  OUTPUT  → Relais 2 IN  (X3 am Treiber – Richtung CW/CCW)
- *  D4  OUTPUT  → Relais 3 IN  unused
- *  D5  OUTPUT  → Relais 4 IN  unused
- *                Folientaster 1: GND (1)
- *  D6  INPUT   ← Folientaster 1: Taste LINKS (3)  (CCW)   [aktiv LOW, Pullup]
- *  D7  INPUT   ← Folientaster 1: Taste RECHTS (2) (CW)    [aktiv LOW, Pullup]
- *                Folientaster 2: GND (1)
- *  D8  INPUT   ← Folientaster 2: Taste ROT (5)   (Stopp) [aktiv LOW, Pullup]
- *  D9  INPUT   ← Folientaster 2: Taste GELB 1 (4) (Preset 1)
- *  D10  INPUT   ← Folientaster 2: Taste GELB 2 (3) (Preset 2)
- *  D11  INPUT   ← Folientaster 2: Taste GRÜN (2)  (Start)  [aktiv LOW, Pullup]
+ * mit gepflegt werden 
  * ────────────────────────────────────────────────────────────────────────────
  *
  * ⚠️  Relay-Modul-Hinweis:
  *     Dieser Sketch verwendet HIGH = Relais zieht an (aktiv-HIGH).
- *     Gilt für die meisten Standard-5V-Relaismodule mit Optokoppler (z.B. SRD-05VDC-SL-C).
- *     Falls dein Modul aktiv-LOW ist (Relais zieht bei LOW an), setze in
- *     basic-control/config.h den Wert relayActiveHigh auf false.
  */
 
 #include <Arduino.h>
 #include "Arduino_LED_Matrix.h"
 #include "config.h"
+#include "controller_state.h"
 
 // ── ZENTRALE KONFIGURATION ───────────────────────────────────────────────────
 static constexpr BasicControlConfig CFG = BASIC_CONTROL_CONFIG;
@@ -180,20 +162,7 @@ static void printBootBanner() {
     Serial.println(F(""));
 }
 
-// ── SYSTEM ZUSTÄNDE (STATE MACHINE) ─────────────────────────────────────────
-enum SystemState {
-    STATE_STANDBY,       // Schleuder steht, wartet auf Start
-    STATE_ACCELERATING,  // Motor läuft an (Anlauframpe, Richtungswechsel erlaubt)
-    STATE_RUNNING_CW,    // Dreht nach Rechts (CW)  – Richtungswechsel erlaubt
-    STATE_RUNNING_CCW,   // Dreht nach Links (CCW) – Richtungswechsel erlaubt
-    STATE_DECELERATING,  // Motor bremst ab, alle Eingaben gesperrt
-    STATE_WAITING        // Motor steht still, Sicherheitszeit läuft ab
-};
-
-SystemState   currentState        = STATE_STANDBY;
-bool          targetDirectionCCW  = false;  // false = CW (Rechts), true = CCW (Links)
-bool          pendingAutoRestart  = false;  // true = Richtungswechsel, danach Auto-Neustart
-unsigned long stateTimerStart     = 0;
+static ControllerState controller = makeInitialControllerState();
 
 // ── LED MATRIX ANIMATION ─────────────────────────────────────────────────────
 // Äußerer Ring, 36 Positionen, im Uhrzeigersinn (CW) startend oben-links
@@ -212,8 +181,6 @@ static const LedPos RING[36] = {
 ArduinoLEDMatrix     ledMatrix;
 static int           ledRingPos        = 0;     // Aktuelle Ring-Position 0–35
 static unsigned long lastLedStep       = 0;     // Zeitstempel letzter Animations-Schritt
-static bool          runningDirCCW     = false; // Drehrichtung beim Eintritt in DECELERATING
-static float         rampStartProgress = 0.0f;  // Rampenfortschritt beim Eintritt in Rampenzustand
 
 // Icon-Definitionen (innere LEDs, außerhalb des äußeren Rings)
 // Pause: zwei vertikale Balken, 5 Zeilen hoch (Zeilen 2–6), wie ⏸
@@ -251,6 +218,10 @@ static void printRelayStates() {
     Serial.println(F("]"));
 }
 
+static const __FlashStringHelper* directionText(SpinDirection direction) {
+    return isDirectionCCW(direction) ? F("LINKS (CCW)") : F("RECHTS (CW)");
+}
+
 // ── setup ────────────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
@@ -270,28 +241,6 @@ void setup() {
     Serial.println(F(""));
 }
 
-// ── Rampenfortschritt berechnen (0.0=steht, 1.0=Vollgeschwindigkeit) ─────────
-// Berücksichtigt den gespeicherten Einstiegspunkt (rampStartProgress) für
-// proportionale Zeiten beim Umkehren einer laufenden Rampe.
-float getCurrentRampProgress() {
-    float elapsed = (float)(millis() - stateTimerStart);
-    switch (currentState) {
-        case STATE_ACCELERATING: {
-            float effDur = max(100.0f, (1.0f - rampStartProgress) * (float)CFG.anlaufRampenZeitMs);
-            return rampStartProgress + min(1.0f, elapsed / effDur) * (1.0f - rampStartProgress);
-        }
-        case STATE_RUNNING_CW:
-        case STATE_RUNNING_CCW:
-            return 1.0f;
-        case STATE_DECELERATING: {
-            float effDur = max(100.0f, rampStartProgress * (float)CFG.bremsRampenZeitMs);
-            return rampStartProgress * (1.0f - min(1.0f, elapsed / effDur));
-        }
-        default:
-            return 0.0f;
-    }
-}
-
 // ── LED-Matrix Animation ─────────────────────────────────────────────────────
 // Ring  : 4 LEDs umlaufend, Geschwindigkeit = aktueller Rampenfortschritt
 // Innen : Icon zeigt Zielaktion (⏸/▶/◀) – blinkt während Rampe läuft, steht still wenn etabliert
@@ -303,19 +252,30 @@ void updateLedAnimation() {
     // ── Ring-LEDs ────────────────────────────────────────────────────────────
     int  dir      = +1;
     bool drawRing = true;
-    switch (currentState) {
-        case STATE_STANDBY:
-        case STATE_WAITING:      drawRing = false;                             break;
-        case STATE_ACCELERATING: dir = targetDirectionCCW ? -1 : +1;
-                                 runningDirCCW = targetDirectionCCW;           break;
-        case STATE_RUNNING_CW:   dir = +1; runningDirCCW = false;             break;
-        case STATE_RUNNING_CCW:  dir = -1; runningDirCCW = true;              break;
-        case STATE_DECELERATING: dir = runningDirCCW ? -1 : +1;              break;
-        default:                 drawRing = false;                             break;
+    switch (controller.id) {
+        case ControllerStateId::STANDBY:
+        case ControllerStateId::WAITING:
+            drawRing = false;
+            break;
+        case ControllerStateId::ACCELERATING:
+            dir = isDirectionCCW(controller.targetDirection) ? -1 : +1;
+            break;
+        case ControllerStateId::RUNNING_CW:
+            dir = +1;
+            break;
+        case ControllerStateId::RUNNING_CCW:
+            dir = -1;
+            break;
+        case ControllerStateId::DECELERATING:
+            dir = isDirectionCCW(controller.runningDirection) ? -1 : +1;
+            break;
+        default:
+            drawRing = false;
+            break;
     }
     if (drawRing) {
         // stepMs aus Rampenfortschritt: 250 ms/Schritt (langsam) → 30 ms/Schritt (schnell)
-        unsigned long stepMs = (unsigned long)(250.0f - 220.0f * getCurrentRampProgress());
+        unsigned long stepMs = (unsigned long)(250.0f - 220.0f * getRampProgress(controller, now, CFG));
         if (now - lastLedStep >= stepMs) {
             ledRingPos  = (dir > 0) ? (ledRingPos + 1) % 36 : (ledRingPos + 35) % 36;
             lastLedStep = now;
@@ -335,22 +295,22 @@ void updateLedAnimation() {
     const LedPos* iconPts   = nullptr;
     int           iconCount = 0;
     bool          iconBlink = false;
-    switch (currentState) {
-        case STATE_STANDBY:
+    switch (controller.id) {
+        case ControllerStateId::STANDBY:
             iconPts = ICON_PAUSE; iconCount = ICON_PAUSE_N; iconBlink = false; break;
-        case STATE_ACCELERATING:
-            iconPts   = targetDirectionCCW ? ICON_PLAY_CCW : ICON_PLAY_CW;
+        case ControllerStateId::ACCELERATING:
+            iconPts   = isDirectionCCW(controller.targetDirection) ? ICON_PLAY_CCW : ICON_PLAY_CW;
             iconCount = ICON_PLAY_N; iconBlink = true; break;
-        case STATE_RUNNING_CW:
+        case ControllerStateId::RUNNING_CW:
             iconPts = ICON_PLAY_CW; iconCount = ICON_PLAY_N; iconBlink = false; break;
-        case STATE_RUNNING_CCW:
+        case ControllerStateId::RUNNING_CCW:
             iconPts = ICON_PLAY_CCW; iconCount = ICON_PLAY_N; iconBlink = false; break;
-        case STATE_DECELERATING:
-        case STATE_WAITING:
-            iconPts = pendingAutoRestart
-                      ? (targetDirectionCCW ? ICON_PLAY_CCW : ICON_PLAY_CW)
+        case ControllerStateId::DECELERATING:
+        case ControllerStateId::WAITING:
+            iconPts = hasAutoRestart(controller)
+                      ? (isDirectionCCW(controller.targetDirection) ? ICON_PLAY_CCW : ICON_PLAY_CW)
                       : ICON_PAUSE;
-            iconCount = pendingAutoRestart ? ICON_PLAY_N : ICON_PAUSE_N;
+            iconCount = hasAutoRestart(controller) ? ICON_PLAY_N : ICON_PAUSE_N;
             iconBlink = true; break;
         default: break;
     }
@@ -371,19 +331,19 @@ void loop() {
     unsigned long currentMillis = millis();
     InputSnapshot inputs = readInputs();
 
-    switch (currentState) {
+    switch (controller.id) {
 
-        case STATE_STANDBY:
+        case ControllerStateId::STANDBY:
             // Im Standby kann die Richtung jederzeit gewählt werden
             if (inputs.dirLeftPressed) {
-                targetDirectionCCW = true;
+                setTargetDirection(controller, SpinDirection::CCW);
                 setDirectionRelay(true);
                 Serial.println(F("[STANDBY] Richtung gewählt: LINKS (CCW)"));
                 printRelayStates();
                 delay(CFG.debounceDirectionMs);
             }
             else if (inputs.dirRightPressed) {
-                targetDirectionCCW = false;
+                setTargetDirection(controller, SpinDirection::CW);
                 setDirectionRelay(false);
                 Serial.println(F("[STANDBY] Richtung gewählt: RECHTS (CW)"));
                 printRelayStates();
@@ -391,75 +351,85 @@ void loop() {
             }
 
             if (inputs.startPressed) {
-                rampStartProgress   = 0.0f; // vollständiger Anlauf vom Stillstand
                 setStartRelayEnabled(true);
-                stateTimerStart     = currentMillis;
-                pendingAutoRestart  = false;
-                currentState        = STATE_ACCELERATING;
+                beginAcceleration(controller, currentMillis, 0.0f);
                 Serial.print(F("[START] Anlauframpe → "));
-                Serial.println(targetDirectionCCW ? F("LINKS (CCW)") : F("RECHTS (CW)"));
+                Serial.println(directionText(controller.targetDirection));
                 printRelayStates();
                 delay(CFG.debounceActionMs);
             }
             break;
 
-        case STATE_ACCELERATING: {
+        case ControllerStateId::ACCELERATING: {
             // REL1 ist AN – Motor läuft hoch
             // Richtungswechsel während Anlauf erlaubt (Gegenrichtungs-Taste)
             bool dirChange =
-                (!targetDirectionCCW && inputs.dirLeftPressed) ||
-                ( targetDirectionCCW && inputs.dirRightPressed);
+                (!isDirectionCCW(controller.targetDirection) && inputs.dirLeftPressed) ||
+                ( isDirectionCCW(controller.targetDirection) && inputs.dirRightPressed);
 
             if (inputs.stopPressed || dirChange) {
-                rampStartProgress = getCurrentRampProgress();
+                float currentProgress = getRampProgress(controller, currentMillis, CFG);
                 setStartRelayEnabled(false);
-                stateTimerStart   = currentMillis;
                 if (dirChange) {
-                    targetDirectionCCW = !targetDirectionCCW;
-                    pendingAutoRestart = true;
+                    SpinDirection runningDirection = controller.targetDirection;
+                    flipTargetDirection(controller);
+                    beginDeceleration(
+                        controller,
+                        currentMillis,
+                        currentProgress,
+                        runningDirection,
+                        RestartIntent::AUTO_RESTART);
                     Serial.print(F("[DIR] Richtungswechsel im Anlauf → "));
-                    Serial.println(targetDirectionCCW ? F("LINKS (CCW)") : F("RECHTS (CW)"));
+                    Serial.println(directionText(controller.targetDirection));
                     Serial.println(F("      Bremsrampe proportional, danach Auto-Neustart"));
                 } else {
-                    pendingAutoRestart = false;
+                    beginDeceleration(
+                        controller,
+                        currentMillis,
+                        currentProgress,
+                        controller.targetDirection,
+                        RestartIntent::NONE);
                     Serial.print(F("[STOP] Anlauf abgebrochen bei "));
-                    Serial.print((int)(rampStartProgress * 100.0f));
+                    Serial.print((int)(currentProgress * 100.0f));
                     Serial.println(F("% – Bremsrampe proportional"));
                 }
-                currentState = STATE_DECELERATING;
                 printRelayStates();
                 delay(CFG.debounceActionMs);
             } else {
-                unsigned long effAccelDur = (unsigned long)max(100.0f,
-                    (1.0f - rampStartProgress) * (float)CFG.anlaufRampenZeitMs);
-                if (currentMillis - stateTimerStart >= effAccelDur) {
-                    currentState = targetDirectionCCW ? STATE_RUNNING_CCW : STATE_RUNNING_CW;
+                unsigned long effAccelDur = getEffectiveAccelerationDurationMs(controller, CFG);
+                if (currentMillis - controller.stateTimerStartMs >= effAccelDur) {
+                    completeAcceleration(controller);
                     Serial.print(F("[RUNNING] Anlauframpe abgeschlossen → "));
-                    Serial.println(targetDirectionCCW ? F("LÄUFT LINKS (CCW)") : F("LÄUFT RECHTS (CW)"));
+                    Serial.print(F("LAEUFT "));
+                    Serial.println(directionText(controller.targetDirection));
                 }
             }
             break;
         }
 
-        case STATE_RUNNING_CW:
+        case ControllerStateId::RUNNING_CW:
             // STOPP oder Richtungswechsel nach LINKS
             if (inputs.stopPressed) {
-                rampStartProgress  = 1.0f; // Vollgas → volle Bremsrampe
                 setStartRelayEnabled(false);
-                stateTimerStart    = currentMillis;
-                pendingAutoRestart = false;
-                currentState       = STATE_DECELERATING;
+                beginDeceleration(
+                    controller,
+                    currentMillis,
+                    1.0f,
+                    SpinDirection::CW,
+                    RestartIntent::NONE);
                 Serial.println(F("[STOP] Signal erhalten – Bremsrampe läuft"));
                 printRelayStates();
                 delay(CFG.debounceActionMs);
             }
             else if (inputs.dirLeftPressed) {
-                rampStartProgress  = 1.0f;
-                targetDirectionCCW = true;
+                setTargetDirection(controller, SpinDirection::CCW);
                 setStartRelayEnabled(false);
-                stateTimerStart    = currentMillis;
-                pendingAutoRestart = true;
-                currentState       = STATE_DECELERATING;
+                beginDeceleration(
+                    controller,
+                    currentMillis,
+                    1.0f,
+                    SpinDirection::CW,
+                    RestartIntent::AUTO_RESTART);
                 Serial.println(F("[DIR] Richtungswechsel → LINKS (CCW) angefordert"));
                 Serial.println(F("      Bremsrampe läuft, danach Auto-Neustart"));
                 printRelayStates();
@@ -467,25 +437,29 @@ void loop() {
             }
             break;
 
-        case STATE_RUNNING_CCW:
+        case ControllerStateId::RUNNING_CCW:
             // STOPP oder Richtungswechsel nach RECHTS
             if (inputs.stopPressed) {
-                rampStartProgress  = 1.0f; // Vollgas → volle Bremsrampe
                 setStartRelayEnabled(false);
-                stateTimerStart    = currentMillis;
-                pendingAutoRestart = false;
-                currentState       = STATE_DECELERATING;
+                beginDeceleration(
+                    controller,
+                    currentMillis,
+                    1.0f,
+                    SpinDirection::CCW,
+                    RestartIntent::NONE);
                 Serial.println(F("[STOP] Signal erhalten – Bremsrampe läuft"));
                 printRelayStates();
                 delay(CFG.debounceActionMs);
             }
             else if (inputs.dirRightPressed) {
-                rampStartProgress  = 1.0f;
-                targetDirectionCCW = false;
+                setTargetDirection(controller, SpinDirection::CW);
                 setStartRelayEnabled(false);
-                stateTimerStart    = currentMillis;
-                pendingAutoRestart = true;
-                currentState       = STATE_DECELERATING;
+                beginDeceleration(
+                    controller,
+                    currentMillis,
+                    1.0f,
+                    SpinDirection::CCW,
+                    RestartIntent::AUTO_RESTART);
                 Serial.println(F("[DIR] Richtungswechsel → RECHTS (CW) angefordert"));
                 Serial.println(F("      Bremsrampe läuft, danach Auto-Neustart"));
                 printRelayStates();
@@ -493,48 +467,43 @@ void loop() {
             }
             break;
 
-        case STATE_DECELERATING: {
+        case ControllerStateId::DECELERATING: {
             // Proportionale Bremsdauer + optional Umkehrung per START-Taste
-            unsigned long effDecelDur = (unsigned long)max(100.0f,
-                rampStartProgress * (float)CFG.bremsRampenZeitMs);
-            if (!pendingAutoRestart && inputs.startPressed) {
+            unsigned long effDecelDur = getEffectiveDecelerationDurationMs(controller, CFG);
+            if (!hasAutoRestart(controller) && inputs.startPressed) {
                 // Bremsung umkehren: Anlauf vom aktuellen Rampen-Punkt
-                rampStartProgress = getCurrentRampProgress();
+                float currentProgress = getRampProgress(controller, currentMillis, CFG);
                 setStartRelayEnabled(true);
-                stateTimerStart   = currentMillis;
-                currentState      = STATE_ACCELERATING;
+                beginAcceleration(controller, currentMillis, currentProgress);
                 Serial.print(F("[RE-START] Bremsung umgekehrt bei "));
-                Serial.print((int)(rampStartProgress * 100.0f));
+                Serial.print((int)(currentProgress * 100.0f));
                 Serial.println(F("% → Anlauframpe"));
                 printRelayStates();
                 delay(CFG.debounceActionMs);
-            } else if (currentMillis - stateTimerStart >= effDecelDur) {
-                stateTimerStart = currentMillis;
-                currentState    = STATE_WAITING;
+            } else if (currentMillis - controller.stateTimerStartMs >= effDecelDur) {
+                beginWaiting(controller, currentMillis);
                 Serial.print(F("[WARTEN] Bremsrampe abgelaufen ("));
                 Serial.print(effDecelDur / 1000);
                 Serial.print(F(" s). "));
-                Serial.println(pendingAutoRestart ? F("Auto-Neustart folgt...") : F("Sicherheitspause läuft..."));
+                Serial.println(hasAutoRestart(controller) ? F("Auto-Neustart folgt...") : F("Sicherheitspause läuft..."));
             }
             break;
         }
 
-        case STATE_WAITING:
-            if (currentMillis - stateTimerStart >= CFG.sicherheitsPauseMs) {
-                if (pendingAutoRestart) {
+        case ControllerStateId::WAITING:
+            if (currentMillis - controller.stateTimerStartMs >= CFG.sicherheitsPauseMs) {
+                if (hasAutoRestart(controller)) {
                     // Richtungsrelais auf neuen Wert setzen, kurz warten, dann starten
-                    setDirectionRelay(targetDirectionCCW);
+                    setDirectionRelay(isDirectionCCW(controller.targetDirection));
                     delay(CFG.relaySettleMs); // Relais-Einschwingzeit
                     setStartRelayEnabled(true);
-                    rampStartProgress  = 0.0f; // Motor vollständig gestoppt → voller Anlauf
-                    stateTimerStart    = millis();
-                    pendingAutoRestart = false;
-                    currentState       = STATE_ACCELERATING;
+                    beginAcceleration(controller, millis(), 0.0f);
+                    consumeAutoRestart(controller);
                     Serial.print(F("[AUTO-START] Richtung gesetzt → Anlauframpe → "));
-                    Serial.println(targetDirectionCCW ? F("LINKS (CCW)") : F("RECHTS (CW)"));
+                    Serial.println(directionText(controller.targetDirection));
                     printRelayStates();
                 } else {
-                    currentState = STATE_STANDBY;
+                    completeWaitingToStandby(controller);
                     Serial.print(F("[STANDBY] Bereit. Gesamtwartezeit: "));
                     Serial.print((CFG.bremsRampenZeitMs + CFG.sicherheitsPauseMs) / 1000);
                     Serial.println(F(" s abgelaufen."));
@@ -545,7 +514,7 @@ void loop() {
     }
 
     // ── Gelbe Tasten (Presets – noch nicht belegt) ───────────────────────────
-    if (currentState == STATE_STANDBY) {
+    if (controller.id == ControllerStateId::STANDBY) {
         if (inputs.preset1Pressed) {
             Serial.println(F("[PRESET 1] Gelb-1 gedrückt (noch nicht belegt)"));
             delay(CFG.debounceActionMs);

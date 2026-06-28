@@ -16,10 +16,10 @@
 
 ## Milestone 3: State Model Separation
 
-- [ ] Move mutable runtime variables into a dedicated state structure.
-- [ ] Define explicit types for controller state, requested direction, and pending restart intent.
-- [ ] Replace scattered global state mutations with focused transition helpers.
-- [ ] Keep ramp progress and timer bookkeeping in the controller state rather than mixed with rendering state.
+- [x] Move mutable runtime variables into a dedicated state structure.
+- [x] Define explicit types for controller state, requested direction, and pending restart intent.
+- [x] Replace scattered global state mutations with focused transition helpers.
+- [x] Keep ramp progress and timer bookkeeping in the controller state rather than mixed with rendering state.
 
 ## Milestone 4: State Machine Extraction
 - use /basic-control/docs/MultiSpeedSaftyBreak.md

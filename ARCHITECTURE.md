@@ -1,6 +1,6 @@
 # ARCHITECTURE.md – honey_please Project Map
 
-**Version:** 1.6.0 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-06-28
+**Version:** 1.6.1 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-06-28
 
 This is the central architecture map for the repository.
 AI agents: read this file first and keep scope small.
@@ -50,8 +50,10 @@ honey_please/
   serve.js
 
   basic-control/                 <- ACTIVE APP CHAIN (env: r4wifi_basic_control)
-    main.cpp                     <- standalone state machine + wiring verification
+    main.cpp                     <- application entry + state machine wiring
     config.h                     <- pin/config single source for basic-control
+    controller_state.h           <- explicit controller state model and transition API
+    controller_state.cpp         <- controller state transitions and ramp timing logic
     docs/
       ErsteInbetriebnahmeMotorundSteuerung.html
 
@@ -83,6 +85,8 @@ Use only the smallest relevant documentation set.
 | [platformio.ini](platformio.ini) | Checking active env, pins, board constraints |
 | [basic-control/main.cpp](basic-control/main.cpp) | Basic control logic or state transitions |
 | [basic-control/config.h](basic-control/config.h) | Pin assignment or timing constants |
+| [basic-control/controller_state.h](basic-control/controller_state.h) | Controller state types and transition helpers |
+| [basic-control/controller_state.cpp](basic-control/controller_state.cpp) | Ramp progress and effective ramp durations |
 | [basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html](basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html) | Wiring validation |
 | [docs/hardware/README.md](docs/hardware/README.md) | Hardware constraints and cautions |
 | [docs/ops/README.md](docs/ops/README.md) | Build/flash/monitor commands |
