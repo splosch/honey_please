@@ -56,6 +56,12 @@ static void printBootBanner() {
     Serial.print(F("  Bremsrampe  : "));
     Serial.print(CFG.bremsRampenZeitMs / 1000);
     Serial.println(F(" s"));
+    Serial.print(F("  Modus 1 Ziel: "));
+    Serial.print(kMode1TargetSpeedRpm);
+    Serial.println(F(" rpm"));
+    Serial.print(F("  Modus 2 Ziel: "));
+    Serial.print(kMode2TargetSpeedRpm);
+    Serial.println(F(" rpm"));
     Serial.print(F("  Sicherheit  : "));
     Serial.print(CFG.sicherheitsPauseMs / 1000);
     Serial.println(F(" s"));

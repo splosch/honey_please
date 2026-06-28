@@ -42,6 +42,39 @@ static const LedPos ICON_PLAY_CCW[] = {  // ◀  tip left (counter-clockwise)
 };
 static constexpr int ICON_PLAY_N = 9;
 
+static void drawProfileMarkerDots(
+    byte frame[8][12],
+    BinarySpeedDataset dataset,
+    uint8_t iconMinCol)
+{
+    // Draw profile indicator left of the icon with 1 px horizontal gap.
+    // dAtA 2 -> one 2x2 block, dAtA 4 -> two stacked 2x2 blocks with 1 px gap.
+    uint8_t dotCount = 0;
+    if (dataset == BinarySpeedDataset::DATASET_2) {
+        dotCount = 1;
+    } else if (dataset == BinarySpeedDataset::DATASET_4) {
+        dotCount = 2;
+    } else {
+        return;
+    }
+
+    if (iconMinCol < 3) {
+        return;
+    }
+
+    const uint8_t baseCol = iconMinCol - 3;  // 2 px dot + 1 px padding to icon
+    const uint8_t topRows[2] = {1, 4};       // 1 px vertical gap between two 2x2 dots
+
+    for (uint8_t d = 0; d < dotCount; d++) {
+        const uint8_t r0 = topRows[d];
+        for (uint8_t dr = 0; dr < 2; dr++) {
+            for (uint8_t dc = 0; dc < 2; dc++) {
+                frame[r0 + dr][baseCol + dc] = 1;
+            }
+        }
+    }
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 LedAnimationState makeInitialLedAnimationState() {
@@ -112,20 +145,25 @@ void updateLedAnimationFrame(
     const LedPos* iconPts   = nullptr;
     int           iconCount = 0;
     bool          iconBlink = false;
+    uint8_t       iconMinCol = 4;
 
     switch (controller.id) {
         case ControllerStateId::STANDBY:
             iconPts = ICON_PAUSE; iconCount = ICON_PAUSE_N; iconBlink = false;
+            iconMinCol = 4;
             break;
         case ControllerStateId::ACCELERATING:
             iconPts   = isDirectionCCW(controller.targetDirection) ? ICON_PLAY_CCW : ICON_PLAY_CW;
             iconCount = ICON_PLAY_N; iconBlink = true;
+            iconMinCol = 5;
             break;
         case ControllerStateId::RUNNING_CW:
             iconPts = ICON_PLAY_CW; iconCount = ICON_PLAY_N; iconBlink = false;
+            iconMinCol = 5;
             break;
         case ControllerStateId::RUNNING_CCW:
             iconPts = ICON_PLAY_CCW; iconCount = ICON_PLAY_N; iconBlink = false;
+            iconMinCol = 5;
             break;
         case ControllerStateId::DECELERATING:
         case ControllerStateId::WAITING:
@@ -134,6 +172,7 @@ void updateLedAnimationFrame(
                       : ICON_PAUSE;
             iconCount = hasAutoRestart(controller) ? ICON_PLAY_N : ICON_PAUSE_N;
             iconBlink = true;
+            iconMinCol = hasAutoRestart(controller) ? 5 : 4;
             break;
         default:
             break;
@@ -145,6 +184,7 @@ void updateLedAnimationFrame(
             for (int i = 0; i < iconCount; i++) {
                 animState.frame[ iconPts[i].r ][ iconPts[i].c ] = 1;
             }
+            drawProfileMarkerDots(animState.frame, controller.selectedRunDataset, iconMinCol);
         }
     }
 

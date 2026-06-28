@@ -1,6 +1,7 @@
 #include "controller_logic.h"
 
 static constexpr BinarySpeedDataset kStandbyDataset = BinarySpeedDataset::DATASET_0;
+static constexpr BinarySpeedDataset kMode1Dataset = BinarySpeedDataset::DATASET_2;
 
 static void printRelayStates(const BasicControlConfig& cfg) {
     Serial.print(F("  [REL1/X1="));
@@ -236,6 +237,17 @@ static void handleRunning(
         return;
     }
 
+    // Re-pressing START while already running always falls back to Mode 1 (slower).
+    if (inputs.startPressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            kMode1Dataset,
+            F("[START] Erneut gedrueckt (RUNNING)"));
+        delay(cfg.debounceActionMs);
+        return;
+    }
+
     bool changeToCCW = !isDirectionCCW(runningDirection) && inputs.dirLeftPressed;
     bool changeToCW = isDirectionCCW(runningDirection) && inputs.dirRightPressed;
     if (changeToCCW) {
@@ -262,6 +274,14 @@ static void handleDecelerating(
     unsigned long nowMs,
     const BasicControlConfig& cfg) {
     unsigned long effDecelDur = getEffectiveDecelerationDurationMs(controller, cfg);
+
+    if (inputs.stopPressed && hasAutoRestart(controller)) {
+        consumeAutoRestart(controller);
+        Serial.println(F("[STOP] Auto-Neustart waehrend Bremsrampe verworfen"));
+        printRelayStates(cfg);
+        delay(cfg.debounceActionMs);
+    }
+
     if (!hasAutoRestart(controller) && inputs.startPressed) {
         float currentProgress = getRampProgress(controller, nowMs, cfg);
         setStartRelayEnabled(cfg, true);
@@ -287,8 +307,16 @@ static void handleDecelerating(
 
 static void handleWaiting(
     ControllerState& controller,
+    const InputSnapshot& inputs,
     unsigned long nowMs,
     const BasicControlConfig& cfg) {
+    if (inputs.stopPressed && hasAutoRestart(controller)) {
+        consumeAutoRestart(controller);
+        Serial.println(F("[STOP] Auto-Neustart in Sicherheitspause verworfen"));
+        printRelayStates(cfg);
+        delay(cfg.debounceActionMs);
+    }
+
     if (nowMs - controller.stateTimerStartMs >= cfg.sicherheitsPauseMs) {
         completeWaitingPeriod(controller, cfg);
     }
@@ -316,7 +344,7 @@ void tickController(
             handleDecelerating(controller, inputs, nowMs, cfg);
             break;
         case ControllerStateId::WAITING:
-            handleWaiting(controller, nowMs, cfg);
+            handleWaiting(controller, inputs, nowMs, cfg);
             break;
     }
 }

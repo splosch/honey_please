@@ -52,7 +52,7 @@
         <div class="xl:col-span-1 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col gap-5 h-fit">
             <div>
                 <h2 class="text-md font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Interaktive Simulation</h2>
-                <p class="text-xs text-gray-400 mb-3">Simulation (Rampen: 3 s statt 15 s). Tasten verhalten sich zustandsabhängig:</p>
+                        <p class="text-xs text-gray-400 mb-3">Simulation (Rampen: 3 s statt 15 s, Sicherheitspause: 0,15 s). Tasten verhalten sich zustandsabhängig:</p>
                 
                 <div class="space-y-3">
                     <!-- Folientaster Richtung -->
@@ -137,7 +137,7 @@
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – 15 s, Stop oder Richtungswechsel möglich</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">LÄUFT</b> – Stop/Richtungswechsel</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – 15 s, gesperrt</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 1.5 s Sicherheitspause</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 0,15 s Sicherheitspause</span></div>
                 </div>
             </div>
         </div>
@@ -556,7 +556,7 @@
             <!-- Notes Section -->
             <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
                 <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (15 s):</strong> Die Rampenzeiten entsprechen den Treiber-Parametern (dEC/ACC). Der Arduino wartet diese Zeit ab, bevor er den nächsten Zustand einleitet.</p>
-                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (1,5 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
+                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (0,15 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
                 <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
                 <p><strong class="text-purple-400">Binary-Speed Relais:</strong> D4 (M1) und D5 (M2) bilden dAtA 0/2/4/6 ab. Gelb 1 waehlt dAtA 2, Gelb 2 waehlt dAtA 4; in Standby bleibt dAtA 0 aktiv.</p>
                 <p><strong class="text-amber-500">Verteilte Positionen:</strong> Steuerungsmodule (links) → Relais (Mitte) → Motor-Treiber (rechts) – keine Kabelkreuzungen.</p>
@@ -637,7 +637,7 @@
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Grün)</td>
                             <td class="p-2">Pin 5</td>
                             <td class="p-2">Arduino <strong class="text-emerald-300">D11</strong></td>
-                            <td class="p-2">START – nur in STANDBY: REL1 (X1) AN → Anlauframpe 15 s → LÄUFT</td>
+                            <td class="p-2">START – in STANDBY: REL1 (X1) AN → Anlauframpe 15 s → LÄUFT; in LÄUFT: setzt Modus 1 (dAtA 2 / langsamer)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -650,7 +650,7 @@
         // ── Ramp durations (scaled for simulation: 3 s instead of real 15 s) ────
         const SIM_ANLAUF_MS = 3000;
         const SIM_BREMS_MS  = 3000;
-        const SIM_WARTE_MS  = 600;
+        const SIM_WARTE_MS  = 150;
 
         // ── State ────────────────────────────────────────────────────────────────
         // LOCKED | STANDBY | ACCELERATING | RUNNING_CW | RUNNING_CCW | DECELERATING | WAITING
@@ -699,10 +699,10 @@
             LOCKED:       { color:'red',    ping:true,  text:'Gesperrt (X2 aus)',     desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' },
             STANDBY:      { color:'amber',  ping:false, text:'Standby – Bereit',       desc:'Richtung wählen (LINKS/RECHTS), dann GRÜN drücken.' },
             ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft (15 s). STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
-            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW.' },
-            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW.' },
+            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW. GRÜN setzt Modus 1 (dAtA 2).' },
+            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW. GRÜN setzt Modus 1 (dAtA 2).' },
             DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft (15 s). Alle Eingaben gesperrt.' },
-            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (1,5 s).' },
+            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (0,15 s).' },
         };
         const COLOR_MAP = {
             red:    { box:'text-red-500',    ping:'bg-red-400',    dot:'bg-red-500',    bar:'bg-red-400'    },
@@ -823,7 +823,17 @@
             else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true); }
         }
         function pressGruen() {
-            if (simState === 'STANDBY') { goAccelerating(); }
+            if (simState === 'STANDBY') {
+                goAccelerating();
+                return;
+            }
+
+            // Match firmware: pressing START while already running forces Mode 1 (dAtA 2).
+            if (simState === 'RUNNING_CW' || simState === 'RUNNING_CCW') {
+                selectedRunDataset = 'dAtA 2';
+                console.log('[SIM] START in RUNNING -> Modus 1 (dAtA 2)');
+                updateUI();
+            }
         }
         function pressRot() {
             if (['RUNNING_CW','RUNNING_CCW','ACCELERATING'].includes(simState)) { goDecelerating(false); }

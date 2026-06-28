@@ -72,6 +72,14 @@ struct WiringEntry {
     const char* detail;
 };
 
+// Motor-driver oriented values in natural units for easier tuning.
+// The state machine uses milliseconds, so second-based values are converted below.
+static constexpr unsigned long kMode1TargetSpeedRpm = 1500UL;  // dAtA 2 (slower run mode)
+static constexpr unsigned long kMode2TargetSpeedRpm = 2250UL;  // dAtA 4 (faster run mode)
+static constexpr unsigned long kAccelerationSeconds = 15UL;    // Purpose: soft spool-up to protect mechanics
+static constexpr unsigned long kDecelerationSeconds = 15UL;    // Purpose: smooth stop to reduce honeycomb stress
+static constexpr unsigned long kSafetyPauseMilliseconds = 150UL;
+
 static constexpr BasicControlConfig BASIC_CONTROL_CONFIG = {
     2,   // pinRelayStart
     3,   // pinRelayDir
@@ -84,9 +92,9 @@ static constexpr BasicControlConfig BASIC_CONTROL_CONFIG = {
     10,  // pinKeyYel2
     11,  // pinKeyStart
 
-    15000UL,  // anlaufRampenZeitMs
-    15000UL,  // bremsRampenZeitMs
-    150UL,   // sicherheitsPauseMs
+    kAccelerationSeconds * 1000UL,  // anlaufRampenZeitMs
+    kDecelerationSeconds * 1000UL,  // bremsRampenZeitMs
+    kSafetyPauseMilliseconds,       // sicherheitsPauseMs
 
     150UL,    // debounceDirectionMs
     200UL,    // debounceActionMs
