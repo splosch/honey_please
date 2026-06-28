@@ -36,7 +36,7 @@
                     + Folientaster integriert
                 </span>
                 <span class="bg-blue-900/50 border border-blue-500 text-blue-400 text-xs px-2.5 py-1 rounded-full font-semibold">
-                    3-Wire-Sicherheitslogik
+                    4-Relais-Setup (X1/X3/M1/M2)
                 </span>
                 <span class="bg-green-900/50 border border-green-500 text-green-400 text-xs px-2.5 py-1 rounded-full font-semibold">
                     ↺ Richtungswechsel im Betrieb
@@ -114,6 +114,7 @@
                     <span id="status-text" class="text-xs font-bold">Gesperrt (X2 aus)</span>
                 </div>
                 <p id="status-desc" class="text-[11px] text-gray-400 mt-1.5">Der Wippschalter an X2 ist geöffnet. Der Motor blockiert sofort.</p>
+                <p class="text-[11px] text-gray-500 mt-1">Aktiver Datensatz (Relais 3/4): <span id="dataset-text" class="font-semibold text-amber-400">dAtA 0</span></p>
                 <!-- Ramp progress bar -->
                 <div id="ramp-section" class="hidden mt-2">
                     <div class="flex justify-between text-[10px] mb-1">
@@ -188,41 +189,45 @@
                             <circle id="pin-ard-d3" cx="5" cy="41" r="3.5" fill="#3B82F6" stroke="#FFF" stroke-width="0.75"/>
                             <text x="-12" y="45" fill="#FFF" font-size="9" text-anchor="end">D3 (Rel 2 / X3)</text>
 
-                            <!-- D4 unused -->
-                            
-                            
-                            <!-- D5 unused -->
-                            
-                            
-                            <!-- D6 -->
+                            <!-- D4 -->
                             <rect x="0" y="70" width="10" height="12" fill="#A855F7"/>
                             <circle id="pin-ard-d4" cx="5" cy="76" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="80" fill="#FFF" font-size="9" text-anchor="end">D6 (Rot / Links / 3)</text>
-                            
-                            <!-- D7 -->
+                            <text x="-12" y="80" fill="#FFF" font-size="9" text-anchor="end">D4 (Rel 3 / M1)</text>
+
+                            <!-- D5 -->
                             <rect x="0" y="95" width="10" height="12" fill="#A855F7"/>
                             <circle id="pin-ard-d5" cx="5" cy="101" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="105" fill="#FFF" font-size="9" text-anchor="end">D7 (Gelb / Rechts / 2)</text>
-                            
+                            <text x="-12" y="105" fill="#FFF" font-size="9" text-anchor="end">D5 (Rel 4 / M2)</text>
+
+                            <!-- D6 -->
+                            <rect x="0" y="120" width="10" height="12" fill="#A855F7"/>
+                            <circle id="pin-ard-d6" cx="5" cy="126" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="130" fill="#FFF" font-size="9" text-anchor="end">D6 (Key Links)</text>
+
+                            <!-- D7 -->
+                            <rect x="0" y="145" width="10" height="12" fill="#A855F7"/>
+                            <circle id="pin-ard-d7" cx="5" cy="151" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="155" fill="#FFF" font-size="9" text-anchor="end">D7 (Key Rechts)</text>
+
                             <!-- D8 -->
-                            <rect x="0" y="130" width="10" height="12" fill="#EF4444"/>
-                            <circle id="pin-ard-d6" cx="5" cy="136" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="140" fill="#FFF" font-size="9" text-anchor="end">D8 (Key Rot-Stop)</text>
-                            
+                            <rect x="0" y="170" width="10" height="12" fill="#EF4444"/>
+                            <circle id="pin-ard-d8" cx="5" cy="176" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="180" fill="#FFF" font-size="9" text-anchor="end">D8 (Key Rot-Stop)</text>
+
                             <!-- D9 -->
-                            <rect x="0" y="155" width="10" height="12" fill="#F59E0B"/>
-                            <circle id="pin-ard-d7" cx="5" cy="161" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="165" fill="#FFF" font-size="9" text-anchor="end">D9 (Key Gelb 1)</text>
-                            
+                            <rect x="0" y="195" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d9" cx="5" cy="201" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="205" fill="#FFF" font-size="9" text-anchor="end">D9 (Key Gelb 1)</text>
+
                             <!-- D10 -->
-                            <rect x="0" y="180" width="10" height="12" fill="#F59E0B"/>
-                            <circle id="pin-ard-d8" cx="5" cy="186" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="190" fill="#FFF" font-size="9" text-anchor="end">D10 (Key Gelb 2)</text>
-                            
+                            <rect x="0" y="220" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d10" cx="5" cy="226" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="230" fill="#FFF" font-size="9" text-anchor="end">D10 (Key Gelb 2)</text>
+
                             <!-- D11 -->
-                            <rect x="0" y="205" width="10" height="12" fill="#10B981"/>
-                            <circle id="pin-ard-d9" cx="5" cy="211" r="3.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="215" fill="#FFF" font-size="9" text-anchor="end">11 (Key Grn-Start)</text>
+                            <rect x="0" y="245" width="10" height="12" fill="#10B981"/>
+                            <circle id="pin-ard-d11" cx="5" cy="251" r="3.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="255" fill="#FFF" font-size="9" text-anchor="end">D11 (Key Grn-Start)</text>
                         </g>
                     </g>
 
@@ -297,6 +302,38 @@
                             
                             <circle cx="27.5" cy="80" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"/>
                             <text x="15" y="84" fill="#FFF" font-size="9" text-anchor="end">NC</text>
+                        </g>
+                    </g>
+
+                    <!-- ================= RELAISBOARD 3+4 (M1/M2 DATASET) ================= -->
+                    <g transform="translate(480, 600)">
+                        <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#A855F7" stroke-width="2.5"/>
+                        <text x="120" y="22" fill="#A855F7" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 3+4 (M1/M2)</text>
+
+                        <g transform="translate(5, 60)">
+                            <circle id="pin-r34-vcc" cx="5" cy="10" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="13" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
+
+                            <circle id="pin-r34-gnd" cx="5" cy="35" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="38" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
+
+                            <circle id="pin-r3-in" cx="5" cy="60" r="4.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="63" fill="#A855F7" font-size="9" font-weight="bold">IN1 (M1)</text>
+
+                            <circle id="pin-r4-in" cx="5" cy="85" r="4.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="18" y="88" fill="#A855F7" font-size="9" font-weight="bold">IN2 (M2)</text>
+                        </g>
+
+                        <g transform="translate(160, 35)">
+                            <rect width="70" height="120" rx="4" fill="#0284C7"/>
+                            <circle id="pin-r3-no" cx="40" cy="25" r="5" fill="#A855F7" stroke="#FFF" stroke-width="1"/>
+                            <text x="20" y="29" fill="#FFF" font-size="8" text-anchor="end">NO1</text>
+                            <circle id="pin-r3-com" cx="40" cy="50" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"/>
+                            <text x="20" y="54" fill="#FFF" font-size="8" text-anchor="end">COM1</text>
+                            <circle id="pin-r4-no" cx="40" cy="80" r="5" fill="#A855F7" stroke="#FFF" stroke-width="1"/>
+                            <text x="20" y="84" fill="#FFF" font-size="8" text-anchor="end">NO2</text>
+                            <circle id="pin-r4-com" cx="40" cy="105" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"/>
+                            <text x="20" y="109" fill="#FFF" font-size="8" text-anchor="end">COM2</text>
                         </g>
                     </g>
 
@@ -392,7 +429,7 @@
                     <!-- ================= ORIENTAL MOTOR DRIVER ================= -->
                     <!-- Weit rechts platziert, separiert durch großen Freiraum -->
                     <g transform="translate(860, 40)">
-                        <rect width="300" height="300" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"/>
+                        <rect width="300" height="360" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"/>
                         <text x="150" y="25" fill="#10B981" font-weight="bold" font-size="13" text-anchor="middle">ORIENTAL MOTOR BLF</text>
                         <text x="150" y="42" fill="#86EFAC" font-size="10" text-anchor="middle">Steuerungsklemmen (Control I/O)</text>
                         
@@ -416,17 +453,23 @@
                             <text x="35" y="132" fill="#FFF" font-weight="bold" font-size="12">X3</text>
                             <text x="75" y="132" fill="#9CA3AF" font-size="10">CW/CCW</text>
 
-                            <!-- IN-COM -->
+                            <!-- M1 -->
                             <rect x="0" y="165" width="85" height="35" rx="3" stroke="#4B5563"/>
-                            <circle id="pin-driver-incom" cx="15" cy="182.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
-                            <text x="32" y="187" fill="#FFF" font-weight="bold" font-size="11">IN-COM</text>
-                            <text x="95" y="187" fill="#9CA3AF" font-size="10">MASSE</text>
+                            <circle id="pin-driver-m1" cx="15" cy="182.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="36" y="187" fill="#FFF" font-weight="bold" font-size="11">M1</text>
+                            <text x="95" y="187" fill="#9CA3AF" font-size="10">dAtA Bit 0</text>
 
-                            <!-- X0 -->
+                            <!-- M2 -->
                             <rect x="0" y="220" width="85" height="35" rx="3" stroke="#4B5563"/>
-                            <circle id="pin-driver-incom" cx="15" cy="237.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
-                            <text x="32" y="242" fill="#FFF" font-weight="bold" font-size="11">X0</text>
-                            <text x="95" y="242" fill="#9CA3AF" font-size="10">Error Port</text>
+                            <circle id="pin-driver-m2" cx="15" cy="237.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="36" y="242" fill="#FFF" font-weight="bold" font-size="11">M2</text>
+                            <text x="95" y="242" fill="#9CA3AF" font-size="10">dAtA Bit 1</text>
+
+                            <!-- IN-COM -->
+                            <rect x="0" y="275" width="85" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-incom" cx="15" cy="292.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="32" y="297" fill="#FFF" font-weight="bold" font-size="11">IN-COM</text>
+                            <text x="95" y="297" fill="#9CA3AF" font-size="10">MASSE</text>
                         </g>
                     </g>
 
@@ -436,6 +479,8 @@
                     <path class="wire" d="M 35,96 L 250,96 L 250,120 L 485,120" fill="none" stroke="#EF4444" stroke-width="1.5" />
                     <!-- Brücke zu Relais 2 DC+ (485, 340) -->
                     <path class="wire" d="M 250,120 L 250,340 L 485,340" fill="none" stroke="#EF4444" stroke-width="1.5" />
+                    <!-- Brücke zu Relais 3+4 DC+ (485, 670) -->
+                    <path class="wire" d="M 250,340 L 250,670 L 485,670" fill="none" stroke="#EF4444" stroke-width="1.5" />
                     <circle cx="250" cy="120" r="3.5" fill="#EF4444" />
                     
                     <!-- Ground Rail (GND) to Relays -->
@@ -443,6 +488,8 @@
                     <path class="wire" d="M 35,126 L 265,126 L 265,145 L 485,145" fill="none" stroke="#4B5563" stroke-width="1.5" />
                     <!-- Brücke zu Relais 2 DC- (485, 365) -->
                     <path class="wire" d="M 265,145 L 265,365 L 485,365" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    <!-- Brücke zu Relais 3+4 DC- (485, 695) -->
+                    <path class="wire" d="M 265,365 L 265,695 L 485,695" fill="none" stroke="#4B5563" stroke-width="1.5" />
                     <circle cx="265" cy="145" r="3.5" fill="#4B5563" />
 
                     <!-- GND to Membrane Keypads -->
@@ -460,21 +507,25 @@
                     <!-- Von Pin D3 (230, 131) direkt zu Relais 2 IN (485, 390) -->
                     <path class="wire" d="M 230,131 L 295,131 L 295,390 L 485,390" fill="none" stroke="#3B82F6" stroke-width="1.8" />
 
+                    <!-- Trigger D4/D5 -> Relais 3/4 IN (M1/M2) -->
+                    <path class="wire" d="M 230,166 L 305,166 L 305,730 L 485,730" fill="none" stroke="#A855F7" stroke-width="1.8" />
+                    <path class="wire" d="M 230,191 L 315,191 L 315,755 L 485,755" fill="none" stroke="#A855F7" stroke-width="1.8" />
+
                     <!-- Keypad 1 -> Arduino Digital Pins -->
-                    <!-- Pin D4 (230, 166) zu Keypad 1 Links (120, 495) -->
-                    <path class="wire" d="M 230,166 L 315,166 L 315,375 L 120,375 L 120,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
-                    <!-- Pin D5 (230, 191) zu Keypad 1 Rechts (165, 495) -->
-                    <path class="wire" d="M 230,191 L 325,191 L 325,365 L 165,365 L 165,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+                    <!-- Pin D6 (230, 216) zu Keypad 1 Links (120, 495) -->
+                    <path class="wire" d="M 230,216 L 315,216 L 315,375 L 120,375 L 120,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+                    <!-- Pin D7 (230, 241) zu Keypad 1 Rechts (165, 495) -->
+                    <path class="wire" d="M 230,241 L 325,241 L 325,365 L 165,365 L 165,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
 
                     <!-- Keypad 2 -> Arduino Digital Pins -->
-                    <!-- Pin D6 (230, 226) zu Keypad 2 Rot (95, 665) -->
-                    <path class="wire" d="M 230,226 L 335,226 L 335,610 L 95,610 L 95,665" fill="none" stroke="#EF4444" stroke-width="1.5"/>
-                    <!-- Pin D7 (230, 251) zu Keypad 2 Gelb 1 (135, 665) -->
-                    <path class="wire" d="M 230,251 L 345,251 L 345,620 L 135,620 L 135,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
-                    <!-- Pin D8 (230, 276) zu Keypad 2 Gelb 2 (175, 665) -->
-                    <path class="wire" d="M 230,276 L 355,276 L 355,630 L 175,630 L 175,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
-                    <!-- Pin D9 (230, 301) zu Keypad 2 Grün (215, 665) -->
-                    <path class="wire" d="M 230,301 L 365,301 L 365,640 L 215,640 L 215,665" fill="none" stroke="#10B981" stroke-width="1.5"/>
+                    <!-- Pin D8 (230, 266) zu Keypad 2 Rot (95, 665) -->
+                    <path class="wire" d="M 230,266 L 335,266 L 335,610 L 95,610 L 95,665" fill="none" stroke="#EF4444" stroke-width="1.5"/>
+                    <!-- Pin D9 (230, 291) zu Keypad 2 Gelb 1 (135, 665) -->
+                    <path class="wire" d="M 230,291 L 345,291 L 345,620 L 135,620 L 135,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+                    <!-- Pin D10 (230, 316) zu Keypad 2 Gelb 2 (175, 665) -->
+                    <path class="wire" d="M 230,316 L 355,316 L 355,630 L 175,630 L 175,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+                    <!-- Pin D11 (230, 341) zu Keypad 2 Grün (215, 665) -->
+                    <path class="wire" d="M 230,341 L 365,341 L 365,640 L 215,640 L 215,665" fill="none" stroke="#10B981" stroke-width="1.5"/>
 
                     <!-- SWITCHING TERMINALS TO C0 BUS (WAGO) -->
                     <!-- Relais COM 1 (707.5, 130) zu Wago Contact 1 (520, 547) -->
@@ -484,8 +535,8 @@
                     <!-- Wippschalter Contact 1 (910, 530) zu Wago Contact 3 (600, 547) -->
                     <path id="wire-switch-com" class="wire" d="M 910,530 L 800,530 L 800,470 L 600,470 L 600,547" fill="none" stroke="#F97316" stroke-width="2"/>
                     
-                    <!-- Main Return Loop: Driver IN-COM (890, 297.5) zu Wago Contact 5 (680, 547) -->
-                    <path class="wire" d="M 890,297.5 L 815,297.5 L 815,480 L 680,480 L 680,547" fill="none" stroke="#10B981" stroke-width="2.5"/>
+                    <!-- Main Return Loop: Driver IN-COM (890, 332.5) zu Wago Contact 5 (680, 547) -->
+                    <path class="wire" d="M 890,332.5 L 815,332.5 L 815,480 L 680,480 L 680,547" fill="none" stroke="#10B981" stroke-width="2.5"/>
 
                     <!-- RELAIS NO CONTACTS TO DRIVER -->
                     <!-- Relais 1 NO (707.5, 100) zu Driver X1 (890, 132.5) -->
@@ -495,8 +546,9 @@
                     <!-- Wippschalter Contact 2 (1050, 530) zu Driver X2 (890, 187.5) -->
                     <path id="wire-x2" class="wire" d="M 1050,530 L 1110,530 L 1110,187.5 L 890,187.5" fill="none" stroke="#10B981" stroke-width="2.5"/>
 
-                    <!-- X0 Error (1050, 282.5) zu IN-COM (890, 297.5) -->
-                    <path id="wire-x2" class="wire" d="M 1050,282.5 L 1110,282.5 L 1110,297.5 L 890,297.5" fill="none" stroke="#10B981" stroke-width="2.5"/>
+                    <!-- Relais 3/4 NO zu Driver M1/M2 -->
+                    <path id="wire-m1" class="wire" d="M 680,660 L 790,660 L 790,297.5 L 890,297.5" fill="none" stroke="#A855F7" stroke-width="2.5"/>
+                    <path id="wire-m2" class="wire" d="M 680,715 L 800,715 L 800,352.5 L 890,352.5" fill="none" stroke="#A855F7" stroke-width="2.5"/>
 
                 </svg>
             </div>
@@ -505,7 +557,8 @@
             <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
                 <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (15 s):</strong> Die Rampenzeiten entsprechen den Treiber-Parametern (dEC/ACC). Der Arduino wartet diese Zeit ab, bevor er den nächsten Zustand einleitet.</p>
                 <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (1,5 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
-                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D4–D9 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
+                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
+                <p><strong class="text-purple-400">Binary-Speed Relais:</strong> D4 (M1) und D5 (M2) bilden dAtA 0/2/4/6 ab. Gelb 1 waehlt dAtA 2, Gelb 2 waehlt dAtA 4; in Standby bleibt dAtA 0 aktiv.</p>
                 <p><strong class="text-amber-500">Verteilte Positionen:</strong> Steuerungsmodule (links) → Relais (Mitte) → Motor-Treiber (rechts) – keine Kabelkreuzungen.</p>
             </div>
         </div>
@@ -514,7 +567,7 @@
     <!-- Pin Out tables / Documentation -->
     <section class="w-full px-4 pb-8">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg">
-            <h2 class="text-sm font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Verkabelungsliste mit den neuen Keypads</h2>
+            <h2 class="text-sm font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Verkabelungsliste mit Folientastern und 4 Relais</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-gray-300">
                     <thead class="bg-gray-900 uppercase text-gray-400">
@@ -527,6 +580,18 @@
                     </thead>
                     <tbody class="divide-y divide-gray-700">
                         <tr>
+                            <td class="p-2 font-semibold text-blue-400">Arduino Relais 3 (M1)</td>
+                            <td class="p-2">D4 (OUTPUT)</td>
+                            <td class="p-2">Relais IN1 → Treiber M1</td>
+                            <td class="p-2">dAtA-Bit 0 (Binary-Speed Mapping)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2 font-semibold text-blue-400">Arduino Relais 4 (M2)</td>
+                            <td class="p-2">D5 (OUTPUT)</td>
+                            <td class="p-2">Relais IN2 → Treiber M2</td>
+                            <td class="p-2">dAtA-Bit 1 (Binary-Speed Mapping)</td>
+                        </tr>
+                        <tr>
                             <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Richtung)</td>
                             <td class="p-2">Pin 1 (Masse)</td>
                             <td class="p-2">Arduino <strong class="text-gray-300">GND</strong> (Masserückleitung)</td>
@@ -535,13 +600,13 @@
                         <tr>
                             <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Links)</td>
                             <td class="p-2">Pin 2</td>
-                            <td class="p-2">Arduino <strong class="text-purple-300">D4</strong></td>
+                            <td class="p-2">Arduino <strong class="text-purple-300">D6</strong></td>
                             <td class="p-2">Standby: Linkslauf (CCW) vorwählen · Im Betrieb (CW): Richtungswechsel → Bremsrampe → Auto-Neustart CCW</td>
                         </tr>
                         <tr>
                             <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Rechts)</td>
                             <td class="p-2">Pin 3</td>
-                            <td class="p-2">Arduino <strong class="text-purple-300">D5</strong></td>
+                            <td class="p-2">Arduino <strong class="text-purple-300">D7</strong></td>
                             <td class="p-2">Standby: Rechtslauf (CW) vorwählen · Im Betrieb (CCW): Richtungswechsel → Bremsrampe → Auto-Neustart CW</td>
                         </tr>
                         <tr class="bg-gray-900/30">
@@ -553,25 +618,25 @@
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Rot)</td>
                             <td class="p-2">Pin 2</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D6</strong></td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D8</strong></td>
                             <td class="p-2">STOP – aktiv in ANLAUFEN &amp; LÄUFT: Bremsrampe (15 s) → Standby</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 1)</td>
                             <td class="p-2">Pin 3</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D7</strong></td>
-                            <td class="p-2">Programmtaster 1 / Geschwindigkeit 1</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D9</strong></td>
+                            <td class="p-2">Programmtaster 1: dAtA 2 (M1=ON, M2=OFF)</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 2)</td>
                             <td class="p-2">Pin 4</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D8</strong></td>
-                            <td class="p-2">Programmtaster 2 / Geschwindigkeit 2</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D10</strong></td>
+                            <td class="p-2">Programmtaster 2: dAtA 4 (M1=OFF, M2=ON)</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Grün)</td>
                             <td class="p-2">Pin 5</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D9</strong></td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D11</strong></td>
                             <td class="p-2">START – nur in STANDBY: REL1 (X1) AN → Anlauframpe 15 s → LÄUFT</td>
                         </tr>
                     </tbody>
@@ -592,6 +657,7 @@
         let simState    = 'LOCKED';
         let targetDir   = 'CW';    // 'CW' or 'CCW'
         let pendingAuto = false;
+        let selectedRunDataset = 'dAtA 2';
         let rampHandle  = null;
         let rampStartMs = 0;
         let rampTotalMs = 0;
@@ -646,9 +712,22 @@
             orange: { box:'text-orange-400', ping:'bg-orange-400', dot:'bg-orange-400', bar:'bg-orange-400' },
         };
 
+        function activeDataset() {
+            return ['LOCKED', 'STANDBY'].includes(simState) ? 'dAtA 0' : selectedRunDataset;
+        }
+
+        function relayBitsForDataset(dataset) {
+            if (dataset === 'dAtA 2') return { m1: true, m2: false };
+            if (dataset === 'dAtA 4') return { m1: false, m2: true };
+            if (dataset === 'dAtA 6') return { m1: true, m2: true };
+            return { m1: false, m2: false };
+        }
+
         function updateUI() {
             const ui = STATE_UI[simState] || STATE_UI.LOCKED;
             const c  = COLOR_MAP[ui.color];
+            const dataset = activeDataset();
+            const bits = relayBitsForDataset(dataset);
 
             document.getElementById('status-box').className  = 'flex items-center gap-2 ' + c.box;
             document.getElementById('status-ping').className = ui.ping
@@ -656,6 +735,7 @@
             document.getElementById('status-dot').className  = 'relative inline-flex rounded-full h-2.5 w-2.5 ' + c.dot;
             document.getElementById('status-text').textContent = ui.text;
             document.getElementById('status-desc').textContent = ui.desc;
+            document.getElementById('dataset-text').textContent = dataset;
 
             // Ramp progress bar
             const rs = document.getElementById('ramp-section');
@@ -673,6 +753,8 @@
             const x1on = ['ACCELERATING','RUNNING_CW','RUNNING_CCW'].includes(simState);
             setWire('wire-x1', x1on, '#EF4444');
             setWire('wire-x3', targetDir === 'CCW', '#3B82F6');
+            setWire('wire-m1', bits.m1, '#A855F7');
+            setWire('wire-m2', bits.m2, '#A855F7');
 
             // X2 hardware switch visual
             const btnX2   = document.getElementById('btn-x2');
@@ -746,8 +828,18 @@
         function pressRot() {
             if (['RUNNING_CW','RUNNING_CCW','ACCELERATING'].includes(simState)) { goDecelerating(false); }
         }
-        function pressGelb1() { if (simState !== 'LOCKED') console.log('[SIM] Preset 1 – noch nicht belegt'); }
-        function pressGelb2() { if (simState !== 'LOCKED') console.log('[SIM] Preset 2 – noch nicht belegt'); }
+        function pressGelb1() {
+            if (simState === 'LOCKED') return;
+            selectedRunDataset = 'dAtA 2';
+            console.log('[SIM] Preset 1 gedrueckt -> dAtA 2');
+            updateUI();
+        }
+        function pressGelb2() {
+            if (simState === 'LOCKED') return;
+            selectedRunDataset = 'dAtA 4';
+            console.log('[SIM] Preset 2 gedrueckt -> dAtA 4');
+            updateUI();
+        }
 
         window.onload = function() { updateUI(); };
     </script>

@@ -30,7 +30,7 @@
 
 ## Milestone 4A: Multi Speed
 - use /basic-control/docs/MultiSpeedSaftyBreak.md
-- [ ] Keep binary speed dataset mapping (`dAtA 0/2/4/6`) centralized so normal run stages and safety stages use the same relay-profile source of truth.
+- [x] Keep binary speed dataset mapping (`dAtA 0/2/4/6`) centralized so normal run stages and safety stages use the same relay-profile source of truth.
 
 ## Milestone 4B: SafetySwitch
 - use /basic-control/docs/MultiSpeedSaftyBreak.md

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "speed_dataset.h"
 
 enum class ControllerStateId {
     STANDBY,
@@ -26,6 +27,7 @@ struct ControllerState {
     ControllerStateId id;
     SpinDirection targetDirection;
     SpinDirection runningDirection;
+    BinarySpeedDataset selectedRunDataset;
     RestartIntent restartIntent;
     unsigned long stateTimerStartMs;
     float rampStartProgress;

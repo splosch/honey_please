@@ -1,15 +1,37 @@
 #include "controller_logic.h"
 
+static constexpr BinarySpeedDataset kStandbyDataset = BinarySpeedDataset::DATASET_0;
+
 static void printRelayStates(const BasicControlConfig& cfg) {
     Serial.print(F("  [REL1/X1="));
     Serial.print(isStartRelayEnabled(cfg) ? F("ON") : F("OFF"));
     Serial.print(F(", REL2/X3="));
     Serial.print(isDirectionRelayCCW(cfg) ? F("CCW") : F("CW"));
+    Serial.print(F(", M1/M2="));
+    Serial.print(datasetText(currentSpeedDataset(cfg)));
     Serial.println(F("]"));
 }
 
 static const __FlashStringHelper* directionText(SpinDirection direction) {
     return isDirectionCCW(direction) ? F("LINKS (CCW)") : F("RECHTS (CW)");
+}
+
+static void setSelectedRunDataset(
+    ControllerState& controller,
+    const BasicControlConfig& cfg,
+    BinarySpeedDataset dataset,
+    const __FlashStringHelper* sourceText) {
+    controller.selectedRunDataset = dataset;
+
+    // If motor is not running, keep relays at standby profile until start.
+    if (isStartRelayEnabled(cfg)) {
+        applySpeedDataset(cfg, dataset);
+    }
+
+    Serial.print(sourceText);
+    Serial.print(F(" -> Modus gesetzt: "));
+    Serial.println(datasetText(dataset));
+    printRelayStates(cfg);
 }
 
 static void requestDirectionChange(
@@ -40,6 +62,7 @@ static void completeWaitingPeriod(
     if (hasAutoRestart(controller)) {
         // Set relay direction before restart and wait for relay settle time.
         setDirectionRelay(cfg, isDirectionCCW(controller.targetDirection));
+        applySpeedDataset(cfg, controller.selectedRunDataset);
         delay(cfg.relaySettleMs);
         setStartRelayEnabled(cfg, true);
         beginAcceleration(controller, millis(), 0.0f);
@@ -52,6 +75,7 @@ static void completeWaitingPeriod(
     }
 
     completeWaitingToStandby(controller);
+    applySpeedDataset(cfg, kStandbyDataset);
     Serial.print(F("[STANDBY] Bereit. Gesamtwartezeit: "));
     Serial.print((cfg.bremsRampenZeitMs + cfg.sicherheitsPauseMs) / 1000);
     Serial.println(F(" s abgelaufen."));
@@ -63,6 +87,23 @@ static void handleStandby(
     const InputSnapshot& inputs,
     unsigned long nowMs,
     const BasicControlConfig& cfg) {
+    if (inputs.preset1Pressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            BinarySpeedDataset::DATASET_2,
+            F("[PRESET 1] Gelb-1 gedrueckt"));
+        delay(cfg.debounceActionMs);
+    }
+    else if (inputs.preset2Pressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            BinarySpeedDataset::DATASET_4,
+            F("[PRESET 2] Gelb-2 gedrueckt"));
+        delay(cfg.debounceActionMs);
+    }
+
     if (inputs.dirLeftPressed) {
         setTargetDirection(controller, SpinDirection::CCW);
         setDirectionRelay(cfg, true);
@@ -79,23 +120,15 @@ static void handleStandby(
     }
 
     if (inputs.startPressed) {
+        applySpeedDataset(cfg, controller.selectedRunDataset);
         setStartRelayEnabled(cfg, true);
         beginAcceleration(controller, nowMs, 0.0f);
         Serial.print(F("[START] Anlauframpe -> "));
         Serial.println(directionText(controller.targetDirection));
+        Serial.print(F("        Geschwindigkeitsmodus: "));
+        Serial.println(datasetText(controller.selectedRunDataset));
         printRelayStates(cfg);
         delay(cfg.debounceActionMs);
-    }
-
-    if (controller.id == ControllerStateId::STANDBY) {
-        if (inputs.preset1Pressed) {
-            Serial.println(F("[PRESET 1] Gelb-1 gedrueckt (noch nicht belegt)"));
-            delay(cfg.debounceActionMs);
-        }
-        if (inputs.preset2Pressed) {
-            Serial.println(F("[PRESET 2] Gelb-2 gedrueckt (noch nicht belegt)"));
-            delay(cfg.debounceActionMs);
-        }
     }
 }
 
@@ -104,6 +137,23 @@ static void handleAccelerating(
     const InputSnapshot& inputs,
     unsigned long nowMs,
     const BasicControlConfig& cfg) {
+    if (inputs.preset1Pressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            BinarySpeedDataset::DATASET_2,
+            F("[PRESET 1] Gelb-1 gedrueckt"));
+        delay(cfg.debounceActionMs);
+    }
+    else if (inputs.preset2Pressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            BinarySpeedDataset::DATASET_4,
+            F("[PRESET 2] Gelb-2 gedrueckt"));
+        delay(cfg.debounceActionMs);
+    }
+
     bool dirChange =
         (!isDirectionCCW(controller.targetDirection) && inputs.dirLeftPressed) ||
         (isDirectionCCW(controller.targetDirection) && inputs.dirRightPressed);
@@ -155,6 +205,23 @@ static void handleRunning(
     unsigned long nowMs,
     SpinDirection runningDirection,
     const BasicControlConfig& cfg) {
+    if (inputs.preset1Pressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            BinarySpeedDataset::DATASET_2,
+            F("[PRESET 1] Gelb-1 gedrueckt"));
+        delay(cfg.debounceActionMs);
+    }
+    else if (inputs.preset2Pressed) {
+        setSelectedRunDataset(
+            controller,
+            cfg,
+            BinarySpeedDataset::DATASET_4,
+            F("[PRESET 2] Gelb-2 gedrueckt"));
+        delay(cfg.debounceActionMs);
+    }
+
     if (inputs.stopPressed) {
         setStartRelayEnabled(cfg, false);
         beginDeceleration(

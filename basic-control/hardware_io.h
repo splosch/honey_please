@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "speed_dataset.h"
 
 enum class ButtonId {
     DIR_LEFT,
@@ -27,6 +28,8 @@ void initializeHardwareIo(const BasicControlConfig& cfg);
 
 void setStartRelayEnabled(const BasicControlConfig& cfg, bool enabled);
 void setDirectionRelay(const BasicControlConfig& cfg, bool ccw);
+void applySpeedDataset(const BasicControlConfig& cfg, BinarySpeedDataset dataset);
 
 bool isStartRelayEnabled(const BasicControlConfig& cfg);
 bool isDirectionRelayCCW(const BasicControlConfig& cfg);
+BinarySpeedDataset currentSpeedDataset(const BasicControlConfig& cfg);

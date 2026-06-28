@@ -52,12 +52,24 @@ void setDirectionRelay(const BasicControlConfig& cfg, bool ccw) {
     digitalWrite(cfg.pinRelayDir, relayDirLevelFor(cfg, ccw));
 }
 
+void applySpeedDataset(const BasicControlConfig& cfg, BinarySpeedDataset dataset) {
+    const BinarySpeedRelayProfile& profile = relayProfileForDataset(dataset);
+    digitalWrite(cfg.pinRelayUnused3, profile.m1Enabled ? relayOnLevel(cfg) : relayOffLevel(cfg));
+    digitalWrite(cfg.pinRelayUnused4, profile.m2Enabled ? relayOnLevel(cfg) : relayOffLevel(cfg));
+}
+
 bool isStartRelayEnabled(const BasicControlConfig& cfg) {
     return digitalRead(cfg.pinRelayStart) == relayOnLevel(cfg);
 }
 
 bool isDirectionRelayCCW(const BasicControlConfig& cfg) {
     return digitalRead(cfg.pinRelayDir) == relayDirLevelFor(cfg, true);
+}
+
+BinarySpeedDataset currentSpeedDataset(const BasicControlConfig& cfg) {
+    bool m1Enabled = digitalRead(cfg.pinRelayUnused3) == relayOnLevel(cfg);
+    bool m2Enabled = digitalRead(cfg.pinRelayUnused4) == relayOnLevel(cfg);
+    return datasetFromRelayBits(m1Enabled, m2Enabled);
 }
 
 void initializeHardwareIo(const BasicControlConfig& cfg) {
@@ -69,8 +81,7 @@ void initializeHardwareIo(const BasicControlConfig& cfg) {
     // Safe startup state for all relay outputs.
     setStartRelayEnabled(cfg, false);
     setDirectionRelay(cfg, false);
-    digitalWrite(cfg.pinRelayUnused3, relayOffLevel(cfg));
-    digitalWrite(cfg.pinRelayUnused4, relayOffLevel(cfg));
+    applySpeedDataset(cfg, BinarySpeedDataset::DATASET_0);
 
     pinMode(cfg.pinKeyLinks, INPUT_PULLUP);
     pinMode(cfg.pinKeyRechts, INPUT_PULLUP);
