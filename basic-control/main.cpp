@@ -22,6 +22,7 @@
 #include "config.h"
 #include "controller_state.h"
 #include "hardware_io.h"
+#include "led_animation.h"
 
 // ── ZENTRALE KONFIGURATION ───────────────────────────────────────────────────
 static constexpr BasicControlConfig CFG = BASIC_CONTROL_CONFIG;
@@ -65,52 +66,12 @@ static void printBootBanner() {
     Serial.println(F(""));
 }
 
-static ControllerState controller = makeInitialControllerState();
+static ControllerState    controller = makeInitialControllerState();
+static LedAnimationState  ledAnim    = makeInitialLedAnimationState();
 
-// ── LED MATRIX ANIMATION ─────────────────────────────────────────────────────
-// Äußerer Ring, 36 Positionen, im Uhrzeigersinn (CW) startend oben-links
-struct LedPos { uint8_t r; uint8_t c; };
-static const LedPos RING[36] = {
-    // Oben: links→rechts (Zeile 0)
-    {0,0},{0,1},{0,2},{0,3},{0,4},{0,5},{0,6},{0,7},{0,8},{0,9},{0,10},{0,11},
-    // Rechts: oben→unten (Spalte 11, Zeilen 1–7)
-    {1,11},{2,11},{3,11},{4,11},{5,11},{6,11},{7,11},
-    // Unten: rechts→links (Zeile 7, Spalten 10–0)
-    {7,10},{7,9},{7,8},{7,7},{7,6},{7,5},{7,4},{7,3},{7,2},{7,1},{7,0},
-    // Links: unten→oben (Spalte 0, Zeilen 6–1)
-    {6,0},{5,0},{4,0},{3,0},{2,0},{1,0}
-};
-
-ArduinoLEDMatrix     ledMatrix;
-static int           ledRingPos        = 0;     // Aktuelle Ring-Position 0–35
-static unsigned long lastLedStep       = 0;     // Zeitstempel letzter Animations-Schritt
-
-// Icon-Definitionen (innere LEDs, außerhalb des äußeren Rings)
-// Pause: zwei vertikale Balken, 5 Zeilen hoch (Zeilen 2–6), wie ⏸
-static const LedPos ICON_PAUSE[] = {
-    {2,4},{3,4},{4,4},{5,4},{6,4},  // linker Balken  (Spalte 4)
-    {2,5},{3,5},{4,5},{5,5},{6,5},  // linker Balken  (Spalte 5)
-    {2,7},{3,7},{4,7},{5,7},{6,7},  // rechter Balken (Spalte 7)
-    {2,8},{3,8},{4,8},{5,8},{6,8}   // rechter Balken (Spalte 8)
-};
-static const int ICON_PAUSE_N = 20;
-
-// Dreiecke: 5 Zeilen hoch (Zeilen 2–6), Spitze horizontal links/rechts
-static const LedPos ICON_PLAY_CW[] = {   // ▶  Spitze rechts (Rechtslauf)
-    {2,5},
-    {3,5},{3,6},
-    {4,5},{4,6},{4,7},
-    {5,5},{5,6},
-    {6,5}
-};
-static const LedPos ICON_PLAY_CCW[] = {  // ◀  Spitze links (Linkslauf)
-    {2,7},
-    {3,6},{3,7},
-    {4,5},{4,6},{4,7},
-    {5,6},{5,7},
-    {6,7}
-};
-static const int ICON_PLAY_N = 9;
+// ── LED MATRIX ───────────────────────────────────────────────────────────────
+// Geometry, icons, and animation logic live in led_animation.h / led_animation.cpp
+ArduinoLEDMatrix ledMatrix;
 
 // ── Hilfsfunktion: Relay-Zustand als Text ────────────────────────────────────
 static void printRelayStates() {
@@ -138,95 +99,15 @@ void setup() {
     initializeHardwareIo(CFG);
 
     ledMatrix.begin();
+    // Draw the initial standby frame immediately so the matrix shows something at boot.
+    // renderBitmap must be called here (main.cpp) to avoid the duplicate-static
+    // `framebuffer` ODR issue in Arduino_LED_Matrix.h.
+    updateLedAnimationFrame(ledAnim, controller, millis(), CFG);
+    ledMatrix.renderBitmap(ledAnim.frame, 8, 12);
 
     Serial.println(F("[BOOT] Initialisierung abgeschlossen. Zustand: STANDBY"));
     Serial.println(F("[BOOT] Warte auf Eingaben..."));
     Serial.println(F(""));
-}
-
-// ── LED-Matrix Animation ─────────────────────────────────────────────────────
-// Ring  : 4 LEDs umlaufend, Geschwindigkeit = aktueller Rampenfortschritt
-// Innen : Icon zeigt Zielaktion (⏸/▶/◀) – blinkt während Rampe läuft, steht still wenn etabliert
-void updateLedAnimation() {
-    unsigned long now   = millis();
-    byte          frame[8][12];
-    memset(frame, 0, sizeof(frame));
-
-    // ── Ring-LEDs ────────────────────────────────────────────────────────────
-    int  dir      = +1;
-    bool drawRing = true;
-    switch (controller.id) {
-        case ControllerStateId::STANDBY:
-        case ControllerStateId::WAITING:
-            drawRing = false;
-            break;
-        case ControllerStateId::ACCELERATING:
-            dir = isDirectionCCW(controller.targetDirection) ? -1 : +1;
-            break;
-        case ControllerStateId::RUNNING_CW:
-            dir = +1;
-            break;
-        case ControllerStateId::RUNNING_CCW:
-            dir = -1;
-            break;
-        case ControllerStateId::DECELERATING:
-            dir = isDirectionCCW(controller.runningDirection) ? -1 : +1;
-            break;
-        default:
-            drawRing = false;
-            break;
-    }
-    if (drawRing) {
-        // stepMs aus Rampenfortschritt: 250 ms/Schritt (langsam) → 30 ms/Schritt (schnell)
-        unsigned long stepMs = (unsigned long)(250.0f - 220.0f * getRampProgress(controller, now, CFG));
-        if (now - lastLedStep >= stepMs) {
-            ledRingPos  = (dir > 0) ? (ledRingPos + 1) % 36 : (ledRingPos + 35) % 36;
-            lastLedStep = now;
-        }
-        const int idx[4] = {
-            ledRingPos,           (ledRingPos +  1) % 36,
-            (ledRingPos + 18) % 36, (ledRingPos + 19) % 36
-        };
-        for (int i = 0; i < 4; i++) {
-            frame[ RING[idx[i]].r ][ RING[idx[i]].c ] = 1;
-        }
-    }
-
-    // ── Inneres Icon ─────────────────────────────────────────────────────────
-    // Zeigt Zielaktion: ⏸ Pause | ▶ CW | ◀ CCW
-    // Blinkt (~1.25 Hz) wenn Rampe noch läuft, steht still wenn Zustand etabliert
-    const LedPos* iconPts   = nullptr;
-    int           iconCount = 0;
-    bool          iconBlink = false;
-    switch (controller.id) {
-        case ControllerStateId::STANDBY:
-            iconPts = ICON_PAUSE; iconCount = ICON_PAUSE_N; iconBlink = false; break;
-        case ControllerStateId::ACCELERATING:
-            iconPts   = isDirectionCCW(controller.targetDirection) ? ICON_PLAY_CCW : ICON_PLAY_CW;
-            iconCount = ICON_PLAY_N; iconBlink = true; break;
-        case ControllerStateId::RUNNING_CW:
-            iconPts = ICON_PLAY_CW; iconCount = ICON_PLAY_N; iconBlink = false; break;
-        case ControllerStateId::RUNNING_CCW:
-            iconPts = ICON_PLAY_CCW; iconCount = ICON_PLAY_N; iconBlink = false; break;
-        case ControllerStateId::DECELERATING:
-        case ControllerStateId::WAITING:
-            iconPts = hasAutoRestart(controller)
-                      ? (isDirectionCCW(controller.targetDirection) ? ICON_PLAY_CCW : ICON_PLAY_CW)
-                      : ICON_PAUSE;
-            iconCount = hasAutoRestart(controller) ? ICON_PLAY_N : ICON_PAUSE_N;
-            iconBlink = true; break;
-        default: break;
-    }
-    if (iconPts != nullptr) {
-        bool show = !iconBlink || ((now / 400) % 2 == 0);
-        if (show) {
-            for (int i = 0; i < iconCount; i++) {
-                frame[ iconPts[i].r ][ iconPts[i].c ] = 1;
-            }
-        }
-    }
-
-    ledMatrix.renderBitmap(frame, 8, 12);
 }
 
 // ── loop ─────────────────────────────────────────────────────────────────────
@@ -428,5 +309,6 @@ void loop() {
         }
     }
 
-    updateLedAnimation();
+    updateLedAnimationFrame(ledAnim, controller, millis(), CFG);
+    ledMatrix.renderBitmap(ledAnim.frame, 8, 12);
 }

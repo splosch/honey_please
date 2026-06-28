@@ -37,10 +37,10 @@
 
 ## Milestone 5: LED Animation Separation
 
-- [ ] Move LED ring geometry and icon definitions into a dedicated animation module.
-- [ ] Separate animation state from motor control state where possible.
-- [ ] Make LED rendering consume controller state instead of reading global variables directly.
-- [ ] Preserve the current visual behavior for standby, ramping, running, braking, and waiting states.
+- [x] Move LED ring geometry and icon definitions into a dedicated animation module.
+- [x] Separate animation state from motor control state where possible.
+- [x] Make LED rendering consume controller state instead of reading global variables directly.
+- [x] Preserve the current visual behavior for standby, ramping, running, braking, and waiting states.
 
 ## Milestone 6: Logging and Messaging Cleanup
 
