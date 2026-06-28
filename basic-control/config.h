@@ -34,6 +34,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "speed_dataset.h"
 
 struct BasicControlConfig {
     // Relay outputs
@@ -59,6 +60,11 @@ struct BasicControlConfig {
     unsigned long debounceDirectionMs;
     unsigned long debounceActionMs;
     unsigned long relaySettleMs;
+
+    // Runtime preset dataset selection (Gelb-1 / Gelb-2).
+    // Choose a one-bit pair to minimize transient intermediate profiles.
+    BinarySpeedDataset preset1Dataset;
+    BinarySpeedDataset preset2Dataset;
 
     // Relay logic configuration
     bool relayActiveHigh;
@@ -97,6 +103,11 @@ static constexpr BasicControlConfig BASIC_CONTROL_CONFIG = {
     150UL,    // debounceDirectionMs
     200UL,    // debounceActionMs
     100UL,    // relaySettleMs
+
+    // One-relay preset switching default: M1 fixed OFF, M2 toggles.
+    // GELB-1 -> dAtA 0 (M1=0,M2=0), GELB-2 -> dAtA 4 (M1=0,M2=1)
+    BinarySpeedDataset::DATASET_0,  // preset1Dataset
+    BinarySpeedDataset::DATASET_4,  // preset2Dataset
 
     true,     // relayActiveHigh: HIGH energizes relay
     true      // dirRelayHighMeansCCW: HIGH on dir relay means CCW

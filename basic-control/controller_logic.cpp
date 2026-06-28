@@ -1,7 +1,6 @@
 #include "controller_logic.h"
 
 static constexpr BinarySpeedDataset kStandbyDataset = BinarySpeedDataset::DATASET_0;
-static constexpr BinarySpeedDataset kMode1Dataset = BinarySpeedDataset::DATASET_2;
 
 static void printRelayStates(const BasicControlConfig& cfg) {
     Serial.print(F("  [REL1/X1="));
@@ -108,7 +107,7 @@ static void handleStandby(
         setSelectedRunDataset(
             controller,
             cfg,
-            BinarySpeedDataset::DATASET_2,
+            cfg.preset1Dataset,
             F("[PRESET 1] Gelb-1 gedrueckt"));
         delay(cfg.debounceActionMs);
     }
@@ -116,7 +115,7 @@ static void handleStandby(
         setSelectedRunDataset(
             controller,
             cfg,
-            BinarySpeedDataset::DATASET_4,
+            cfg.preset2Dataset,
             F("[PRESET 2] Gelb-2 gedrueckt"));
         delay(cfg.debounceActionMs);
     }
@@ -158,7 +157,7 @@ static void handleAccelerating(
         setSelectedRunDataset(
             controller,
             cfg,
-            BinarySpeedDataset::DATASET_2,
+            cfg.preset1Dataset,
             F("[PRESET 1] Gelb-1 gedrueckt"));
         delay(cfg.debounceActionMs);
     }
@@ -166,7 +165,7 @@ static void handleAccelerating(
         setSelectedRunDataset(
             controller,
             cfg,
-            BinarySpeedDataset::DATASET_4,
+            cfg.preset2Dataset,
             F("[PRESET 2] Gelb-2 gedrueckt"));
         delay(cfg.debounceActionMs);
     }
@@ -228,17 +227,19 @@ static void handleRunning(
         setSelectedRunDataset(
             controller,
             cfg,
-            BinarySpeedDataset::DATASET_2,
+            cfg.preset1Dataset,
             F("[PRESET 1] Gelb-1 gedrueckt"));
         delay(cfg.debounceActionMs);
+        return;
     }
     else if (inputs.preset2Pressed) {
         setSelectedRunDataset(
             controller,
             cfg,
-            BinarySpeedDataset::DATASET_4,
+            cfg.preset2Dataset,
             F("[PRESET 2] Gelb-2 gedrueckt"));
         delay(cfg.debounceActionMs);
+        return;
     }
 
     if (inputs.stopPressed) {
@@ -261,7 +262,7 @@ static void handleRunning(
         setSelectedRunDataset(
             controller,
             cfg,
-            kMode1Dataset,
+            cfg.preset1Dataset,
             F("[START] Erneut gedrueckt (RUNNING)"));
         delay(cfg.debounceActionMs);
         return;

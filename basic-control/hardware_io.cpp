@@ -53,9 +53,33 @@ void setDirectionRelay(const BasicControlConfig& cfg, bool ccw) {
 }
 
 void applySpeedDataset(const BasicControlConfig& cfg, BinarySpeedDataset dataset) {
-    const BinarySpeedRelayProfile& profile = relayProfileForDataset(dataset);
-    digitalWrite(cfg.pinRelayUnused3, profile.m1Enabled ? relayOnLevel(cfg) : relayOffLevel(cfg));
-    digitalWrite(cfg.pinRelayUnused4, profile.m2Enabled ? relayOnLevel(cfg) : relayOffLevel(cfg));
+    const BinarySpeedRelayProfile& target = relayProfileForDataset(dataset);
+    const BinarySpeedRelayProfile& current = relayProfileForDataset(currentSpeedDataset(cfg));
+
+    if (current.dataset == target.dataset) {
+        return;
+    }
+
+    const bool m1Changes = current.m1Enabled != target.m1Enabled;
+    const bool m2Changes = current.m2Enabled != target.m2Enabled;
+
+    // If both bits change (e.g. DATASET_4 <-> DATASET_2), apply ON->OFF first,
+    // then OFF->ON. This avoids a transient "both ON" profile (DATASET_6).
+    if (m1Changes && m2Changes) {
+        if (current.m1Enabled && !target.m1Enabled) {
+            digitalWrite(cfg.pinRelayUnused3, relayOffLevel(cfg));
+        }
+        if (current.m2Enabled && !target.m2Enabled) {
+            digitalWrite(cfg.pinRelayUnused4, relayOffLevel(cfg));
+        }
+    }
+
+    if (m1Changes) {
+        digitalWrite(cfg.pinRelayUnused3, target.m1Enabled ? relayOnLevel(cfg) : relayOffLevel(cfg));
+    }
+    if (m2Changes) {
+        digitalWrite(cfg.pinRelayUnused4, target.m2Enabled ? relayOnLevel(cfg) : relayOffLevel(cfg));
+    }
 }
 
 bool isStartRelayEnabled(const BasicControlConfig& cfg) {

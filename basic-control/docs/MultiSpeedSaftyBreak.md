@@ -28,8 +28,26 @@ Technical specification for honey extractor automation using **ESP32/Arduino**, 
 |---|---|---|---|---|---|---|---|
 | `dAtA 0` | `LOW` (OFF) | `LOW` (OFF) | `LOW` (GND) | 750 r/min | 15.0 s | **2.5 s** | Für Stufe 1 der Sicherheitsbremsung |
 | `dAtA 2` | `LOW` (OFF) | `HIGH` (ON) | `LOW` (GND) | 1500 r/min | 10.0 s | 2.0 s | Normalbetrieb Stufe 1 |
-| `dAtA 4` | `HIGH` (ON) | `LOW` (OFF) | `LOW` (GND) | 2250 r/min | 8.0 s | 1.5 s | Normalbetrieb Stufe 2 |
+| `dAtA 4` | `HIGH` (ON) | `LOW` (OFF) | `LOW` (GND) | 2500 r/min | 8.0 s | 1.5 s | Normalbetrieb Stufe 2 |
 | `dAtA 6` | `HIGH` (ON) | `HIGH` (ON) | `LOW` (GND) | 0 r/min | 0.2 s | **0.2 s** | Für Stufe 2 (End-Lock) |
+
+### Preset-Umschaltung mit nur einem Relais (implementiert in basic-control)
+
+Zur Minimierung von Zwischenzustaenden bei Relais-Umschaltungen verwendet `basic-control`
+standardmaessig ein Preset-Paar mit nur **einem** Bitwechsel:
+
+* **Preset 1 (Gelb-1): `dAtA 0`** -> `M1=LOW`, `M2=LOW`
+* **Preset 2 (Gelb-2): `dAtA 4`** -> `M1=LOW`, `M2=HIGH`
+
+Damit bleibt `M1` konstant und nur `M2` schaltet. Das reduziert Unsicherheit durch
+Relais-Laufzeitdifferenzen/Bounce gegenueber einem 2-Bit-Wechsel (z. B. `dAtA 2 <-> dAtA 4`).
+
+Hinweis:
+
+* Diese Zuordnung ist in `basic-control/config.h` ueber `preset1Dataset` / `preset2Dataset`
+    konfigurierbar.
+* Falls fuer deinen Prozess andere Ziel-drehzahlen benoetigt werden, die VFD-Parameter in den
+    verwendeten dAtA-Slots entsprechend programmieren.
 
 ## 3. State Machine & Sicherheits-Bremslogik
 

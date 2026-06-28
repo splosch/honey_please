@@ -5,8 +5,8 @@ ControllerState makeInitialControllerState() {
     state.id = ControllerStateId::STANDBY;
     state.targetDirection = SpinDirection::CW;
     state.runningDirection = SpinDirection::CW;
-    state.selectedRunDataset = BinarySpeedDataset::DATASET_2;
-    state.decelFromDataset = BinarySpeedDataset::DATASET_2;
+    state.selectedRunDataset = BASIC_CONTROL_CONFIG.preset1Dataset;
+    state.decelFromDataset = BASIC_CONTROL_CONFIG.preset1Dataset;
     state.restartIntent = RestartIntent::NONE;
     state.stateTimerStartMs = 0;
     state.rampStartProgress = 0.0f;

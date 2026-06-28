@@ -14,9 +14,12 @@ static constexpr BinarySpeedDynamicsProfile kDynamicsProfiles[] = {
     // 1) DATASET_0 (dc=2500 ms) for a gentle 2250->750 rpm decel (~1250 ms).
     // 2) DATASET_6 (dc=200 ms) for final lock to 0 rpm (code uses +margin, e.g. 150 ms).
     // Row format: {     dataset,   targetRpm,  accelerationMs, decelerationMs}
-    {BinarySpeedDataset::DATASET_0, 750UL,      15000UL,        2500UL},
-    {BinarySpeedDataset::DATASET_2, 1250UL,     15000UL,        15000UL},
+
+    // Speed Datasets
+    {BinarySpeedDataset::DATASET_0, 1250UL,     15000UL,        15000UL},
     {BinarySpeedDataset::DATASET_4, 2500UL,     15000UL,        15000UL},
+    // Breaking Datasets
+    {BinarySpeedDataset::DATASET_2, 750UL,      15000UL,        2500UL},
     {BinarySpeedDataset::DATASET_6, 0UL,        2000UL,         2000UL}
 };
 
