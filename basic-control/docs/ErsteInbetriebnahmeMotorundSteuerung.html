@@ -29,7 +29,7 @@
         <div class="w-full flex flex-col md:flex-row justify-between items-center gap-3">
             <div>
                 <h1 class="text-xl font-bold text-amber-500">Präziser Verdrahtungsplan: Honigschleuder</h1>
-                <p class="text-xs text-gray-400">Optimiertes Layout · State Machine: 6 Zustände · Anlauf- &amp; Bremsrampen je 15 s</p>
+                <p class="text-xs text-gray-400">Optimiertes Layout · State Machine: 6 Zustände · dAtA-abhängige Anlauf- &amp; Bremsrampen</p>
             </div>
             <div class="flex gap-2 flex-wrap">
                 <span class="bg-purple-900/50 border border-purple-500 text-purple-400 text-xs px-2.5 py-1 rounded-full font-semibold">
@@ -52,7 +52,7 @@
         <div class="xl:col-span-1 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col gap-5 h-fit">
             <div>
                 <h2 class="text-md font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Interaktive Simulation</h2>
-                        <p class="text-xs text-gray-400 mb-3">Simulation (Rampen: 3 s statt 15 s, Sicherheitspause: 0,15 s). Tasten verhalten sich zustandsabhängig:</p>
+                        <p class="text-xs text-gray-400 mb-3">Simulation mit skalierten dAtA-Profilzeiten (z. B. dAtA 2: 3,0 s Anlauf), Sicherheitspause: 0,15 s. Tasten verhalten sich zustandsabhängig:</p>
                 
                 <div class="space-y-3">
                     <!-- Folientaster Richtung -->
@@ -124,7 +124,7 @@
                     <div class="w-full bg-gray-700 rounded-full h-1.5">
                         <div id="ramp-bar" class="h-1.5 rounded-full bg-yellow-400" style="width:0%"></div>
                     </div>
-                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: 3 s · Reales Board: 15 s</span>
+                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: dAtA-Zeiten skaliert (x0,30) · Reales Board: Profilzeiten aus speed_dataset.cpp</span>
                 </div>
             </div>
 
@@ -134,9 +134,9 @@
                 <div class="space-y-1 text-[10px]">
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">GESPERRT</b> – X2 offen</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">STANDBY</b> – Richtung wählen, Start</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – 15 s, Stop oder Richtungswechsel möglich</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – dAtA-abhängige Rampe, Stop oder Richtungswechsel möglich</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">LÄUFT</b> – Stop/Richtungswechsel</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – 15 s, gesperrt</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – dAtA-abhängige/proportionale Rampe</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 0,15 s Sicherheitspause</span></div>
                 </div>
             </div>
@@ -555,8 +555,8 @@
 
             <!-- Notes Section -->
             <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
-                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (15 s):</strong> Die Rampenzeiten entsprechen den Treiber-Parametern (dEC/ACC). Der Arduino wartet diese Zeit ab, bevor er den nächsten Zustand einleitet.</p>
-                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (0,15 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
+                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (dAtA-abhängig):</strong> Die Rampenzeiten folgen den Profilen aus speed_dataset.cpp (z. B. dAtA 2: Ac 10,0 s / dc 2,0 s; dAtA 4: Ac 8,0 s / dc 1,5 s). Die Simulation skaliert diese Zeiten, behält aber die Relationen bei.</p>
+                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe (aus aktuellem Rampenfortschritt) → Sicherheitspause (0,15 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe mit gewähltem dAtA-Profil.</p>
                 <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
                 <p><strong class="text-purple-400">Binary-Speed Relais:</strong> D4 (M1) und D5 (M2) bilden dAtA 0/2/4/6 ab. Gelb 1 waehlt dAtA 2, Gelb 2 waehlt dAtA 4; in Standby bleibt dAtA 0 aktiv.</p>
                 <p><strong class="text-amber-500">Verteilte Positionen:</strong> Steuerungsmodule (links) → Relais (Mitte) → Motor-Treiber (rechts) – keine Kabelkreuzungen.</p>
@@ -619,7 +619,7 @@
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Rot)</td>
                             <td class="p-2">Pin 2</td>
                             <td class="p-2">Arduino <strong class="text-emerald-300">D8</strong></td>
-                            <td class="p-2">STOP – aktiv in ANLAUFEN &amp; LÄUFT: Bremsrampe (15 s) → Standby</td>
+                            <td class="p-2">STOP – aktiv in ANLAUFEN &amp; LÄUFT: dAtA-abhängige Bremsrampe (im ANLAUF proportional) → Standby</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 1)</td>
@@ -637,7 +637,7 @@
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Grün)</td>
                             <td class="p-2">Pin 5</td>
                             <td class="p-2">Arduino <strong class="text-emerald-300">D11</strong></td>
-                            <td class="p-2">START – in STANDBY: REL1 (X1) AN → Anlauframpe 15 s → LÄUFT; in LÄUFT: setzt Modus 1 (dAtA 2 / langsamer)</td>
+                            <td class="p-2">START – in STANDBY: REL1 (X1) AN → dAtA-abhängige Anlauframpe → LÄUFT; in LÄUFT: setzt Modus 1 (dAtA 2 / langsamer)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -647,10 +647,18 @@
 
     <!-- Simulation Script – 6-state machine matching demo/main.cpp -->
     <script>
-        // ── Ramp durations (scaled for simulation: 3 s instead of real 15 s) ────
-        const SIM_ANLAUF_MS = 3000;
-        const SIM_BREMS_MS  = 3000;
+        // ── Ramp durations (scaled from firmware dAtA profiles) ─────────────────
+        // Scale factor keeps simulation responsive while preserving profile ratios.
+        const SIM_TIME_SCALE = 0.30;
+        const SIM_MIN_RAMP_MS = 100;
         const SIM_WARTE_MS  = 150;
+
+        const DATASET_PROFILES = {
+            'dAtA 0': { targetRpm:  750, accelMs: 15000, decelMs: 2500 },
+            'dAtA 2': { targetRpm: 1500, accelMs: 10000, decelMs: 2000 },
+            'dAtA 4': { targetRpm: 2250, accelMs:  8000, decelMs: 1500 },
+            'dAtA 6': { targetRpm:    0, accelMs:   200, decelMs:  200 },
+        };
 
         // ── State ────────────────────────────────────────────────────────────────
         // LOCKED | STANDBY | ACCELERATING | RUNNING_CW | RUNNING_CCW | DECELERATING | WAITING
@@ -658,10 +666,54 @@
         let targetDir   = 'CW';    // 'CW' or 'CCW'
         let pendingAuto = false;
         let selectedRunDataset = 'dAtA 2';
+        let decelFromDataset   = 'dAtA 2';
+        let rampStartProgress  = 0.0;
         let rampHandle  = null;
         let rampStartMs = 0;
         let rampTotalMs = 0;
         let rafHandle   = null;
+
+        function clamp01(v) {
+            return Math.max(0, Math.min(1, v));
+        }
+
+        function profileForDataset(dataset) {
+            return DATASET_PROFILES[dataset] || DATASET_PROFILES['dAtA 0'];
+        }
+
+        function toSimMs(realMs) {
+            return Math.max(SIM_MIN_RAMP_MS, Math.round(realMs * SIM_TIME_SCALE));
+        }
+
+        function effectiveAccelRealMs(dataset, fromProgress) {
+            const p = profileForDataset(dataset);
+            return Math.max(100, Math.round((1 - clamp01(fromProgress)) * p.accelMs));
+        }
+
+        function effectiveDecelRealMs(dataset, fromProgress) {
+            const p = profileForDataset(dataset);
+            return Math.max(100, Math.round(clamp01(fromProgress) * p.decelMs));
+        }
+
+        function currentRampRatio() {
+            if (rampTotalMs <= 0) return 0;
+            const elapsed = Math.min(Date.now() - rampStartMs, rampTotalMs);
+            return clamp01(elapsed / rampTotalMs);
+        }
+
+        function getRampProgressNow() {
+            const ratio = currentRampRatio();
+            if (simState === 'ACCELERATING') {
+                return clamp01(rampStartProgress + ratio * (1 - rampStartProgress));
+            }
+            if (simState === 'DECELERATING') {
+                return clamp01(rampStartProgress * (1 - ratio));
+            }
+            if (simState === 'RUNNING_CW' || simState === 'RUNNING_CCW') {
+                return 1;
+            }
+            return 0;
+        }
 
         function clearTimers() {
             if (rampHandle) { clearTimeout(rampHandle); rampHandle = null; }
@@ -678,7 +730,7 @@
 
         function animateBar() {
             const elapsed = Math.min(Date.now() - rampStartMs, rampTotalMs);
-            const pct = Math.round((elapsed / rampTotalMs) * 100);
+            const pct = rampTotalMs > 0 ? Math.round((elapsed / rampTotalMs) * 100) : 0;
             const bar  = document.getElementById('ramp-bar');
             const pctEl = document.getElementById('ramp-pct');
             if (bar)   bar.style.width = pct + '%';
@@ -698,10 +750,10 @@
         const STATE_UI = {
             LOCKED:       { color:'red',    ping:true,  text:'Gesperrt (X2 aus)',     desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' },
             STANDBY:      { color:'amber',  ping:false, text:'Standby – Bereit',       desc:'Richtung wählen (LINKS/RECHTS), dann GRÜN drücken.' },
-            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft (15 s). STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
+            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft dAtA-abhängig. STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
             RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW. GRÜN setzt Modus 1 (dAtA 2).' },
             RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW. GRÜN setzt Modus 1 (dAtA 2).' },
-            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft (15 s). Alle Eingaben gesperrt.' },
+            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft dAtA-abhängig/proportional. START kann manuell neu anlaufen (ohne Auto-Neustart).' },
             WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (0,15 s).' },
         };
         const COLOR_MAP = {
@@ -713,7 +765,9 @@
         };
 
         function activeDataset() {
-            return ['LOCKED', 'STANDBY'].includes(simState) ? 'dAtA 0' : selectedRunDataset;
+            if (simState === 'LOCKED' || simState === 'STANDBY') return 'dAtA 0';
+            if (simState === 'DECELERATING' || simState === 'WAITING') return decelFromDataset;
+            return selectedRunDataset;
         }
 
         function relayBitsForDataset(dataset) {
@@ -742,8 +796,15 @@
             const isRamping = ['ACCELERATING','DECELERATING','WAITING'].includes(simState);
             rs.classList.toggle('hidden', !isRamping);
             if (isRamping) {
-                const labels = { ACCELERATING:'Anlauframpe (15 s)', DECELERATING:'Bremsrampe (15 s)', WAITING:'Sicherheitspause' };
-                document.getElementById('ramp-label').textContent = labels[simState];
+                let label = 'Sicherheitspause';
+                if (simState === 'ACCELERATING') {
+                    const realMs = effectiveAccelRealMs(selectedRunDataset, rampStartProgress);
+                    label = `Anlauframpe ${selectedRunDataset} (real ${(realMs / 1000).toFixed(2)} s)`;
+                } else if (simState === 'DECELERATING') {
+                    const realMs = effectiveDecelRealMs(decelFromDataset, rampStartProgress);
+                    label = `Bremsrampe ${decelFromDataset} (real ${(realMs / 1000).toFixed(2)} s)`;
+                }
+                document.getElementById('ramp-label').textContent = label;
                 document.getElementById('ramp-bar').className = 'h-1.5 rounded-full ' + c.bar;
             }
 
@@ -774,18 +835,23 @@
         }
 
         // ── Transitions ──────────────────────────────────────────────────────────
-        function goDecelerating(autoRestart) {
+        function goDecelerating(autoRestart, fromProgress) {
             clearTimers();
             pendingAuto = autoRestart;
+            decelFromDataset = activeDataset();
+            rampStartProgress = clamp01(typeof fromProgress === 'number' ? fromProgress : 1.0);
             simState    = 'DECELERATING';
             updateUI();
-            startRamp(SIM_BREMS_MS, () => {
+            startRamp(toSimMs(effectiveDecelRealMs(decelFromDataset, rampStartProgress)), () => {
                 document.getElementById('ramp-bar').style.width = '100%';
                 simState = 'WAITING'; updateUI();
                 startRamp(SIM_WARTE_MS, () => {
                     if (pendingAuto) {
-                        simState = 'ACCELERATING'; pendingAuto = false; updateUI();
-                        startRamp(SIM_ANLAUF_MS, () => {
+                        simState = 'ACCELERATING';
+                        rampStartProgress = 0.0;
+                        pendingAuto = false;
+                        updateUI();
+                        startRamp(toSimMs(effectiveAccelRealMs(selectedRunDataset, rampStartProgress)), () => {
                             simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
                             updateUI();
                         });
@@ -796,10 +862,11 @@
             });
         }
 
-        function goAccelerating() {
+        function goAccelerating(fromProgress = 0) {
             clearTimers(); pendingAuto = false;
+            rampStartProgress = clamp01(fromProgress);
             simState = 'ACCELERATING'; updateUI();
-            startRamp(SIM_ANLAUF_MS, () => {
+            startRamp(toSimMs(effectiveAccelRealMs(selectedRunDataset, rampStartProgress)), () => {
                 simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
                 updateUI();
             });
@@ -813,18 +880,23 @@
         }
         function pressLinks() {
             if      (simState === 'STANDBY')                          { targetDir = 'CCW'; updateUI(); }
-            else if (simState === 'RUNNING_CW')                       { targetDir = 'CCW'; goDecelerating(true); }
-            else if (simState === 'ACCELERATING' && targetDir === 'CW') { targetDir = 'CCW'; goDecelerating(true); }
+            else if (simState === 'RUNNING_CW')                       { targetDir = 'CCW'; goDecelerating(true, 1.0); }
+            else if (simState === 'ACCELERATING' && targetDir === 'CW') { targetDir = 'CCW'; goDecelerating(true, getRampProgressNow()); }
             // RUNNING_CCW / already-CCW-ramp / decel/wait → no-op
         }
         function pressRechts() {
             if      (simState === 'STANDBY')                            { targetDir = 'CW'; updateUI(); }
-            else if (simState === 'RUNNING_CCW')                        { targetDir = 'CW'; goDecelerating(true); }
-            else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true); }
+            else if (simState === 'RUNNING_CCW')                        { targetDir = 'CW'; goDecelerating(true, 1.0); }
+            else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true, getRampProgressNow()); }
         }
         function pressGruen() {
             if (simState === 'STANDBY') {
                 goAccelerating();
+                return;
+            }
+
+            if (simState === 'DECELERATING' && !pendingAuto) {
+                goAccelerating(getRampProgressNow());
                 return;
             }
 
@@ -836,18 +908,41 @@
             }
         }
         function pressRot() {
-            if (['RUNNING_CW','RUNNING_CCW','ACCELERATING'].includes(simState)) { goDecelerating(false); }
+            if (simState === 'RUNNING_CW' || simState === 'RUNNING_CCW') {
+                goDecelerating(false, 1.0);
+                return;
+            }
+
+            if (simState === 'ACCELERATING') {
+                goDecelerating(false, getRampProgressNow());
+                return;
+            }
+
+            if (simState === 'DECELERATING' && pendingAuto) {
+                pendingAuto = false;
+                updateUI();
+            }
         }
         function pressGelb1() {
-            if (simState === 'LOCKED') return;
+            if (!['STANDBY', 'ACCELERATING', 'RUNNING_CW', 'RUNNING_CCW'].includes(simState)) return;
+            const progress = (simState === 'ACCELERATING') ? getRampProgressNow() : 0;
             selectedRunDataset = 'dAtA 2';
             console.log('[SIM] Preset 1 gedrueckt -> dAtA 2');
+            if (simState === 'ACCELERATING') {
+                goAccelerating(progress);
+                return;
+            }
             updateUI();
         }
         function pressGelb2() {
-            if (simState === 'LOCKED') return;
+            if (!['STANDBY', 'ACCELERATING', 'RUNNING_CW', 'RUNNING_CCW'].includes(simState)) return;
+            const progress = (simState === 'ACCELERATING') ? getRampProgressNow() : 0;
             selectedRunDataset = 'dAtA 4';
             console.log('[SIM] Preset 2 gedrueckt -> dAtA 4');
+            if (simState === 'ACCELERATING') {
+                goAccelerating(progress);
+                return;
+            }
             updateUI();
         }
 
