@@ -23,17 +23,23 @@
 - [x] Keep ramp progress and timer bookkeeping in the controller state rather than mixed with rendering state.
 
 ## Milestone 4: State Machine Extraction
+- [x] Extract the `loop()` switch-case control flow into a controller module or class.
+- [x] Introduce helpers such as `beginAcceleration`, `beginDeceleration`, `requestDirectionChange`, and `completeWaitingPeriod`.
+- [x] Remove duplicated transition code between CW and CCW running branches.
+- [x] Make the controller operate on an input snapshot per tick instead of reading GPIO directly.
+
+## Milestone 4A: Multi Speed
 - use /basic-control/docs/MultiSpeedSaftyBreak.md
-- [ ] Add explicit states for `SAFETY_STAGE_1`, `SAFETY_STAGE_2`, and `SAFE_WAIT` (including safe return to `IDLE` only when lid is closed).
+- [ ] Keep binary speed dataset mapping (`dAtA 0/2/4/6`) centralized so normal run stages and safety stages use the same relay-profile source of truth.
+
+## Milestone 4B: SafetySwitch
+- use /basic-control/docs/MultiSpeedSaftyBreak.md
+ [ ] Add explicit states for `SAFETY_STAGE_1`, `SAFETY_STAGE_2`, and `SAFE_WAIT` (including safe return to `IDLE` only when lid is closed).
 - [ ] Implement immediate safety transition on lid-open from running states (`SPIN_LOW`, `SPIN_HIGH`, optional `DYN_BRAKE`) into `SAFETY_STAGE_1`.
 - [ ] Implement stage-1 safety braking profile (`dAtA 0`: `M1=LOW`, `M2=LOW`, `START/STOP=HIGH`) with non-blocking timer window of 1250 ms.
 - [ ] Implement stage-2 safety braking profile (`dAtA 6`: `M1=HIGH`, `M2=HIGH`, `START/STOP=HIGH`) with non-blocking timer window of 150 ms.
 - [ ] Enforce `SAFE_WAIT` lockout behavior (`START/STOP=LOW`, `M1=LOW`, `M2=LOW`) that blocks restart while lid input remains open.
-- [ ] Keep binary speed dataset mapping (`dAtA 0/2/4/6`) centralized so normal run stages and safety stages use the same relay-profile source of truth.
-- [ ] Extract the `loop()` switch-case control flow into a controller module or class.
-- [ ] Introduce helpers such as `beginAcceleration`, `beginDeceleration`, `requestDirectionChange`, and `completeWaitingPeriod`.
-- [ ] Remove duplicated transition code between CW and CCW running branches.
-- [ ] Make the controller operate on an input snapshot per tick instead of reading GPIO directly.
+
 
 ## Milestone 5: LED Animation Separation
 

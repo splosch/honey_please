@@ -54,8 +54,11 @@ honey_please/
     config.h                     <- pin/config single source for basic-control
     controller_state.h           <- explicit controller state model and transition API
     controller_state.cpp         <- controller state transitions and ramp timing logic
+    controller_logic.h           <- controller tick interface (state machine extraction)
+    controller_logic.cpp         <- state machine transitions operating on input snapshots
     docs/
       ErsteInbetriebnahmeMotorundSteuerung.html
+
 
   advanced-control/              <- LEGACY CHAIN (not used by default)
     ...
@@ -87,6 +90,8 @@ Use only the smallest relevant documentation set.
 | [basic-control/config.h](basic-control/config.h) | Pin assignment or timing constants |
 | [basic-control/controller_state.h](basic-control/controller_state.h) | Controller state types and transition helpers |
 | [basic-control/controller_state.cpp](basic-control/controller_state.cpp) | Ramp progress and effective ramp durations |
+| [basic-control/controller_logic.h](basic-control/controller_logic.h) | Controller tick API for state machine execution |
+| [basic-control/controller_logic.cpp](basic-control/controller_logic.cpp) | State machine transition flow and transition helper orchestration |
 | [basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html](basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html) | Wiring validation |
 | [docs/hardware/README.md](docs/hardware/README.md) | Hardware constraints and cautions |
 | [docs/ops/README.md](docs/ops/README.md) | Build/flash/monitor commands |
