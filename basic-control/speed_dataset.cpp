@@ -19,8 +19,8 @@ static constexpr BinarySpeedDynamicsProfile kDynamicsProfiles[] = {
     {BinarySpeedDataset::DATASET_0, 1250UL,     15000UL,        15000UL},
     {BinarySpeedDataset::DATASET_4, 2500UL,     15000UL,        15000UL},
     // Breaking Datasets
-    {BinarySpeedDataset::DATASET_2, 750UL,      15000UL,        2500UL},
-    {BinarySpeedDataset::DATASET_6, 0UL,        2000UL,         2000UL}
+    {BinarySpeedDataset::DATASET_2, 750UL,      15000UL,        15000UL},
+    {BinarySpeedDataset::DATASET_6, 0UL,        15000UL,         15000UL}
 };
 
 const BinarySpeedRelayProfile& relayProfileForDataset(BinarySpeedDataset dataset) {
