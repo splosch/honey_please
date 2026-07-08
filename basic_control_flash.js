@@ -2,7 +2,7 @@
 /**
  * basic_control_flash.js – Build and optionally flash the basic-control sketch.
  *
- * Source  : basic-control/main.cpp  (from docs/base_honey_extractor_controller.ino)
+ * Source  : basic-control/main.cpp  (derived from Google Gemini baseline, now archived)
  * Purpose : Verify relay + keypad wiring BEFORE connecting the motor driver.
  *
  * Usage:

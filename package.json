@@ -1,21 +1,10 @@
 {
   "name": "honey-please",
-  "version": "1.5.0",
-  "description": "Honigschleuder motor control – Web UI dev server + board selfcheck",
+  "version": "1.6.0",
+  "description": "Honigschleuder motor control – basic-control firmware tooling",
   "private": true,
   "scripts": {
-    "basic-control:build":  "node basic_control_flash.js --build-only",
-    "basic-control:flash":  "node basic_control_flash.js",
-    "-- unused scribts below -- " : "TBD for advanced WebUI Control",
-    "start":     "node serve.js",
-    "serve":     "node serve.js",
-    "build":       "node deploy.js --build-only",
-    "deploy":      "node deploy.js",
-    "deploy-COM3-left": "node deploy.js -- COM3",
-    "test":        "node tests/selfcheck.js 192.168.178.70",
-    "selfcheck":   "node tests/selfcheck.js 192.168.178.70"
-  },
-  "devDependencies": {
-    "ws": "^8.20.0"
+    "build": "node basic_control_flash.js --build-only",
+    "flash": "node basic_control_flash.js"
   }
 }

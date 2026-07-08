@@ -6,9 +6,6 @@
 
 *.zip
 
-# Secrets – niemals committen!
-advanced-control/secrets.h
-
 tests/node_modules
 
 node_modules

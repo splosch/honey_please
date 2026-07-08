@@ -1,6 +1,6 @@
 # ARCHITECTURE.md – honey_please Project Map
 
-**Version:** 1.6.1 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-06-28
+**Version:** 1.7.0 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-07-08
 
 This is the central architecture map for the repository.
 AI agents: read this file first and keep scope small.
@@ -10,8 +10,7 @@ AI agents: read this file first and keep scope small.
 ## Active Application Scope
 
 - Primary application: `basic-control/`.
-- `advanced-control/` is legacy and not part of the default implementation path.
-- Work in `advanced-control/` only when explicitly requested.
+- The former `advanced-control/` chain has been removed (archived as .zip).
 
 ---
 
@@ -20,8 +19,8 @@ AI agents: read this file first and keep scope small.
 ```
 Developer-PC
   └── VS Code + PlatformIO
-      ├── Build:  npm run basic-control:build
-      ├── Flash:  npm run basic-control:flash
+      ├── Build:  npm run build
+      ├── Flash:  npm run flash
       └── Serial monitor (115200) for runtime diagnostics
 
 Arduino Uno R4 WiFi
@@ -46,8 +45,6 @@ honey_please/
   platformio.ini
   package.json
   basic_control_flash.js
-  deploy.js
-  serve.js
 
   basic-control/                 <- ACTIVE APP CHAIN (env: r4wifi_basic_control)
     main.cpp                     <- application entry + state machine wiring
@@ -59,20 +56,7 @@ honey_please/
     docs/
       ErsteInbetriebnahmeMotorundSteuerung.html
 
-
-  advanced-control/              <- LEGACY CHAIN (not used by default)
-    ...
-
   verify_sketch/                 <- board health verification sketch
-  tests/                         <- scripts (includes legacy selfcheck)
-  docs/
-    current_task.md
-    FEATURE-OVERVIEW.md
-    hardware/
-    ops/
-    features/
-    webui/
-    simulation/
 ```
 
 ---
@@ -93,10 +77,6 @@ Use only the smallest relevant documentation set.
 | [basic-control/controller_logic.h](basic-control/controller_logic.h) | Controller tick API for state machine execution |
 | [basic-control/controller_logic.cpp](basic-control/controller_logic.cpp) | State machine transition flow and transition helper orchestration |
 | [basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html](basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html) | Wiring validation |
-| [docs/hardware/README.md](docs/hardware/README.md) | Hardware constraints and cautions |
-| [docs/ops/README.md](docs/ops/README.md) | Build/flash/monitor commands |
-| [docs/current_task.md](docs/current_task.md) | Current milestone and working plan |
-
 
 ---
 
@@ -104,8 +84,7 @@ Use only the smallest relevant documentation set.
 
 | Decision | Rationale |
 |---|---|
-| `basic-control/` is the default implementation path | It is the currently working chain in this repository |
-| `advanced-control/` is legacy | Not used for normal tasks unless explicitly requested |
+| `basic-control/` is the only implementation path | It is the currently working chain in this repository |
 | USB serial is the mandatory debug channel | Stable on Uno R4 WiFi and independent from network stack |
 | Build-before-flash workflow | Reduces risk and keeps iteration predictable |
 | R4 is single-threaded | No FreeRTOS task model in this project path |
@@ -115,5 +94,5 @@ Use only the smallest relevant documentation set.
 ## Maintenance Rules
 
 1. After structural changes, update this file's folder map and scope notes.
-2. After workflow changes, update [README.md](README.md) and [docs/ops/README.md](docs/ops/README.md).
-3. Keep [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [docs/current_task.md](docs/current_task.md) consistent.
+2. After workflow changes, update [README.md](README.md).
+3. Keep [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md) consistent.

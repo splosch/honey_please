@@ -5,7 +5,7 @@
  * Centralizes pin mapping, timing constants and relay polarity so the
  * runtime logic and boot banner always use the same source of truth.
  *
- * Quelle: docs/base_honey_extractor_controller.ino (erstellt mit Google Gemini)
+ * Quelle: Google Gemini baseline (archiviert im advanced-control.zip)
  * Zweck : Verdrahtungscheck OHNE angeschlossenen Motor-Treiber.
  *         Relais klicken, Serial-Monitor zeigt alle Zustandsübergänge.
  *
