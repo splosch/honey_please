@@ -4,6 +4,8 @@
 .vscode/launch.json
 .vscode/ipch
 
+*.zip
+
 # Secrets – niemals committen!
 advanced-control/secrets.h
 

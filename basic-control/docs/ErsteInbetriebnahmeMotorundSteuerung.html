@@ -29,14 +29,14 @@
         <div class="w-full flex flex-col md:flex-row justify-between items-center gap-3">
             <div>
                 <h1 class="text-xl font-bold text-amber-500">Präziser Verdrahtungsplan: Honigschleuder</h1>
-                <p class="text-xs text-gray-400">Optimiertes Layout · State Machine: 6 Zustände · dAtA-abhängige Anlauf- &amp; Bremsrampen</p>
+                <p class="text-xs text-gray-400">Kreuzungsfreie Leitungsführung · State Machine: 6 Zustände · Anlauf- &amp; Bremsrampen je 15 s</p>
             </div>
             <div class="flex gap-2 flex-wrap">
                 <span class="bg-purple-900/50 border border-purple-500 text-purple-400 text-xs px-2.5 py-1 rounded-full font-semibold">
                     + Folientaster integriert
                 </span>
                 <span class="bg-blue-900/50 border border-blue-500 text-blue-400 text-xs px-2.5 py-1 rounded-full font-semibold">
-                    4-Relais-Setup (X1/X3/M1/M2)
+                    3-Wire-Sicherheitslogik
                 </span>
                 <span class="bg-green-900/50 border border-green-500 text-green-400 text-xs px-2.5 py-1 rounded-full font-semibold">
                     ↺ Richtungswechsel im Betrieb
@@ -45,14 +45,14 @@
         </div>
     </header>
 
-    <!-- Main Grid: Ohne maximale Breitenbegrenzung, 1/4 zu 3/4 Aufteilung -->
+    <!-- Main Grid: 1/4 zu 3/4 Aufteilung -->
     <main class="flex-grow w-full p-4 grid grid-cols-1 xl:grid-cols-4 gap-6">
         
-        <!-- Linke Spalte (Interactive Controls): Nimmt 1 von 4 Gridfeldern ein (25%) -->
+        <!-- Linke Spalte (Interactive Controls) -->
         <div class="xl:col-span-1 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col gap-5 h-fit">
             <div>
                 <h2 class="text-md font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Interaktive Simulation</h2>
-                        <p class="text-xs text-gray-400 mb-3">Simulation mit skalierten dAtA-Profilzeiten (z. B. dAtA 2: 3,0 s Anlauf), Sicherheitspause: 0,15 s. Tasten verhalten sich zustandsabhängig:</p>
+                <p class="text-xs text-gray-400 mb-3">Simulation (Rampen: 3 s statt 15 s). Tasten verhalten sich zustandsabhängig:</p>
                 
                 <div class="space-y-3">
                     <!-- Folientaster Richtung -->
@@ -114,7 +114,6 @@
                     <span id="status-text" class="text-xs font-bold">Gesperrt (X2 aus)</span>
                 </div>
                 <p id="status-desc" class="text-[11px] text-gray-400 mt-1.5">Der Wippschalter an X2 ist geöffnet. Der Motor blockiert sofort.</p>
-                <p class="text-[11px] text-gray-500 mt-1">Aktiver Datensatz (Relais 3/4): <span id="dataset-text" class="font-semibold text-amber-400">dAtA 0</span></p>
                 <!-- Ramp progress bar -->
                 <div id="ramp-section" class="hidden mt-2">
                     <div class="flex justify-between text-[10px] mb-1">
@@ -124,7 +123,7 @@
                     <div class="w-full bg-gray-700 rounded-full h-1.5">
                         <div id="ramp-bar" class="h-1.5 rounded-full bg-yellow-400" style="width:0%"></div>
                     </div>
-                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: dAtA-Zeiten skaliert (x0,30) · Reales Board: Profilzeiten aus speed_dataset.cpp</span>
+                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: 3 s · Reales Board: 15 s</span>
                 </div>
             </div>
 
@@ -134,10 +133,10 @@
                 <div class="space-y-1 text-[10px]">
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">GESPERRT</b> – X2 offen</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">STANDBY</b> – Richtung wählen, Start</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – dAtA-abhängige Rampe, Stop oder Richtungswechsel möglich</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – 15 s, Stop oder Richtungswechsel möglich</span></div>
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">LÄUFT</b> – Stop/Richtungswechsel</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – dAtA-abhängige/proportionale Rampe</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 0,15 s Sicherheitspause</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – 15 s, gesperrt</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 1.5 s Sicherheitspause</span></div>
                 </div>
             </div>
         </div>
@@ -147,12 +146,12 @@
             <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-3">
                 <h2 class="text-md font-bold text-gray-200">Elektrischer Verdrahtungsplan</h2>
                 <span class="text-xs text-amber-500 font-semibold bg-amber-950/40 border border-amber-900/60 px-2 py-0.5 rounded">
-                    Komponenten-Abstand erhöht (+60%) für klare Leitungsführung
+                    Komplett kreuzungsfreie und außenliegende Leitungsführung
                 </span>
             </div>
 
             <div class="relative w-full bg-gray-950 rounded-lg p-2 overflow-x-auto">
-                <!-- SVG Diagram (1200x820 aspect ratio - vergrößert für sauberen Platz und 60% mehr Komponenten-Abstand) -->
+                <!-- SVG Diagram (1200x820 aspect ratio - Optimiert für kreuzungsfreie Linien) -->
                 <svg id="schematic" viewBox="0 0 1200 820" class="w-full h-auto min-w-[1000px]">
                     <!-- GRID BACKDROP -->
                     <g opacity="0.02">
@@ -161,7 +160,6 @@
                     </g>
 
                     <!-- ================= ARDUINO UNO R4 WIFI ================= -->
-                    <!-- Platziert weit links oben -->
                     <g transform="translate(30, 40)">
                         <rect width="210" height="280" rx="10" fill="#1E293B" fill-opacity="0.35" stroke="#0EA5E9" stroke-width="2.5"/>
                         <text x="105" y="25" fill="#0EA5E9" font-weight="bold" font-size="12" text-anchor="middle">ARDUINO UNO R4 WIFI</text>
@@ -188,51 +186,40 @@
                             <rect x="0" y="35" width="10" height="12" fill="#3B82F6"/>
                             <circle id="pin-ard-d3" cx="5" cy="41" r="3.5" fill="#3B82F6" stroke="#FFF" stroke-width="0.75"/>
                             <text x="-12" y="45" fill="#FFF" font-size="9" text-anchor="end">D3 (Rel 2 / X3)</text>
-
-                            <!-- D4 -->
+                            
+                            <!-- D6 -->
                             <rect x="0" y="70" width="10" height="12" fill="#A855F7"/>
                             <circle id="pin-ard-d4" cx="5" cy="76" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="80" fill="#FFF" font-size="9" text-anchor="end">D4 (Rel 3 / M1)</text>
-
-                            <!-- D5 -->
+                            <text x="-12" y="80" fill="#FFF" font-size="9" text-anchor="end">D6 (Rot / Links / 3)</text>
+                            
+                            <!-- D7 -->
                             <rect x="0" y="95" width="10" height="12" fill="#A855F7"/>
                             <circle id="pin-ard-d5" cx="5" cy="101" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="105" fill="#FFF" font-size="9" text-anchor="end">D5 (Rel 4 / M2)</text>
-
-                            <!-- D6 -->
-                            <rect x="0" y="120" width="10" height="12" fill="#A855F7"/>
-                            <circle id="pin-ard-d6" cx="5" cy="126" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="130" fill="#FFF" font-size="9" text-anchor="end">D6 (Key Links)</text>
-
-                            <!-- D7 -->
-                            <rect x="0" y="145" width="10" height="12" fill="#A855F7"/>
-                            <circle id="pin-ard-d7" cx="5" cy="151" r="3.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="155" fill="#FFF" font-size="9" text-anchor="end">D7 (Key Rechts)</text>
-
+                            <text x="-12" y="105" fill="#FFF" font-size="9" text-anchor="end">D7 (Gelb / Rechts / 2)</text>
+                            
                             <!-- D8 -->
-                            <rect x="0" y="170" width="10" height="12" fill="#EF4444"/>
-                            <circle id="pin-ard-d8" cx="5" cy="176" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="180" fill="#FFF" font-size="9" text-anchor="end">D8 (Key Rot-Stop)</text>
-
+                            <rect x="0" y="130" width="10" height="12" fill="#EF4444"/>
+                            <circle id="pin-ard-d6" cx="5" cy="136" r="3.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="140" fill="#FFF" font-size="9" text-anchor="end">D8 (Key Rot-Stop)</text>
+                            
                             <!-- D9 -->
-                            <rect x="0" y="195" width="10" height="12" fill="#F59E0B"/>
-                            <circle id="pin-ard-d9" cx="5" cy="201" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="205" fill="#FFF" font-size="9" text-anchor="end">D9 (Key Gelb 1)</text>
-
+                            <rect x="0" y="155" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d7" cx="5" cy="161" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="165" fill="#FFF" font-size="9" text-anchor="end">D9 (Key Gelb 1)</text>
+                            
                             <!-- D10 -->
-                            <rect x="0" y="220" width="10" height="12" fill="#F59E0B"/>
-                            <circle id="pin-ard-d10" cx="5" cy="226" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="230" fill="#FFF" font-size="9" text-anchor="end">D10 (Key Gelb 2)</text>
-
+                            <rect x="0" y="180" width="10" height="12" fill="#F59E0B"/>
+                            <circle id="pin-ard-d8" cx="5" cy="186" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="190" fill="#FFF" font-size="9" text-anchor="end">D10 (Key Gelb 2)</text>
+                            
                             <!-- D11 -->
-                            <rect x="0" y="245" width="10" height="12" fill="#10B981"/>
-                            <circle id="pin-ard-d11" cx="5" cy="251" r="3.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="-12" y="255" fill="#FFF" font-size="9" text-anchor="end">D11 (Key Grn-Start)</text>
+                            <rect x="0" y="205" width="10" height="12" fill="#10B981"/>
+                            <circle id="pin-ard-d9" cx="5" cy="211" r="3.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"/>
+                            <text x="-12" y="215" fill="#FFF" font-size="9" text-anchor="end">11 (Key Grn-Start)</text>
                         </g>
                     </g>
 
                     <!-- ================= RELAISBOARD 1 (START) ================= -->
-                    <!-- Deutlich nach rechts gerückt -->
                     <g transform="translate(480, 40)">
                         <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#F59E0B" stroke-width="2.5"/>
                         <text x="120" y="22" fill="#F59E0B" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 1 (START)</text>
@@ -269,7 +256,6 @@
                     </g>
 
                     <!-- ================= RELAISBOARD 2 (DIRECTION) ================= -->
-                    <!-- Unter Relais 1, ebenfalls weit rechts -->
                     <g transform="translate(480, 260)">
                         <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#3B82F6" stroke-width="2.5"/>
                         <text x="120" y="22" fill="#3B82F6" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 2 (CW/CCW)</text>
@@ -305,40 +291,7 @@
                         </g>
                     </g>
 
-                    <!-- ================= RELAISBOARD 3+4 (M1/M2 DATASET) ================= -->
-                    <g transform="translate(480, 600)">
-                        <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#A855F7" stroke-width="2.5"/>
-                        <text x="120" y="22" fill="#A855F7" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 3+4 (M1/M2)</text>
-
-                        <g transform="translate(5, 60)">
-                            <circle id="pin-r34-vcc" cx="5" cy="10" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="18" y="13" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
-
-                            <circle id="pin-r34-gnd" cx="5" cy="35" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="18" y="38" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
-
-                            <circle id="pin-r3-in" cx="5" cy="60" r="4.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="18" y="63" fill="#A855F7" font-size="9" font-weight="bold">IN1 (M1)</text>
-
-                            <circle id="pin-r4-in" cx="5" cy="85" r="4.5" fill="#A855F7" stroke="#FFF" stroke-width="0.75"/>
-                            <text x="18" y="88" fill="#A855F7" font-size="9" font-weight="bold">IN2 (M2)</text>
-                        </g>
-
-                        <g transform="translate(160, 35)">
-                            <rect width="70" height="120" rx="4" fill="#0284C7"/>
-                            <circle id="pin-r3-no" cx="40" cy="25" r="5" fill="#A855F7" stroke="#FFF" stroke-width="1"/>
-                            <text x="20" y="29" fill="#FFF" font-size="8" text-anchor="end">NO1</text>
-                            <circle id="pin-r3-com" cx="40" cy="50" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"/>
-                            <text x="20" y="54" fill="#FFF" font-size="8" text-anchor="end">COM1</text>
-                            <circle id="pin-r4-no" cx="40" cy="80" r="5" fill="#A855F7" stroke="#FFF" stroke-width="1"/>
-                            <text x="20" y="84" fill="#FFF" font-size="8" text-anchor="end">NO2</text>
-                            <circle id="pin-r4-com" cx="40" cy="105" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"/>
-                            <text x="20" y="109" fill="#FFF" font-size="8" text-anchor="end">COM2</text>
-                        </g>
-                    </g>
-
                     <!-- ================= FOLIENTASTER 1: RICHTUNG (3 PIN) ================= -->
-                    <!-- Tief platziert für klare Kabelwege nach oben -->
                     <g transform="translate(30, 400)">
                         <rect width="180" height="110" rx="6" fill="#111827" fill-opacity="0.35" stroke="#A855F7" stroke-width="2"/>
                         <text x="90" y="20" fill="#A855F7" font-weight="bold" font-size="10" text-anchor="middle">FOLIEN-RICHTUNGSTASTER</text>
@@ -349,7 +302,7 @@
                         <circle cx="135" cy="50" r="14" fill="#3B82F6" stroke="#93C5FD" stroke-width="1.2"/>
                         <text x="135" y="53" fill="#FFF" font-weight="bold" font-size="9" text-anchor="middle">▶</text>
 
-                        <!-- Terminal Pins -->
+                        <!-- Terminal Pins (Am unteren Rand) -->
                         <g transform="translate(45, 95)">
                             <circle id="pin-f1-gnd" cx="0" cy="0" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
                             <text x="0" y="-10" fill="#9CA3AF" font-size="8" text-anchor="middle">GND</text>
@@ -380,7 +333,7 @@
                         <circle cx="170" cy="52" r="11" fill="#10B981"/>
                         <text x="170" y="55" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">GRN</text>
 
-                        <!-- Connector Pins -->
+                        <!-- Connector Pins (Am unteren Rand) -->
                         <g transform="translate(25, 105)">
                             <circle id="pin-f2-gnd" cx="0" cy="0" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"/>
                             <text x="0" y="-10" fill="#9CA3AF" font-size="8" text-anchor="middle">GND</text>
@@ -400,7 +353,6 @@
                     </g>
 
                     <!-- ================= WAGO KLEMME (C0 BUS) ================= -->
-                    <!-- In die geometrische Mitte gerückt für saubere Sternverdrahtung -->
                     <g transform="translate(480, 480)">
                         <rect width="240" height="90" rx="6" fill="#F97316" fill-opacity="0.35" stroke="#C2410C" stroke-width="2"/>
                         <text x="120" y="24" fill="#FFF" font-weight="bold" font-size="11" text-anchor="middle">C0-BUS (WAGO 5-fach)</text>
@@ -414,7 +366,7 @@
                         </g>
                     </g>
 
-                    <!-- ================= MANUAL SWITCH (WIPPSCHALTER) ================= -->
+                    <!-- ================= MANUAL SWITCH (WIPPSCHALTER X2) ================= -->
                     <g id="switch-graphic" class="cursor-pointer" onclick="toggleX2()" transform="translate(860, 480)">
                         <rect width="240" height="80" rx="6" fill="#111827" fill-opacity="0.35" stroke="#9CA3AF" stroke-width="2"/>
                         <text x="120" y="22" fill="#9CA3AF" font-weight="bold" font-size="11" text-anchor="middle">MANUELLER WIPPSCHALTER (X2)</text>
@@ -426,10 +378,9 @@
                         <text id="switch-text-val" x="120" y="55" fill="#EF4444" font-weight="bold" font-size="12" text-anchor="middle">AUS (Gesperrt)</text>
                     </g>
 
-                    <!-- ================= ORIENTAL MOTOR DRIVER ================= -->
-                    <!-- Weit rechts platziert, separiert durch großen Freiraum -->
+                    <!-- ================= ORIENTAL MOTOR DRIVER (Vergrößert) ================= -->
                     <g transform="translate(860, 40)">
-                        <rect width="300" height="360" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"/>
+                        <rect width="300" height="380" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"/>
                         <text x="150" y="25" fill="#10B981" font-weight="bold" font-size="13" text-anchor="middle">ORIENTAL MOTOR BLF</text>
                         <text x="150" y="42" fill="#86EFAC" font-size="10" text-anchor="middle">Steuerungsklemmen (Control I/O)</text>
                         
@@ -453,113 +404,95 @@
                             <text x="35" y="132" fill="#FFF" font-weight="bold" font-size="12">X3</text>
                             <text x="75" y="132" fill="#9CA3AF" font-size="10">CW/CCW</text>
 
-                            <!-- M1 -->
-                            <rect x="0" y="165" width="85" height="35" rx="3" stroke="#4B5563"/>
-                            <circle id="pin-driver-m1" cx="15" cy="182.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
-                            <text x="36" y="187" fill="#FFF" font-weight="bold" font-size="11">M1</text>
-                            <text x="95" y="187" fill="#9CA3AF" font-size="10">dAtA Bit 0</text>
-
-                            <!-- M2 -->
-                            <rect x="0" y="220" width="85" height="35" rx="3" stroke="#4B5563"/>
-                            <circle id="pin-driver-m2" cx="15" cy="237.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
-                            <text x="36" y="242" fill="#FFF" font-weight="bold" font-size="11">M2</text>
-                            <text x="95" y="242" fill="#9CA3AF" font-size="10">dAtA Bit 1</text>
-
                             <!-- IN-COM -->
-                            <rect x="0" y="275" width="85" height="35" rx="3" stroke="#4B5563"/>
-                            <circle id="pin-driver-incom" cx="15" cy="292.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
-                            <text x="32" y="297" fill="#FFF" font-weight="bold" font-size="11">IN-COM</text>
-                            <text x="95" y="297" fill="#9CA3AF" font-size="10">MASSE</text>
+                            <rect x="0" y="165" width="85" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-incom" cx="15" cy="182.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="32" y="187" fill="#FFF" font-weight="bold" font-size="11">IN-COM</text>
+                            <text x="95" y="187" fill="#9CA3AF" font-size="10">MASSE</text>
+
+                            <!-- X0 (Sicher umschlossen durch verlängertes Gehäuse) -->
+                            <rect x="0" y="220" width="85" height="35" rx="3" stroke="#4B5563"/>
+                            <circle id="pin-driver-x0" cx="15" cy="237.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"/>
+                            <text x="32" y="242" fill="#FFF" font-weight="bold" font-size="11">X0</text>
+                            <text x="95" y="242" fill="#9CA3AF" font-size="10">Error Port</text>
                         </g>
                     </g>
 
-                    <!-- ================= WIRES (STRINGS) - EXAKTE ZENTRIERUNG ================= -->
-                    <!-- Power Bus (VCC) Daisy-Chain to Relays -->
-                    <!-- Von Arduino Pin (35, 96) zu Relais 1 DC+ (485, 120) -->
-                    <path class="wire" d="M 35,96 L 250,96 L 250,120 L 485,120" fill="none" stroke="#EF4444" stroke-width="1.5" />
-                    <!-- Brücke zu Relais 2 DC+ (485, 340) -->
+                    <!-- ================= WIRES (STRINGS) - KREUZUNGSFREI & AUßENLIEGEND ================= -->
+                    
+                    <!-- 5V Rail (VCC) - Über die Oberseite des Arduino verlegt -->
+                    <path class="wire" d="M 35,96 L 15,96 L 15,20 L 250,20 L 250,120 L 485,120" fill="none" stroke="#EF4444" stroke-width="1.5" />
+                    <!-- Brücke zu Relais 2 DC+ -->
                     <path class="wire" d="M 250,120 L 250,340 L 485,340" fill="none" stroke="#EF4444" stroke-width="1.5" />
-                    <!-- Brücke zu Relais 3+4 DC+ (485, 670) -->
-                    <path class="wire" d="M 250,340 L 250,670 L 485,670" fill="none" stroke="#EF4444" stroke-width="1.5" />
                     <circle cx="250" cy="120" r="3.5" fill="#EF4444" />
                     
-                    <!-- Ground Rail (GND) to Relays -->
-                    <!-- Von Arduino Pin (35, 126) zu Relais 1 DC- (485, 145) -->
-                    <path class="wire" d="M 35,126 L 265,126 L 265,145 L 485,145" fill="none" stroke="#4B5563" stroke-width="1.5" />
-                    <!-- Brücke zu Relais 2 DC- (485, 365) -->
+                    <!-- Ground Rail (GND) - Weit über die Oberseite des Arduino verlegt -->
+                    <path class="wire" d="M 35,126 L 10,126 L 10,10 L 265,10 L 265,145 L 485,145" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    <!-- Brücke zu Relais 2 DC- -->
                     <path class="wire" d="M 265,145 L 265,365 L 485,365" fill="none" stroke="#4B5563" stroke-width="1.5" />
-                    <!-- Brücke zu Relais 3+4 DC- (485, 695) -->
-                    <path class="wire" d="M 265,365 L 265,695 L 485,695" fill="none" stroke="#4B5563" stroke-width="1.5" />
                     <circle cx="265" cy="145" r="3.5" fill="#4B5563" />
 
-                    <!-- GND to Membrane Keypads -->
-                    <!-- Leitung vom Massestützpunkt (265, 365) runter zu Keypad 1 GND (75, 495) -->
-                    <path class="wire" d="M 265,365 L 265,385 L 75,385 L 75,495" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    <!-- GND zu Folientaster 1 (Unten herum geführt) -->
+                    <path class="wire" d="M 265,365 L 265,520 L 75,520 L 75,495" fill="none" stroke="#4B5563" stroke-width="1.5" />
                     <circle cx="265" cy="365" r="3.5" fill="#4B5563" />
-                    <!-- Brücke von Keypad 1 GND (75, 495) zu Keypad 2 GND (55, 665) -->
-                    <path class="wire" d="M 75,495 L 55,495 L 55,665" fill="none" stroke="#4B5563" stroke-width="1.5" />
+                    
+                    <!-- Brücke von Folientaster 1 GND zu Folientaster 2 GND (Sicher um Taster 2 herum) -->
+                    <path class="wire" d="M 75,495 L 75,520 L 15,520 L 15,700 L 55,700 L 55,665" fill="none" stroke="#4B5563" stroke-width="1.5" />
 
                     <!-- Trigger D2 -> Relais 1 IN -->
-                    <!-- Von Pin D2 (230, 106) direkt zu Relais 1 IN (485, 170) -->
                     <path class="wire" d="M 230,106 L 285,106 L 285,170 L 485,170" fill="none" stroke="#F59E0B" stroke-width="1.8" />
                     
                     <!-- Trigger D3 -> Relais 2 IN -->
-                    <!-- Von Pin D3 (230, 131) direkt zu Relais 2 IN (485, 390) -->
                     <path class="wire" d="M 230,131 L 295,131 L 295,390 L 485,390" fill="none" stroke="#3B82F6" stroke-width="1.8" />
 
-                    <!-- Trigger D4/D5 -> Relais 3/4 IN (M1/M2) -->
-                    <path class="wire" d="M 230,166 L 305,166 L 305,730 L 485,730" fill="none" stroke="#A855F7" stroke-width="1.8" />
-                    <path class="wire" d="M 230,191 L 315,191 L 315,755 L 485,755" fill="none" stroke="#A855F7" stroke-width="1.8" />
+                    <!-- Folientaster 1 -> Arduino Digital Pins (Unten herum geführt) -->
+                    <!-- Pin D6 zu Taster 1 Links -->
+                    <path class="wire" d="M 230,166 L 315,166 L 315,530 L 120,530 L 120,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+                    <!-- Pin D7 zu Taster 1 Rechts -->
+                    <path class="wire" d="M 230,191 L 325,191 L 325,540 L 165,540 L 165,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
 
-                    <!-- Keypad 1 -> Arduino Digital Pins -->
-                    <!-- Pin D6 (230, 216) zu Keypad 1 Links (120, 495) -->
-                    <path class="wire" d="M 230,216 L 315,216 L 315,375 L 120,375 L 120,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
-                    <!-- Pin D7 (230, 241) zu Keypad 1 Rechts (165, 495) -->
-                    <path class="wire" d="M 230,241 L 325,241 L 325,365 L 165,365 L 165,495" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+                    <!-- Folientaster 2 -> Arduino Digital Pins (Unter dem Gehäuse als Bus verlegt) -->
+                    <!-- Pin D8 zu Keypad 2 Rot -->
+                    <path class="wire" d="M 230,226 L 335,226 L 335,710 L 95,710 L 95,665" fill="none" stroke="#EF4444" stroke-width="1.5"/>
+                    <!-- Pin D9 zu Keypad 2 Gelb 1 -->
+                    <path class="wire" d="M 230,251 L 345,251 L 345,720 L 135,720 L 135,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+                    <!-- Pin D10 zu Keypad 2 Gelb 2 -->
+                    <path class="wire" d="M 230,276 L 355,276 L 355,730 L 175,730 L 175,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+                    <!-- Pin D11 zu Keypad 2 Grün -->
+                    <path class="wire" d="M 230,301 L 365,301 L 365,740 L 215,740 L 215,665" fill="none" stroke="#10B981" stroke-width="1.5"/>
 
-                    <!-- Keypad 2 -> Arduino Digital Pins -->
-                    <!-- Pin D8 (230, 266) zu Keypad 2 Rot (95, 665) -->
-                    <path class="wire" d="M 230,266 L 335,266 L 335,610 L 95,610 L 95,665" fill="none" stroke="#EF4444" stroke-width="1.5"/>
-                    <!-- Pin D9 (230, 291) zu Keypad 2 Gelb 1 (135, 665) -->
-                    <path class="wire" d="M 230,291 L 345,291 L 345,620 L 135,620 L 135,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
-                    <!-- Pin D10 (230, 316) zu Keypad 2 Gelb 2 (175, 665) -->
-                    <path class="wire" d="M 230,316 L 355,316 L 355,630 L 175,630 L 175,665" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
-                    <!-- Pin D11 (230, 341) zu Keypad 2 Grün (215, 665) -->
-                    <path class="wire" d="M 230,341 L 365,341 L 365,640 L 215,640 L 215,665" fill="none" stroke="#10B981" stroke-width="1.5"/>
-
-                    <!-- SWITCHING TERMINALS TO C0 BUS (WAGO) -->
-                    <!-- Relais COM 1 (707.5, 130) zu Wago Contact 1 (520, 547) -->
-                    <path id="wire-rel1-com" class="wire" d="M 707.5,130 L 760,130 L 760,450 L 520,450 L 520,547" fill="none" stroke="#F97316" stroke-width="2"/>
-                    <!-- Relais COM 2 (707.5, 350) zu Wago Contact 2 (560, 547) -->
-                    <path id="wire-rel2-com" class="wire" d="M 707.5,350 L 750,350 L 750,460 L 560,460 L 560,547" fill="none" stroke="#F97316" stroke-width="2"/>
-                    <!-- Wippschalter Contact 1 (910, 530) zu Wago Contact 3 (600, 547) -->
-                    <path id="wire-switch-com" class="wire" d="M 910,530 L 800,530 L 800,470 L 600,470 L 600,547" fill="none" stroke="#F97316" stroke-width="2"/>
+                    <!-- SCHALT-KONTAKTE ZUR WAGO-KLEMME (Von unten eingeführt) -->
+                    <!-- Relais COM 1 zu Wago Anschluss 1 -->
+                    <path id="wire-rel1-com" class="wire" d="M 707.5,130 L 760,130 L 760,590 L 520,590 L 520,547" fill="none" stroke="#F97316" stroke-width="2"/>
+                    <!-- Relais COM 2 zu Wago Anschluss 2 -->
+                    <path id="wire-rel2-com" class="wire" d="M 707.5,350 L 750,350 L 750,600 L 560,600 L 560,547" fill="none" stroke="#F97316" stroke-width="2"/>
+                    <!-- Wippschalter Anschluss 1 zu Wago Anschluss 3 -->
+                    <path id="wire-switch-com" class="wire" d="M 910,530 L 800,530 L 800,610 L 600,610 L 600,547" fill="none" stroke="#F97316" stroke-width="2"/>
                     
-                    <!-- Main Return Loop: Driver IN-COM (890, 332.5) zu Wago Contact 5 (680, 547) -->
-                    <path class="wire" d="M 890,332.5 L 815,332.5 L 815,480 L 680,480 L 680,547" fill="none" stroke="#10B981" stroke-width="2.5"/>
+                    <!-- Haupt-Rückleiter: Driver IN-COM zu Wago Anschluss 5 -->
+                    <path class="wire" d="M 905,297.5 L 815,297.5 L 815,620 L 680,620 L 680,547" fill="none" stroke="#10B981" stroke-width="2.5"/>
 
-                    <!-- RELAIS NO CONTACTS TO DRIVER -->
-                    <!-- Relais 1 NO (707.5, 100) zu Driver X1 (890, 132.5) -->
+                    <!-- Brücke X0 zu IN-COM zur dauerhaften Freigabe (Error-Bypass) -->
+                    <path class="wire wire-active" d="M 905,352.5 L 905,297.5" fill="none" stroke="#10B981" stroke-width="2" />
+                    <circle cx="905" cy="297.5" r="3.5" fill="#10B981" />
+                    <circle cx="905" cy="352.5" r="3.5" fill="#10B981" />
+
+                    <!-- RELAIS-AUSGÄNGE ZUM TREIBER -->
+                    <!-- Relais 1 NO -> Driver X1 -->
                     <path id="wire-x1" class="wire" d="M 707.5,100 L 825,100 L 825,132.5 L 890,132.5" fill="none" stroke="#EF4444" stroke-width="2.5"/>
-                    <!-- Relais 2 NO (707.5, 320) zu Driver X3 (890, 242.5) -->
+                    <!-- Relais 2 NO -> Driver X3 -->
                     <path id="wire-x3" class="wire" d="M 707.5,320 L 780,320 L 780,242.5 L 890,242.5" fill="none" stroke="#3B82F6" stroke-width="2.5"/>
-                    <!-- Wippschalter Contact 2 (1050, 530) zu Driver X2 (890, 187.5) -->
-                    <path id="wire-x2" class="wire" d="M 1050,530 L 1110,530 L 1110,187.5 L 890,187.5" fill="none" stroke="#10B981" stroke-width="2.5"/>
-
-                    <!-- Relais 3/4 NO zu Driver M1/M2 -->
-                    <path id="wire-m1" class="wire" d="M 680,660 L 790,660 L 790,297.5 L 890,297.5" fill="none" stroke="#A855F7" stroke-width="2.5"/>
-                    <path id="wire-m2" class="wire" d="M 680,715 L 800,715 L 800,352.5 L 890,352.5" fill="none" stroke="#A855F7" stroke-width="2.5"/>
-
+                    <!-- Wippschalter Anschluss 2 -> Driver X2 (Unter Schalter und links am Motor vorbei) -->
+                    <path id="wire-x2" class="wire" d="M 1050,530 L 1050,580 L 830,580 L 830,187.5 L 890,187.5" fill="none" stroke="#10B981" stroke-width="2.5"/>
                 </svg>
             </div>
 
             <!-- Notes Section -->
             <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
-                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (dAtA-abhängig):</strong> Die Rampenzeiten folgen den Profilen aus speed_dataset.cpp (z. B. dAtA 2: Ac 10,0 s / dc 2,0 s; dAtA 4: Ac 8,0 s / dc 1,5 s). Die Simulation skaliert diese Zeiten, behält aber die Relationen bei.</p>
-                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe (aus aktuellem Rampenfortschritt) → Sicherheitspause (0,15 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe mit gewähltem dAtA-Profil.</p>
-                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
-                <p><strong class="text-purple-400">Binary-Speed Relais:</strong> D4 (M1) und D5 (M2) bilden dAtA 0/2/4/6 ab. Gelb 1 waehlt dAtA 2, Gelb 2 waehlt dAtA 4; in Standby bleibt dAtA 0 aktiv.</p>
-                <p><strong class="text-amber-500">Verteilte Positionen:</strong> Steuerungsmodule (links) → Relais (Mitte) → Motor-Treiber (rechts) – keine Kabelkreuzungen.</p>
+                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (15 s):</strong> Die Rampenzeiten entsprechen den Treiber-Parametern (dEC/ACC). Der Arduino wartet diese Zeit ab, bevor er den nächsten Zustand einleitet.</p>
+                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (1,5 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
+                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D4–D9 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
+                <p><strong class="text-amber-500">Geometrische Entflechtung:</strong> Die Leitungen der Folientaster wurden komplett nach unten aus den Gehäusen herausgeleitet. Spannungsversorgungen fließen über die Oberseite des Controllers hinweg. Keine Überschneidungen mit Beschriftungen oder aktiven Bauteilen!</p>
             </div>
         </div>
     </main>
@@ -567,7 +500,7 @@
     <!-- Pin Out tables / Documentation -->
     <section class="w-full px-4 pb-8">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg">
-            <h2 class="text-sm font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Verkabelungsliste mit Folientastern und 4 Relais</h2>
+            <h2 class="text-sm font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Verkabelungsliste mit den neuen Keypads</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-gray-300">
                     <thead class="bg-gray-900 uppercase text-gray-400">
@@ -580,18 +513,6 @@
                     </thead>
                     <tbody class="divide-y divide-gray-700">
                         <tr>
-                            <td class="p-2 font-semibold text-blue-400">Arduino Relais 3 (M1)</td>
-                            <td class="p-2">D4 (OUTPUT)</td>
-                            <td class="p-2">Relais IN1 → Treiber M1</td>
-                            <td class="p-2">dAtA-Bit 0 (Binary-Speed Mapping)</td>
-                        </tr>
-                        <tr>
-                            <td class="p-2 font-semibold text-blue-400">Arduino Relais 4 (M2)</td>
-                            <td class="p-2">D5 (OUTPUT)</td>
-                            <td class="p-2">Relais IN2 → Treiber M2</td>
-                            <td class="p-2">dAtA-Bit 1 (Binary-Speed Mapping)</td>
-                        </tr>
-                        <tr>
                             <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Richtung)</td>
                             <td class="p-2">Pin 1 (Masse)</td>
                             <td class="p-2">Arduino <strong class="text-gray-300">GND</strong> (Masserückleitung)</td>
@@ -600,13 +521,13 @@
                         <tr>
                             <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Links)</td>
                             <td class="p-2">Pin 2</td>
-                            <td class="p-2">Arduino <strong class="text-purple-300">D6</strong></td>
+                            <td class="p-2">Arduino <strong class="text-purple-300">D4</strong></td>
                             <td class="p-2">Standby: Linkslauf (CCW) vorwählen · Im Betrieb (CW): Richtungswechsel → Bremsrampe → Auto-Neustart CCW</td>
                         </tr>
                         <tr>
                             <td class="p-2 font-semibold text-purple-400">Folientaster 1 (Rechts)</td>
                             <td class="p-2">Pin 3</td>
-                            <td class="p-2">Arduino <strong class="text-purple-300">D7</strong></td>
+                            <td class="p-2">Arduino <strong class="text-purple-300">D5</strong></td>
                             <td class="p-2">Standby: Rechtslauf (CW) vorwählen · Im Betrieb (CCW): Richtungswechsel → Bremsrampe → Auto-Neustart CW</td>
                         </tr>
                         <tr class="bg-gray-900/30">
@@ -618,26 +539,26 @@
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Rot)</td>
                             <td class="p-2">Pin 2</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D8</strong></td>
-                            <td class="p-2">STOP – aktiv in ANLAUFEN &amp; LÄUFT: dAtA-abhängige Bremsrampe (im ANLAUF proportional) → Standby</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D6</strong></td>
+                            <td class="p-2">STOP – aktiv in ANLAUFEN &amp; LÄUFT: Bremsrampe (15 s) → Standby</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 1)</td>
                             <td class="p-2">Pin 3</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D9</strong></td>
-                            <td class="p-2">Programmtaster 1: dAtA 2 (M1=ON, M2=OFF)</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D7</strong></td>
+                            <td class="p-2">Programmtaster 1 / Geschwindigkeit 1</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Gelb 2)</td>
                             <td class="p-2">Pin 4</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D10</strong></td>
-                            <td class="p-2">Programmtaster 2: dAtA 4 (M1=OFF, M2=ON)</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D8</strong></td>
+                            <td class="p-2">Programmtaster 2 / Geschwindigkeit 2</td>
                         </tr>
                         <tr class="bg-gray-900/30">
                             <td class="p-2 font-semibold text-emerald-400">Folientaster 2 (Grün)</td>
                             <td class="p-2">Pin 5</td>
-                            <td class="p-2">Arduino <strong class="text-emerald-300">D11</strong></td>
-                            <td class="p-2">START – in STANDBY: REL1 (X1) AN → dAtA-abhängige Anlauframpe → LÄUFT; in LÄUFT: setzt Modus 1 (dAtA 2 / langsamer)</td>
+                            <td class="p-2">Arduino <strong class="text-emerald-300">D9</strong></td>
+                            <td class="p-2">START – nur in STANDBY: REL1 (X1) AN → Anlauframpe 15 s → LÄUFT</td>
                         </tr>
                     </tbody>
                 </table>
@@ -647,73 +568,20 @@
 
     <!-- Simulation Script – 6-state machine matching demo/main.cpp -->
     <script>
-        // ── Ramp durations (scaled from firmware dAtA profiles) ─────────────────
-        // Scale factor keeps simulation responsive while preserving profile ratios.
-        const SIM_TIME_SCALE = 0.30;
-        const SIM_MIN_RAMP_MS = 100;
-        const SIM_WARTE_MS  = 150;
-
-        const DATASET_PROFILES = {
-            'dAtA 0': { targetRpm:  750, accelMs: 15000, decelMs: 2500 },
-            'dAtA 2': { targetRpm: 1500, accelMs: 10000, decelMs: 2000 },
-            'dAtA 4': { targetRpm: 2250, accelMs:  8000, decelMs: 1500 },
-            'dAtA 6': { targetRpm:    0, accelMs:   200, decelMs:  200 },
-        };
+        // ── Ramp durations (scaled for simulation: 3 s instead of real 15 s) ────
+        const SIM_ANLAUF_MS = 3000;
+        const SIM_BREMS_MS  = 3000;
+        const SIM_WARTE_MS  = 600;
 
         // ── State ────────────────────────────────────────────────────────────────
         // LOCKED | STANDBY | ACCELERATING | RUNNING_CW | RUNNING_CCW | DECELERATING | WAITING
         let simState    = 'LOCKED';
         let targetDir   = 'CW';    // 'CW' or 'CCW'
         let pendingAuto = false;
-        let selectedRunDataset = 'dAtA 2';
-        let decelFromDataset   = 'dAtA 2';
-        let rampStartProgress  = 0.0;
         let rampHandle  = null;
         let rampStartMs = 0;
         let rampTotalMs = 0;
         let rafHandle   = null;
-
-        function clamp01(v) {
-            return Math.max(0, Math.min(1, v));
-        }
-
-        function profileForDataset(dataset) {
-            return DATASET_PROFILES[dataset] || DATASET_PROFILES['dAtA 0'];
-        }
-
-        function toSimMs(realMs) {
-            return Math.max(SIM_MIN_RAMP_MS, Math.round(realMs * SIM_TIME_SCALE));
-        }
-
-        function effectiveAccelRealMs(dataset, fromProgress) {
-            const p = profileForDataset(dataset);
-            return Math.max(100, Math.round((1 - clamp01(fromProgress)) * p.accelMs));
-        }
-
-        function effectiveDecelRealMs(dataset, fromProgress) {
-            const p = profileForDataset(dataset);
-            return Math.max(100, Math.round(clamp01(fromProgress) * p.decelMs));
-        }
-
-        function currentRampRatio() {
-            if (rampTotalMs <= 0) return 0;
-            const elapsed = Math.min(Date.now() - rampStartMs, rampTotalMs);
-            return clamp01(elapsed / rampTotalMs);
-        }
-
-        function getRampProgressNow() {
-            const ratio = currentRampRatio();
-            if (simState === 'ACCELERATING') {
-                return clamp01(rampStartProgress + ratio * (1 - rampStartProgress));
-            }
-            if (simState === 'DECELERATING') {
-                return clamp01(rampStartProgress * (1 - ratio));
-            }
-            if (simState === 'RUNNING_CW' || simState === 'RUNNING_CCW') {
-                return 1;
-            }
-            return 0;
-        }
 
         function clearTimers() {
             if (rampHandle) { clearTimeout(rampHandle); rampHandle = null; }
@@ -730,7 +598,7 @@
 
         function animateBar() {
             const elapsed = Math.min(Date.now() - rampStartMs, rampTotalMs);
-            const pct = rampTotalMs > 0 ? Math.round((elapsed / rampTotalMs) * 100) : 0;
+            const pct = Math.round((elapsed / rampTotalMs) * 100);
             const bar  = document.getElementById('ramp-bar');
             const pctEl = document.getElementById('ramp-pct');
             if (bar)   bar.style.width = pct + '%';
@@ -750,11 +618,11 @@
         const STATE_UI = {
             LOCKED:       { color:'red',    ping:true,  text:'Gesperrt (X2 aus)',     desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' },
             STANDBY:      { color:'amber',  ping:false, text:'Standby – Bereit',       desc:'Richtung wählen (LINKS/RECHTS), dann GRÜN drücken.' },
-            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft dAtA-abhängig. STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
-            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW. GRÜN setzt Modus 1 (dAtA 2).' },
-            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW. GRÜN setzt Modus 1 (dAtA 2).' },
-            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft dAtA-abhängig/proportional. START kann manuell neu anlaufen (ohne Auto-Neustart).' },
-            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (0,15 s).' },
+            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft (15 s). STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
+            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW.' },
+            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW.' },
+            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft (15 s). Alle Eingaben gesperrt.' },
+            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (1,5 s).' },
         };
         const COLOR_MAP = {
             red:    { box:'text-red-500',    ping:'bg-red-400',    dot:'bg-red-500',    bar:'bg-red-400'    },
@@ -764,47 +632,26 @@
             orange: { box:'text-orange-400', ping:'bg-orange-400', dot:'bg-orange-400', bar:'bg-orange-400' },
         };
 
-        function activeDataset() {
-            if (simState === 'LOCKED' || simState === 'STANDBY') return 'dAtA 0';
-            if (simState === 'DECELERATING' || simState === 'WAITING') return decelFromDataset;
-            return selectedRunDataset;
-        }
-
-        function relayBitsForDataset(dataset) {
-            if (dataset === 'dAtA 2') return { m1: true, m2: false };
-            if (dataset === 'dAtA 4') return { m1: false, m2: true };
-            if (dataset === 'dAtA 6') return { m1: true, m2: true };
-            return { m1: false, m2: false };
-        }
-
         function updateUI() {
             const ui = STATE_UI[simState] || STATE_UI.LOCKED;
             const c  = COLOR_MAP[ui.color];
-            const dataset = activeDataset();
-            const bits = relayBitsForDataset(dataset);
 
             document.getElementById('status-box').className  = 'flex items-center gap-2 ' + c.box;
-            document.getElementById('status-ping').className = ui.ping
-                ? 'animate-ping absolute inline-flex h-full w-full rounded-full ' + c.ping + ' opacity-75' : '';
+            if (document.getElementById('status-ping')) {
+                document.getElementById('status-ping').className = ui.ping
+                    ? 'animate-ping absolute inline-flex h-full w-full rounded-full ' + c.ping + ' opacity-75' : '';
+            }
             document.getElementById('status-dot').className  = 'relative inline-flex rounded-full h-2.5 w-2.5 ' + c.dot;
             document.getElementById('status-text').textContent = ui.text;
             document.getElementById('status-desc').textContent = ui.desc;
-            document.getElementById('dataset-text').textContent = dataset;
 
             // Ramp progress bar
             const rs = document.getElementById('ramp-section');
             const isRamping = ['ACCELERATING','DECELERATING','WAITING'].includes(simState);
             rs.classList.toggle('hidden', !isRamping);
             if (isRamping) {
-                let label = 'Sicherheitspause';
-                if (simState === 'ACCELERATING') {
-                    const realMs = effectiveAccelRealMs(selectedRunDataset, rampStartProgress);
-                    label = `Anlauframpe ${selectedRunDataset} (real ${(realMs / 1000).toFixed(2)} s)`;
-                } else if (simState === 'DECELERATING') {
-                    const realMs = effectiveDecelRealMs(decelFromDataset, rampStartProgress);
-                    label = `Bremsrampe ${decelFromDataset} (real ${(realMs / 1000).toFixed(2)} s)`;
-                }
-                document.getElementById('ramp-label').textContent = label;
+                const labels = { ACCELERATING:'Anlauframpe (15 s)', DECELERATING:'Bremsrampe (15 s)', WAITING:'Sicherheitspause' };
+                document.getElementById('ramp-label').textContent = labels[simState];
                 document.getElementById('ramp-bar').className = 'h-1.5 rounded-full ' + c.bar;
             }
 
@@ -814,8 +661,6 @@
             const x1on = ['ACCELERATING','RUNNING_CW','RUNNING_CCW'].includes(simState);
             setWire('wire-x1', x1on, '#EF4444');
             setWire('wire-x3', targetDir === 'CCW', '#3B82F6');
-            setWire('wire-m1', bits.m1, '#A855F7');
-            setWire('wire-m2', bits.m2, '#A855F7');
 
             // X2 hardware switch visual
             const btnX2   = document.getElementById('btn-x2');
@@ -835,23 +680,18 @@
         }
 
         // ── Transitions ──────────────────────────────────────────────────────────
-        function goDecelerating(autoRestart, fromProgress) {
+        function goDecelerating(autoRestart) {
             clearTimers();
             pendingAuto = autoRestart;
-            decelFromDataset = activeDataset();
-            rampStartProgress = clamp01(typeof fromProgress === 'number' ? fromProgress : 1.0);
             simState    = 'DECELERATING';
             updateUI();
-            startRamp(toSimMs(effectiveDecelRealMs(decelFromDataset, rampStartProgress)), () => {
+            startRamp(SIM_BREMS_MS, () => {
                 document.getElementById('ramp-bar').style.width = '100%';
                 simState = 'WAITING'; updateUI();
                 startRamp(SIM_WARTE_MS, () => {
                     if (pendingAuto) {
-                        simState = 'ACCELERATING';
-                        rampStartProgress = 0.0;
-                        pendingAuto = false;
-                        updateUI();
-                        startRamp(toSimMs(effectiveAccelRealMs(selectedRunDataset, rampStartProgress)), () => {
+                        simState = 'ACCELERATING'; pendingAuto = false; updateUI();
+                        startRamp(SIM_ANLAUF_MS, () => {
                             simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
                             updateUI();
                         });
@@ -862,11 +702,10 @@
             });
         }
 
-        function goAccelerating(fromProgress = 0) {
+        function goAccelerating() {
             clearTimers(); pendingAuto = false;
-            rampStartProgress = clamp01(fromProgress);
             simState = 'ACCELERATING'; updateUI();
-            startRamp(toSimMs(effectiveAccelRealMs(selectedRunDataset, rampStartProgress)), () => {
+            startRamp(SIM_ANLAUF_MS, () => {
                 simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
                 updateUI();
             });
@@ -880,71 +719,22 @@
         }
         function pressLinks() {
             if      (simState === 'STANDBY')                          { targetDir = 'CCW'; updateUI(); }
-            else if (simState === 'RUNNING_CW')                       { targetDir = 'CCW'; goDecelerating(true, 1.0); }
-            else if (simState === 'ACCELERATING' && targetDir === 'CW') { targetDir = 'CCW'; goDecelerating(true, getRampProgressNow()); }
-            // RUNNING_CCW / already-CCW-ramp / decel/wait → no-op
+            else if (simState === 'RUNNING_CW')                       { targetDir = 'CCW'; goDecelerating(true); }
+            else if (simState === 'ACCELERATING' && targetDir === 'CW') { targetDir = 'CCW'; goDecelerating(true); }
         }
         function pressRechts() {
             if      (simState === 'STANDBY')                            { targetDir = 'CW'; updateUI(); }
-            else if (simState === 'RUNNING_CCW')                        { targetDir = 'CW'; goDecelerating(true, 1.0); }
-            else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true, getRampProgressNow()); }
+            else if (simState === 'RUNNING_CCW')                        { targetDir = 'CW'; goDecelerating(true); }
+            else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true); }
         }
         function pressGruen() {
-            if (simState === 'STANDBY') {
-                goAccelerating();
-                return;
-            }
-
-            if (simState === 'DECELERATING' && !pendingAuto) {
-                goAccelerating(getRampProgressNow());
-                return;
-            }
-
-            // Match firmware: pressing START while already running forces Mode 1 (dAtA 2).
-            if (simState === 'RUNNING_CW' || simState === 'RUNNING_CCW') {
-                selectedRunDataset = 'dAtA 2';
-                console.log('[SIM] START in RUNNING -> Modus 1 (dAtA 2)');
-                updateUI();
-            }
+            if (simState === 'STANDBY') { goAccelerating(); }
         }
         function pressRot() {
-            if (simState === 'RUNNING_CW' || simState === 'RUNNING_CCW') {
-                goDecelerating(false, 1.0);
-                return;
-            }
-
-            if (simState === 'ACCELERATING') {
-                goDecelerating(false, getRampProgressNow());
-                return;
-            }
-
-            if (simState === 'DECELERATING' && pendingAuto) {
-                pendingAuto = false;
-                updateUI();
-            }
+            if (['RUNNING_CW','RUNNING_CCW','ACCELERATING'].includes(simState)) { goDecelerating(false); }
         }
-        function pressGelb1() {
-            if (!['STANDBY', 'ACCELERATING', 'RUNNING_CW', 'RUNNING_CCW'].includes(simState)) return;
-            const progress = (simState === 'ACCELERATING') ? getRampProgressNow() : 0;
-            selectedRunDataset = 'dAtA 2';
-            console.log('[SIM] Preset 1 gedrueckt -> dAtA 2');
-            if (simState === 'ACCELERATING') {
-                goAccelerating(progress);
-                return;
-            }
-            updateUI();
-        }
-        function pressGelb2() {
-            if (!['STANDBY', 'ACCELERATING', 'RUNNING_CW', 'RUNNING_CCW'].includes(simState)) return;
-            const progress = (simState === 'ACCELERATING') ? getRampProgressNow() : 0;
-            selectedRunDataset = 'dAtA 4';
-            console.log('[SIM] Preset 2 gedrueckt -> dAtA 4');
-            if (simState === 'ACCELERATING') {
-                goAccelerating(progress);
-                return;
-            }
-            updateUI();
-        }
+        function pressGelb1() { if (simState !== 'LOCKED') console.log('[SIM] Preset 1 – noch nicht belegt'); }
+        function pressGelb2() { if (simState !== 'LOCKED') console.log('[SIM] Preset 2 – noch nicht belegt'); }
 
         window.onload = function() { updateUI(); };
     </script>
