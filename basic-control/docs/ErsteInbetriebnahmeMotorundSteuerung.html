@@ -29,7 +29,7 @@
         <div class="w-full flex flex-col md:flex-row justify-between items-center gap-3">
             <div>
                 <h1 class="text-xl font-bold text-amber-500">Präziser Verdrahtungsplan: Honigschleuder</h1>
-                <p class="text-xs text-gray-400">Kreuzungsfreie Leitungsführung · State Machine: 6 Zustände · Anlauf- &amp; Bremsrampen je 15 s</p>
+                <p class="text-xs text-gray-400">Kreuzungsfreie Leitungsführung · State Machine: 6 Zustände · Config: honey_config.js (simSpeed 0.2×)</p>
             </div>
             <div class="flex gap-2 flex-wrap">
                 <span class="bg-purple-900/50 border border-purple-500 text-purple-400 text-xs px-2.5 py-1 rounded-full font-semibold">
@@ -52,7 +52,7 @@
         <div class="xl:col-span-1 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col gap-5 h-fit">
             <div>
                 <h2 class="text-md font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Interaktive Simulation</h2>
-                <p class="text-xs text-gray-400 mb-3">Simulation (Rampen: 3 s statt 15 s). Tasten verhalten sich zustandsabhängig:</p>
+                <p class="text-xs text-gray-400 mb-3">Simulation (HoneyConfig.simSpeed = 0.2 → 3 s statt 15 s). Tasten verhalten sich zustandsabhängig:</p>
                 
                 <div class="space-y-3">
                     <!-- Folientaster Richtung -->
@@ -123,7 +123,7 @@
                     <div class="w-full bg-gray-700 rounded-full h-1.5">
                         <div id="ramp-bar" class="h-1.5 rounded-full bg-yellow-400" style="width:0%"></div>
                     </div>
-                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: 3 s · Reales Board: 15 s</span>
+                    <span class="text-[9px] text-gray-600 mt-0.5 block">Simulation: simSpeed 0.2× · Reales Board: 1.0× (15 s)</span>
                 </div>
             </div>
 
@@ -132,11 +132,11 @@
                 <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Zustandsmaschine</span>
                 <div class="space-y-1 text-[10px]">
                     <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">GESPERRT</b> – X2 offen</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">STANDBY</b> – Richtung wählen, Start</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – 15 s, Stop oder Richtungswechsel möglich</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">LÄUFT</b> – Stop/Richtungswechsel</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – 15 s, gesperrt</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 1.5 s Sicherheitspause</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">STANDBY</b> – Richtung wählen, Preset, Start</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ANLAUFEN</b> – dAtA-gesteuert, Stop/Richtungswechsel möglich</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">LÄUFT</b> – Stop/Richtungswechsel/Preset</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">ABBREMSEN</b> – proportional zur Rampe, Eingaben gesperrt</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-400"><b class="text-gray-300">WARTEN</b> – 150 ms Sicherheitspause (Hardware)</span></div>
                 </div>
             </div>
         </div>
@@ -489,7 +489,7 @@
 
             <!-- Notes Section -->
             <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
-                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen (15 s):</strong> Die Rampenzeiten entsprechen den Treiber-Parametern (dEC/ACC). Der Arduino wartet diese Zeit ab, bevor er den nächsten Zustand einleitet.</p>
+                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen:</strong> Rampenzeiten werden aus den dAtA-Profilen (honey_config.js → speed_dataset.cpp) berechnet. Die Rampendauer skaliert proportional zur Zieldrehzahl (targetRpm / 3000). simSpeed = 0.2 für Demo, 1.0 für Echtzeit-Verifikation.</p>
                 <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (1,5 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
                 <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D4–D9 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
                 <p><strong class="text-amber-500">Geometrische Entflechtung:</strong> Die Leitungen der Folientaster wurden komplett nach unten aus den Gehäusen herausgeleitet. Spannungsversorgungen fließen über die Oberseite des Controllers hinweg. Keine Überschneidungen mit Beschriftungen oder aktiven Bauteilen!</p>
@@ -566,45 +566,36 @@
         </div>
     </section>
 
-    <!-- Simulation Script – 6-state machine matching demo/main.cpp -->
+    <!-- Shared config & state machine (mirrors C++ basic-control/config.h, controller_*) -->
+    <script src="honey_config.js"></script>
+    <script src="honey_state_machine.js"></script>
+
+    <!-- Simulation UI – thin rendering layer on top of HoneyStateMachine -->
     <script>
-        // ── Ramp durations (scaled for simulation: 3 s instead of real 15 s) ────
-        const SIM_ANLAUF_MS = 3000;
-        const SIM_BREMS_MS  = 3000;
-        const SIM_WARTE_MS  = 600;
+        // ── Create state machine from shared config ───────────────────────────────
+        const sm = new HoneyStateMachine(HoneyConfig);
 
-        // ── State ────────────────────────────────────────────────────────────────
-        // LOCKED | STANDBY | ACCELERATING | RUNNING_CW | RUNNING_CCW | DECELERATING | WAITING
-        let simState    = 'LOCKED';
-        let targetDir   = 'CW';    // 'CW' or 'CCW'
-        let pendingAuto = false;
-        let rampHandle  = null;
-        let rampStartMs = 0;
-        let rampTotalMs = 0;
-        let rafHandle   = null;
+        // LOCKED is UI-only (X2 is a physical lockout on real hardware, not a software state).
+        let uiLocked = true;   // start locked for safety, matching original behaviour
 
-        function clearTimers() {
-            if (rampHandle) { clearTimeout(rampHandle); rampHandle = null; }
-            if (rafHandle)  { cancelAnimationFrame(rafHandle); rafHandle = null; }
-        }
+        // ── State → UI display mapping ───────────────────────────────────────────
+        const STATE_UI = {
+            STANDBY:      { color:'amber',  ping:false, text:'Standby – Bereit',       desc:'Richtung wählen (LINKS/RECHTS), dann GRÜN drücken.' },
+            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft. STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
+            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW.' },
+            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW.' },
+            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft. Alle Eingaben gesperrt.' },
+            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich.' },
+        };
+        const LOCKED_UI = { color:'red', ping:true, text:'Gesperrt (X2 aus)', desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' };
 
-        function startRamp(durationMs, onDone) {
-            clearTimers();
-            rampStartMs = Date.now();
-            rampTotalMs = durationMs;
-            rampHandle  = setTimeout(() => { rampHandle = null; onDone(); }, durationMs);
-            animateBar();
-        }
-
-        function animateBar() {
-            const elapsed = Math.min(Date.now() - rampStartMs, rampTotalMs);
-            const pct = Math.round((elapsed / rampTotalMs) * 100);
-            const bar  = document.getElementById('ramp-bar');
-            const pctEl = document.getElementById('ramp-pct');
-            if (bar)   bar.style.width = pct + '%';
-            if (pctEl) pctEl.textContent = pct + '%';
-            if (rampHandle) rafHandle = requestAnimationFrame(animateBar);
-        }
+        const COLOR_MAP = {
+            red:    { box:'text-red-500',    ping:'bg-red-400',    dot:'bg-red-500',    bar:'bg-red-400'    },
+            amber:  { box:'text-amber-500',  ping:'',              dot:'bg-amber-500',  bar:'bg-amber-400'  },
+            yellow: { box:'text-yellow-400', ping:'bg-yellow-400', dot:'bg-yellow-400', bar:'bg-yellow-400' },
+            green:  { box:'text-green-500',  ping:'bg-green-400',  dot:'bg-green-500',  bar:'bg-green-400'  },
+            orange: { box:'text-orange-400', ping:'bg-orange-400', dot:'bg-orange-400', bar:'bg-orange-400' },
+        };
 
         // ── Wire helpers ─────────────────────────────────────────────────────────
         function setWire(id, on, colorOn, colorOff) {
@@ -614,129 +605,176 @@
             else    { w.classList.remove('wire-active'); w.setAttribute('stroke', colorOff || '#4B5563'); }
         }
 
-        // ── State → UI config ────────────────────────────────────────────────────
-        const STATE_UI = {
-            LOCKED:       { color:'red',    ping:true,  text:'Gesperrt (X2 aus)',     desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' },
-            STANDBY:      { color:'amber',  ping:false, text:'Standby – Bereit',       desc:'Richtung wählen (LINKS/RECHTS), dann GRÜN drücken.' },
-            ACCELERATING: { color:'yellow', ping:true,  text:'⬆ ANLAUFEN …',          desc:'Anlauframpe läuft (15 s). STOP oder Gegenrichtungs-Taste → proportionale Bremsrampe.' },
-            RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW.' },
-            RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW.' },
-            DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft (15 s). Alle Eingaben gesperrt.' },
-            WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich (1,5 s).' },
-        };
-        const COLOR_MAP = {
-            red:    { box:'text-red-500',    ping:'bg-red-400',    dot:'bg-red-500',    bar:'bg-red-400'    },
-            amber:  { box:'text-amber-500',  ping:'',              dot:'bg-amber-500',  bar:'bg-amber-400'  },
-            yellow: { box:'text-yellow-400', ping:'bg-yellow-400', dot:'bg-yellow-400', bar:'bg-yellow-400' },
-            green:  { box:'text-green-500',  ping:'bg-green-400',  dot:'bg-green-500',  bar:'bg-green-400'  },
-            orange: { box:'text-orange-400', ping:'bg-orange-400', dot:'bg-orange-400', bar:'bg-orange-400' },
-        };
+        // ── Render: read state machine → update DOM ─────────────────────────────
+        function renderFromState() {
+            const nowMs = Date.now();
 
-        function updateUI() {
-            const ui = STATE_UI[simState] || STATE_UI.LOCKED;
+            if (uiLocked) {
+                renderLocked();
+                return;
+            }
+
+            const s = sm.getState(nowMs);
+            const ui = STATE_UI[s.id] || STATE_UI.STANDBY;
             const c  = COLOR_MAP[ui.color];
 
-            document.getElementById('status-box').className  = 'flex items-center gap-2 ' + c.box;
-            if (document.getElementById('status-ping')) {
-                document.getElementById('status-ping').className = ui.ping
+            // Status box
+            document.getElementById('status-box').className = 'flex items-center gap-2 ' + c.box;
+            const pingEl = document.getElementById('status-ping');
+            if (pingEl) {
+                pingEl.className = ui.ping
                     ? 'animate-ping absolute inline-flex h-full w-full rounded-full ' + c.ping + ' opacity-75' : '';
             }
-            document.getElementById('status-dot').className  = 'relative inline-flex rounded-full h-2.5 w-2.5 ' + c.dot;
+            document.getElementById('status-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 ' + c.dot;
             document.getElementById('status-text').textContent = ui.text;
             document.getElementById('status-desc').textContent = ui.desc;
 
-            // Ramp progress bar
+            // Ramp progress bar (with real-time label showing dataset-aware durations)
             const rs = document.getElementById('ramp-section');
-            const isRamping = ['ACCELERATING','DECELERATING','WAITING'].includes(simState);
+            const rampingStates = ['ACCELERATING','DECELERATING','WAITING'];
+            const isRamping = rampingStates.includes(s.id);
             rs.classList.toggle('hidden', !isRamping);
             if (isRamping) {
-                const labels = { ACCELERATING:'Anlauframpe (15 s)', DECELERATING:'Bremsrampe (15 s)', WAITING:'Sicherheitspause' };
-                document.getElementById('ramp-label').textContent = labels[simState];
+                const pct = Math.round(s.progress * 100);
+                document.getElementById('ramp-bar').style.width = pct + '%';
+                document.getElementById('ramp-pct').textContent = pct + '%';
                 document.getElementById('ramp-bar').className = 'h-1.5 rounded-full ' + c.bar;
+
+                if (s.id === 'ACCELERATING') {
+                    document.getElementById('ramp-label').textContent =
+                        'Anlauframpe (' + s.selectedRunDataset + ')';
+                } else if (s.id === 'DECELERATING') {
+                    document.getElementById('ramp-label').textContent =
+                        'Bremsrampe (von ' + s.activeDataset + ')';
+                } else {
+                    document.getElementById('ramp-label').textContent = 'Sicherheitspause';
+                }
             }
 
-            // Wires
-            const x2on = (simState !== 'LOCKED');
-            setWire('wire-x2', x2on, '#10B981');
-            const x1on = ['ACCELERATING','RUNNING_CW','RUNNING_CCW'].includes(simState);
+            // SVG wire highlights
+            const x1on = ['ACCELERATING','RUNNING_CW','RUNNING_CCW'].includes(s.id);
             setWire('wire-x1', x1on, '#EF4444');
-            setWire('wire-x3', targetDir === 'CCW', '#3B82F6');
+            setWire('wire-x2', true, '#10B981');   // X2 always on when unlocked
+            setWire('wire-x3', s.dirRelayCCW, '#3B82F6');
 
-            // X2 hardware switch visual
+            // X2 switch visual (unlocked state)
             const btnX2   = document.getElementById('btn-x2');
             const swLever = document.getElementById('switch-lever');
             const swTxt   = document.getElementById('switch-text-val');
-            if (simState === 'LOCKED') {
-                btnX2.textContent = 'SPERRE (OFF)';
-                btnX2.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition bg-red-600 text-white hover:bg-red-500';
-                swLever.setAttribute('y1','50'); swLever.setAttribute('y2','50'); swLever.setAttribute('stroke','#EF4444');
-                swTxt.textContent = 'AUS (Gesperrt)'; swTxt.setAttribute('fill','#EF4444');
-            } else {
-                btnX2.textContent = 'FREIGABE (ON)';
-                btnX2.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition bg-green-600 text-white hover:bg-green-500';
-                swLever.setAttribute('y1','50'); swLever.setAttribute('y2','30'); swLever.setAttribute('stroke','#10B981');
-                swTxt.textContent = 'EIN (Freigegeben)'; swTxt.setAttribute('fill','#10B981');
+            btnX2.textContent = 'FREIGABE (ON)';
+            btnX2.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition bg-green-600 text-white hover:bg-green-500';
+            swLever.setAttribute('y1','50'); swLever.setAttribute('y2','30');
+            swLever.setAttribute('stroke','#10B981');
+            swTxt.textContent = 'EIN (Freigegeben)';
+            swTxt.setAttribute('fill','#10B981');
+        }
+
+        function renderLocked() {
+            const c = COLOR_MAP['red'];
+            document.getElementById('status-box').className = 'flex items-center gap-2 ' + c.box;
+            const pingEl = document.getElementById('status-ping');
+            if (pingEl) {
+                pingEl.className = 'animate-ping absolute inline-flex h-full w-full rounded-full ' + c.ping + ' opacity-75';
             }
+            document.getElementById('status-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 ' + c.dot;
+            document.getElementById('status-text').textContent = LOCKED_UI.text;
+            document.getElementById('status-desc').textContent = LOCKED_UI.desc;
+
+            document.getElementById('ramp-section').classList.add('hidden');
+
+            setWire('wire-x1', false, '#EF4444');
+            setWire('wire-x2', false, '#10B981');
+            setWire('wire-x3', false, '#3B82F6');
+
+            const btnX2   = document.getElementById('btn-x2');
+            const swLever = document.getElementById('switch-lever');
+            const swTxt   = document.getElementById('switch-text-val');
+            btnX2.textContent = 'SPERRE (OFF)';
+            btnX2.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition bg-red-600 text-white hover:bg-red-500';
+            swLever.setAttribute('y1','50'); swLever.setAttribute('y2','50');
+            swLever.setAttribute('stroke','#EF4444');
+            swTxt.textContent = 'AUS (Gesperrt)';
+            swTxt.setAttribute('fill','#EF4444');
         }
 
-        // ── Transitions ──────────────────────────────────────────────────────────
-        function goDecelerating(autoRestart) {
-            clearTimers();
-            pendingAuto = autoRestart;
-            simState    = 'DECELERATING';
-            updateUI();
-            startRamp(SIM_BREMS_MS, () => {
-                document.getElementById('ramp-bar').style.width = '100%';
-                simState = 'WAITING'; updateUI();
-                startRamp(SIM_WARTE_MS, () => {
-                    if (pendingAuto) {
-                        simState = 'ACCELERATING'; pendingAuto = false; updateUI();
-                        startRamp(SIM_ANLAUF_MS, () => {
-                            simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
-                            updateUI();
-                        });
-                    } else {
-                        simState = 'STANDBY'; updateUI();
-                    }
-                });
-            });
-        }
+        // ── Polling: check for timer-based transitions ──────────────────────────
+        // The state machine needs periodic ticks to detect ramp completions.
+        // 100ms is fine: <1% error on a 15s ramp.
+        setInterval(function() {
+            if (!uiLocked) {
+                sm.tick({}, Date.now());
+            }
+        }, 100);
 
-        function goAccelerating() {
-            clearTimers(); pendingAuto = false;
-            simState = 'ACCELERATING'; updateUI();
-            startRamp(SIM_ANLAUF_MS, () => {
-                simState = (targetDir === 'CCW') ? 'RUNNING_CCW' : 'RUNNING_CW';
-                updateUI();
-            });
+        // ── Animation loop: smooth progress bar updates ─────────────────────────
+        function animationLoop() {
+            if (!uiLocked) {
+                const s = sm.getState(Date.now());
+                const rampingStates = ['ACCELERATING','DECELERATING','WAITING'];
+                if (rampingStates.includes(s.id)) {
+                    const pct = Math.round(s.progress * 100);
+                    const bar = document.getElementById('ramp-bar');
+                    const pctEl = document.getElementById('ramp-pct');
+                    if (bar) bar.style.width = pct + '%';
+                    if (pctEl) pctEl.textContent = pct + '%';
+                }
+            }
+            requestAnimationFrame(animationLoop);
         }
 
         // ── Button handlers ──────────────────────────────────────────────────────
         function toggleX2() {
-            clearTimers();
-            simState = (simState === 'LOCKED') ? 'STANDBY' : 'LOCKED';
-            updateUI();
+            if (uiLocked) {
+                uiLocked = false;
+                sm.reset();
+            } else {
+                uiLocked = true;
+                sm.reset();
+            }
+            renderFromState();
         }
-        function pressLinks() {
-            if      (simState === 'STANDBY')                          { targetDir = 'CCW'; updateUI(); }
-            else if (simState === 'RUNNING_CW')                       { targetDir = 'CCW'; goDecelerating(true); }
-            else if (simState === 'ACCELERATING' && targetDir === 'CW') { targetDir = 'CCW'; goDecelerating(true); }
-        }
-        function pressRechts() {
-            if      (simState === 'STANDBY')                            { targetDir = 'CW'; updateUI(); }
-            else if (simState === 'RUNNING_CCW')                        { targetDir = 'CW'; goDecelerating(true); }
-            else if (simState === 'ACCELERATING' && targetDir === 'CCW') { targetDir = 'CW'; goDecelerating(true); }
-        }
-        function pressGruen() {
-            if (simState === 'STANDBY') { goAccelerating(); }
-        }
-        function pressRot() {
-            if (['RUNNING_CW','RUNNING_CCW','ACCELERATING'].includes(simState)) { goDecelerating(false); }
-        }
-        function pressGelb1() { if (simState !== 'LOCKED') console.log('[SIM] Preset 1 – noch nicht belegt'); }
-        function pressGelb2() { if (simState !== 'LOCKED') console.log('[SIM] Preset 2 – noch nicht belegt'); }
 
-        window.onload = function() { updateUI(); };
+        function pressLinks() {
+            if (uiLocked) return;
+            sm.tick({ dirLeftPressed: true }, Date.now());
+            renderFromState();
+        }
+
+        function pressRechts() {
+            if (uiLocked) return;
+            sm.tick({ dirRightPressed: true }, Date.now());
+            renderFromState();
+        }
+
+        function pressGruen() {
+            if (uiLocked) return;
+            sm.tick({ startPressed: true }, Date.now());
+            renderFromState();
+        }
+
+        function pressRot() {
+            if (uiLocked) return;
+            sm.tick({ stopPressed: true }, Date.now());
+            renderFromState();
+        }
+
+        function pressGelb1() {
+            if (uiLocked) return;
+            sm.tick({ preset1Pressed: true }, Date.now());
+            renderFromState();
+        }
+
+        function pressGelb2() {
+            if (uiLocked) return;
+            sm.tick({ preset2Pressed: true }, Date.now());
+            renderFromState();
+        }
+
+        // ── Boot ─────────────────────────────────────────────────────────────────
+        window.onload = function() {
+            renderFromState();      // show initial LOCKED state
+            requestAnimationFrame(animationLoop);
+        };
     </script>
 </body>
 </html>
