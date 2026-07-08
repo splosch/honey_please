@@ -36,8 +36,8 @@ const BinarySpeedRelayProfile& relayProfileForDataset(BinarySpeedDataset dataset
 const BinarySpeedDynamicsProfile& dynamicsProfileForDataset(BinarySpeedDataset dataset) {
     switch (dataset) {
         case BinarySpeedDataset::DATASET_0: return kDynamicsProfiles[0];
-        case BinarySpeedDataset::DATASET_2: return kDynamicsProfiles[1];
-        case BinarySpeedDataset::DATASET_4: return kDynamicsProfiles[2];
+        case BinarySpeedDataset::DATASET_2: return kDynamicsProfiles[2];
+        case BinarySpeedDataset::DATASET_4: return kDynamicsProfiles[1];
         case BinarySpeedDataset::DATASET_6: return kDynamicsProfiles[3];
         default:                            return kDynamicsProfiles[0];
     }

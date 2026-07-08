@@ -62,6 +62,8 @@ export default function useSimulation(config) {
         // -- SVG wires --
         dirRelayCCW:   false,
         startRelayOn:  false,
+        m1RelayOn:     false,
+        m2RelayOn:     false,
 
         // -- Dataset labels for ramp --
         selectedRunDataset: config.presets.preset1,
@@ -90,6 +92,11 @@ export default function useSimulation(config) {
         simState.selectedRunDataset = s.selectedRunDataset;
         simState.activeDataset = s.activeDataset;
 
+        // M1/M2 relay states derived from active dataset
+        var ds = config.datasets[s.activeDataset];
+        simState.m1RelayOn = ds ? ds.m1 : false;
+        simState.m2RelayOn = ds ? ds.m2 : false;
+
         if (s.id === 'ACCELERATING') {
             simState.rampLabel = 'Anlauframpe (' + s.selectedRunDataset + ')';
         } else if (s.id === 'DECELERATING') {
@@ -117,6 +124,8 @@ export default function useSimulation(config) {
         simState.rampLabel = '';
         simState.dirRelayCCW = false;
         simState.startRelayOn = false;
+        simState.m1RelayOn = false;
+        simState.m2RelayOn = false;
     }
 
     function syncFromSM(nowMs) {

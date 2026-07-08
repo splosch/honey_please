@@ -224,7 +224,7 @@
 
                     <!-- ====== ARDUINO UNO R4 WIFI ====== -->
                     <g transform="translate(30, 40)">
-                        <rect width="210" height="280" rx="10" fill="#1E293B" fill-opacity="0.35" stroke="#0EA5E9" stroke-width="2.5"></rect>
+                        <rect width="210" height="340" rx="10" fill="#1E293B" fill-opacity="0.35" stroke="#0EA5E9" stroke-width="2.5"></rect>
                         <text x="105" y="25" fill="#0EA5E9" font-weight="bold" font-size="12" text-anchor="middle">ARDUINO UNO R4 WIFI</text>
                         <!-- Left Power Rail -->
                         <g transform="translate(0, 50)">
@@ -245,46 +245,98 @@
                             <rect x="0" y="155" width="10" height="12" fill="#F59E0B"></rect><circle id="pin-ard-d7" cx="5" cy="161" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle><text x="-12" y="165" fill="#FFF" font-size="9" text-anchor="end">D9 (Key Gelb 1)</text>
                             <rect x="0" y="180" width="10" height="12" fill="#F59E0B"></rect><circle id="pin-ard-d8" cx="5" cy="186" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle><text x="-12" y="190" fill="#FFF" font-size="9" text-anchor="end">D10 (Key Gelb 2)</text>
                             <rect x="0" y="205" width="10" height="12" fill="#10B981"></rect><circle id="pin-ard-d9" cx="5" cy="211" r="3.5" fill="#10B981" stroke="#FFF" stroke-width="0.75"></circle><text x="-12" y="215" fill="#FFF" font-size="9" text-anchor="end">11 (Key Grn-Start)</text>
+                            <rect x="0" y="240" width="10" height="12" fill="#F59E0B"></rect><circle id="pin-ard-r3" cx="5" cy="246" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle><text x="-12" y="250" fill="#FFF" font-size="9" text-anchor="end">D4 (Rel M1 / Speed 0)</text>
+                            <rect x="0" y="265" width="10" height="12" fill="#F59E0B"></rect><circle id="pin-ard-r4" cx="5" cy="271" r="3.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle><text x="-12" y="275" fill="#FFF" font-size="9" text-anchor="end">D5 (Rel M2 / Speed 1)</text>
                         </g>
                     </g>
 
-                    <!-- ====== RELAISBOARD 1 (START) ====== -->
-                    <g transform="translate(480, 40)">
-                        <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#F59E0B" stroke-width="2.5"></rect>
-                        <text x="120" y="22" fill="#F59E0B" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 1 (START)</text>
-                        <rect x="15" y="30" width="40" height="20" rx="3" fill="#111827"></rect>
-                        <rect x="29" y="33" width="12" height="14" fill="#EF4444" rx="1"></rect>
-                        <text x="35" y="43" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
-                        <g transform="translate(5, 70)">
-                            <circle id="pin-r1-vcc" cx="5" cy="10" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"></circle><text x="18" y="13" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
-                            <circle id="pin-r1-gnd" cx="5" cy="35" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"></circle><text x="18" y="38" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
-                            <circle id="pin-r1-in" cx="5" cy="60" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle><text x="18" y="63" fill="#F59E0B" font-size="9" font-weight="bold">IN</text>
+                    <!-- ====== 4-KANAL RELAIS-BANK ====== -->
+                    <g transform="translate(470, 40)">
+                        <rect width="260" height="370" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#F97316" stroke-width="2.5"></rect>
+                        <text x="130" y="22" fill="#F97316" font-weight="bold" font-size="11" text-anchor="middle">4-KANAL RELAIS-BANK</text>
+                        <!-- Power pins (whole bank) -->
+                        <g transform="translate(5, 45)">
+                            <circle id="pin-rbank-vcc" cx="5" cy="5" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"></circle>
+                            <text x="18" y="8" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
+                            <circle id="pin-rbank-gnd" cx="5" cy="28" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"></circle>
+                            <text x="18" y="31" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
                         </g>
-                        <g transform="translate(170, 40)">
-                            <rect width="55" height="100" rx="4" fill="#0284C7"></rect>
-                            <circle id="pin-r1-no" cx="27.5" cy="20" r="5" fill="#EF4444" stroke="#FFF" stroke-width="1"></circle><text x="15" y="24" fill="#FFF" font-size="9" text-anchor="end">NO</text>
-                            <circle id="pin-r1-com" cx="27.5" cy="50" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"></circle><text x="15" y="54" fill="#FFF" font-size="9" text-anchor="end">COM</text>
-                            <circle cx="27.5" cy="80" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"></circle><text x="15" y="84" fill="#FFF" font-size="9" text-anchor="end">NC</text>
-                        </g>
-                    </g>
 
-                    <!-- ====== RELAISBOARD 2 (DIRECTION) ====== -->
-                    <g transform="translate(480, 260)">
-                        <rect width="240" height="170" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#3B82F6" stroke-width="2.5"></rect>
-                        <text x="120" y="22" fill="#3B82F6" font-weight="bold" font-size="11" text-anchor="middle">RELAIS MODUL 2 (CW/CCW)</text>
-                        <rect x="15" y="30" width="40" height="20" rx="3" fill="#111827"></rect>
-                        <rect x="29" y="33" width="12" height="14" fill="#EF4444" rx="1"></rect>
-                        <text x="35" y="43" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
-                        <g transform="translate(5, 70)">
-                            <circle id="pin-r2-vcc" cx="5" cy="10" r="4.5" fill="#EF4444" stroke="#FFF" stroke-width="0.75"></circle><text x="18" y="13" fill="#EF4444" font-size="9" font-weight="bold">DC+</text>
-                            <circle id="pin-r2-gnd" cx="5" cy="35" r="4.5" fill="#4B5563" stroke="#FFF" stroke-width="0.75"></circle><text x="18" y="38" fill="#4B5563" font-size="9" font-weight="bold">DC-</text>
-                            <circle id="pin-r2-in" cx="5" cy="60" r="4.5" fill="#3B82F6" stroke="#FFF" stroke-width="0.75"></circle><text x="18" y="63" fill="#3B82F6" font-size="9" font-weight="bold">IN</text>
+                        <!-- Kanal 1: START/STOP (X1) — Orange -->
+                        <g transform="translate(0, 78)">
+                            <rect x="15" y="5" width="40" height="20" rx="3" fill="#111827"></rect>
+                            <rect x="29" y="8" width="12" height="14" fill="#EF4444" rx="1"></rect>
+                            <text x="35" y="18" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
+                            <text x="70" y="18" fill="#F59E0B" font-size="9" font-weight="bold">K1: START/STOP (X1)</text>
+                            <circle id="pin-r1-in" cx="10" cy="50" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle>
+                            <text x="23" y="53" fill="#F59E0B" font-size="9" font-weight="bold">IN (D2)</text>
+                            <!-- NO/COM/NC terminal block -->
+                            <g transform="translate(185, 0)">
+                                <rect width="60" height="68" rx="4" fill="#0284C7"></rect>
+                                <circle id="pin-r1-no" cx="30" cy="14" r="5" fill="#EF4444" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="18" fill="#FFF" font-size="8" text-anchor="end">NO</text>
+                                <circle id="pin-r1-com" cx="30" cy="36" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="40" fill="#FFF" font-size="8" text-anchor="end">COM</text>
+                                <circle cx="30" cy="58" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="62" fill="#FFF" font-size="8" text-anchor="end">NC</text>
+                            </g>
                         </g>
-                        <g transform="translate(170, 40)">
-                            <rect width="55" height="100" rx="4" fill="#0284C7"></rect>
-                            <circle id="pin-r2-no" cx="27.5" cy="20" r="5" fill="#3B82F6" stroke="#FFF" stroke-width="1"></circle><text x="15" y="24" fill="#FFF" font-size="9" text-anchor="end">NO</text>
-                            <circle id="pin-r2-com" cx="27.5" cy="50" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"></circle><text x="15" y="54" fill="#FFF" font-size="9" text-anchor="end">COM</text>
-                            <circle cx="27.5" cy="80" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"></circle><text x="15" y="84" fill="#FFF" font-size="9" text-anchor="end">NC</text>
+
+                        <!-- Kanal 2: CW/CCW (X3) — Blau -->
+                        <g transform="translate(0, 158)">
+                            <rect x="15" y="5" width="40" height="20" rx="3" fill="#111827"></rect>
+                            <rect x="29" y="8" width="12" height="14" fill="#EF4444" rx="1"></rect>
+                            <text x="35" y="18" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
+                            <text x="70" y="18" fill="#3B82F6" font-size="9" font-weight="bold">K2: CW/CCW (X3)</text>
+                            <circle id="pin-r2-in" cx="10" cy="50" r="4.5" fill="#3B82F6" stroke="#FFF" stroke-width="0.75"></circle>
+                            <text x="23" y="53" fill="#3B82F6" font-size="9" font-weight="bold">IN (D3)</text>
+                            <g transform="translate(185, 0)">
+                                <rect width="60" height="68" rx="4" fill="#0284C7"></rect>
+                                <circle id="pin-r2-no" cx="30" cy="14" r="5" fill="#3B82F6" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="18" fill="#FFF" font-size="8" text-anchor="end">NO</text>
+                                <circle id="pin-r2-com" cx="30" cy="36" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="40" fill="#FFF" font-size="8" text-anchor="end">COM</text>
+                                <circle cx="30" cy="58" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="62" fill="#FFF" font-size="8" text-anchor="end">NC</text>
+                            </g>
+                        </g>
+
+                        <!-- Kanal 3: M1 (Speed Bit 0) — Amber -->
+                        <g transform="translate(0, 238)">
+                            <rect x="15" y="5" width="40" height="20" rx="3" fill="#111827"></rect>
+                            <rect x="29" y="8" width="12" height="14" fill="#EF4444" rx="1"></rect>
+                            <text x="35" y="18" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
+                            <text x="70" y="18" fill="#F59E0B" font-size="9" font-weight="bold">K3: M1 (Speed Bit 0)</text>
+                            <circle id="pin-r3-in" cx="10" cy="50" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle>
+                            <text x="23" y="53" fill="#F59E0B" font-size="9" font-weight="bold">IN (D4)</text>
+                            <g transform="translate(185, 0)">
+                                <rect width="60" height="68" rx="4" fill="#0284C7"></rect>
+                                <circle id="pin-r3-no" cx="30" cy="14" r="5" fill="#F59E0B" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="18" fill="#FFF" font-size="8" text-anchor="end">NO</text>
+                                <circle id="pin-r3-com" cx="30" cy="36" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="40" fill="#FFF" font-size="8" text-anchor="end">COM</text>
+                                <circle cx="30" cy="58" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="62" fill="#FFF" font-size="8" text-anchor="end">NC</text>
+                            </g>
+                        </g>
+
+                        <!-- Kanal 4: M2 (Speed Bit 1) — Amber -->
+                        <g transform="translate(0, 318)">
+                            <rect x="15" y="5" width="40" height="20" rx="3" fill="#111827"></rect>
+                            <rect x="29" y="8" width="12" height="14" fill="#EF4444" rx="1"></rect>
+                            <text x="35" y="18" fill="#FFF" font-size="7" font-weight="bold" text-anchor="middle">H</text>
+                            <text x="70" y="18" fill="#F59E0B" font-size="9" font-weight="bold">K4: M2 (Speed Bit 1)</text>
+                            <circle id="pin-r4-in" cx="10" cy="50" r="4.5" fill="#F59E0B" stroke="#FFF" stroke-width="0.75"></circle>
+                            <text x="23" y="53" fill="#F59E0B" font-size="9" font-weight="bold">IN (D5)</text>
+                            <g transform="translate(185, 0)">
+                                <rect width="60" height="68" rx="4" fill="#0284C7"></rect>
+                                <circle id="pin-r4-no" cx="30" cy="14" r="5" fill="#F59E0B" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="18" fill="#FFF" font-size="8" text-anchor="end">NO</text>
+                                <circle id="pin-r4-com" cx="30" cy="36" r="5" fill="#F97316" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="40" fill="#FFF" font-size="8" text-anchor="end">COM</text>
+                                <circle cx="30" cy="58" r="5" fill="#6B7280" stroke="#FFF" stroke-width="1"></circle>
+                                <text x="15" y="62" fill="#FFF" font-size="8" text-anchor="end">NC</text>
+                            </g>
                         </g>
                     </g>
 
@@ -319,20 +371,22 @@
                     </g>
 
                     <!-- ====== WAGO KLEMME (C0 BUS) ====== -->
-                    <g transform="translate(480, 480)">
-                        <rect width="240" height="90" rx="6" fill="#F97316" fill-opacity="0.35" stroke="#C2410C" stroke-width="2"></rect>
-                        <text x="120" y="24" fill="#FFF" font-weight="bold" font-size="11" text-anchor="middle">C0-BUS (WAGO 5-fach)</text>
-                        <g transform="translate(20, 52)">
+                    <g transform="translate(470, 420)">
+                        <rect width="260" height="100" rx="6" fill="#F97316" fill-opacity="0.35" stroke="#C2410C" stroke-width="2"></rect>
+                        <text x="130" y="24" fill="#FFF" font-weight="bold" font-size="11" text-anchor="middle">C0-BUS (WAGO 7-fach)</text>
+                        <g transform="translate(15, 52)">
                             <circle id="wago-contact-1" cx="20" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
-                            <circle id="wago-contact-2" cx="60" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
-                            <circle id="wago-contact-3" cx="100" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
-                            <circle id="wago-contact-4" cx="140" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
-                            <circle id="wago-contact-5" cx="180" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
+                            <circle id="wago-contact-2" cx="55" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
+                            <circle id="wago-contact-3" cx="90" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
+                            <circle id="wago-contact-4" cx="125" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
+                            <circle id="wago-contact-5" cx="160" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
+                            <circle id="wago-contact-6" cx="195" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
+                            <circle id="wago-contact-7" cx="230" cy="15" r="7" fill="#4B5563" stroke="#FFF" stroke-width="1.2"></circle>
                         </g>
                     </g>
 
                     <!-- ====== MANUAL SWITCH (WIPPSCHALTER X2) -- REACTIVE ====== -->
-                    <g id="switch-graphic" class="cursor-pointer" @click="$emit('toggle-lock')" transform="translate(860, 480)">
+                    <g id="switch-graphic" class="cursor-pointer" @click="$emit('toggle-lock')" transform="translate(860, 540)">
                         <rect width="240" height="80" rx="6" fill="#111827" fill-opacity="0.35" stroke="#9CA3AF" stroke-width="2"></rect>
                         <text x="120" y="22" fill="#9CA3AF" font-weight="bold" font-size="11" text-anchor="middle">MANUELLER WIPPSCHALTER (X2)</text>
                         <circle id="switch-contact-1" cx="50" cy="50" r="8" fill="#374151" stroke="#FFF"></circle>
@@ -343,7 +397,7 @@
 
                     <!-- ====== ORIENTAL MOTOR DRIVER ====== -->
                     <g transform="translate(860, 40)">
-                        <rect width="300" height="380" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"></rect>
+                        <rect width="300" height="490" rx="8" fill="#1E293B" fill-opacity="0.35" stroke="#10B981" stroke-width="3"></rect>
                         <text x="150" y="25" fill="#10B981" font-weight="bold" font-size="13" text-anchor="middle">ORIENTAL MOTOR BLF</text>
                         <text x="150" y="42" fill="#86EFAC" font-size="10" text-anchor="middle">Steuerungsklemmen (Control I/O)</text>
                         <g transform="translate(30, 75)" fill="#374151">
@@ -352,6 +406,9 @@
                             <rect x="0" y="110" width="60" height="35" rx="3" stroke="#4B5563"></rect><circle id="pin-driver-x3" cx="15" cy="127.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"></circle><text x="35" y="132" fill="#FFF" font-weight="bold" font-size="12">X3</text><text x="75" y="132" fill="#9CA3AF" font-size="10">CW/CCW</text>
                             <rect x="0" y="165" width="85" height="35" rx="3" stroke="#4B5563"></rect><circle id="pin-driver-incom" cx="15" cy="182.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"></circle><text x="32" y="187" fill="#FFF" font-weight="bold" font-size="11">IN-COM</text><text x="95" y="187" fill="#9CA3AF" font-size="10">MASSE</text>
                             <rect x="0" y="220" width="85" height="35" rx="3" stroke="#4B5563"></rect><circle id="pin-driver-x0" cx="15" cy="237.5" r="5" fill="#10B981" stroke="#FFF" stroke-width="1"></circle><text x="32" y="242" fill="#FFF" font-weight="bold" font-size="11">X0</text><text x="95" y="242" fill="#9CA3AF" font-size="10">Error Port</text>
+                            <rect x="0" y="275" width="85" height="35" rx="3" stroke="#4B5563"></rect><circle id="pin-driver-m1" cx="15" cy="292.5" r="5" fill="#F59E0B" stroke="#FFF" stroke-width="1"></circle><text x="32" y="297" fill="#FFF" font-weight="bold" font-size="11">M1</text><text x="95" y="297" fill="#9CA3AF" font-size="10">Speed Bit 0 (D4)</text>
+                            <rect x="0" y="330" width="85" height="35" rx="3" stroke="#4B5563"></rect><circle id="pin-driver-m2" cx="15" cy="347.5" r="5" fill="#F59E0B" stroke="#FFF" stroke-width="1"></circle><text x="32" y="352" fill="#FFF" font-weight="bold" font-size="11">M2</text><text x="95" y="352" fill="#9CA3AF" font-size="10">Speed Bit 1 (D5)</text>
+                            <rect x="0" y="385" width="85" height="35" rx="3" stroke="#4B5563"></rect><circle id="pin-driver-m0" cx="15" cy="402.5" r="5" fill="#4B5563" stroke="#FFF" stroke-width="1"></circle><text x="32" y="407" fill="#FFF" font-weight="bold" font-size="11">M0</text><text x="95" y="407" fill="#9CA3AF" font-size="10">GND (Hardwire)</text>
                         </g>
                     </g>
 
@@ -373,7 +430,7 @@
             <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
                 <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen:</strong> Rampenzeiten werden aus den dAtA-Profilen (honey_config.js → speed_dataset.cpp) berechnet. Die Rampendauer skaliert proportional zur Zieldrehzahl (targetRpm / 3000). simSpeed = 0.2 für Demo, 1.0 für Echtzeit-Verifikation.</p>
                 <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (1,5 s) → neues Richtungsrelais (REL2/X3) → Anlauframpe (15 s).</p>
-                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D4–D9 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig.</p>
+                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig. D4/D5 steuern die M1/M2 Speed-Relais.</p>
                 <p><strong class="text-amber-500">Geometrische Entflechtung:</strong> Die Leitungen der Folientaster wurden komplett nach unten aus den Gehäusen herausgeleitet. Spannungsversorgungen fließen über die Oberseite des Controllers hinweg. Keine Überschneidungen mit Beschriftungen oder aktiven Bauteilen!</p>
             </div>
         </div>

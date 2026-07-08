@@ -29,8 +29,8 @@ const HoneyConfig = {
     pins: {
         relayStart:   2,   // D2 → Relay 1 IN → Driver X1 (START/STOP)
         relayDir:     3,   // D3 → Relay 2 IN → Driver X3 (CW/CCW)
-        relayUnused3: 4,   // D4 → M1 speed-select relay bit
-        relayUnused4: 5,   // D5 → M2 speed-select relay bit
+        relayM1:       4,   // D4 → M1 speed-select relay bit (Geschwindigkeits-Preset)
+        relayM2:       5,   // D5 → M2 speed-select relay bit (Geschwindigkeits-Preset)
         keyLinks:     6,   // D6 ← Membrane LEFT (CCW), INPUT_PULLUP, active LOW
         keyRechts:    7,   // D7 ← Membrane RIGHT (CW)
         keyStop:      8,   // D8 ← Membrane RED (Stop)
