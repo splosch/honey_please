@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State-Machine BMP Generator</title>
+    <!-- Tailwind für schnelles Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-gray-900 text-white p-6 font-sans">
+
+    <div id="app" class="max-w-6xl mx-auto">
+        <h1 class="text-2xl font-bold mb-2">State Machine Simulator & BMP Generator</h1>
+        <p class="text-gray-400 text-sm mb-6">Diagnose-Werkzeug zur schnellen visuellen Erkennung von Logikfehlern und Edge-Cases.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Sidebar: Controls -->
+            <div class="col-span-1 bg-gray-800 p-4 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-3">Szenario auswählen</h2>
+                <select v-model="selectedScenarioId" class="w-full bg-gray-700 border border-gray-600 rounded p-2 mb-2 text-white text-sm">
+                    <option v-for="scen in scenarios" :key="scen.id" :value="scen.id">
+                        {{ scen.name }}
+                    </option>
+                </select>
+
+                <h2 class="text-lg font-semibold mb-3">Timing-Preset</h2>
+                <select v-model="selectedTimingPreset" class="w-full bg-gray-700 border border-gray-600 rounded p-2 mb-2 text-white text-sm">
+                    <option v-for="tp in timingPresets" :key="tp.id" :value="tp.id">
+                        {{ tp.name }}
+                    </option>
+                </select>
+                <p class="text-xs text-gray-500 mb-6">{{ currentTimingPreset.description }}</p>
+
+                <h2 class="text-lg font-semibold mb-3">Vorschau-Skalierung</h2>
+                <input type="range" min="1" max="12" step="1" v-model="displayScale" class="w-full mb-2">
+                <div class="text-sm text-gray-400 mb-6">Skalierung: {{ displayScale }}x (BMP wird immer 1:1 generiert)</div>
+
+                <button @click="runSimulation" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded mb-3 transition text-sm">
+                    Simulieren & Rendern
+                </button>
+
+                <button @click="downloadBMP" :disabled="!bmpBuffer" class="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded transition text-sm">
+                    BMP Herunterladen (1:1)
+                </button>
+            </div>
+
+            <!-- Main Area: Canvas & Legend -->
+            <div class="col-span-3">
+                <div class="bg-gray-800 p-4 rounded-lg shadow mb-4 overflow-x-auto">
+                    <h2 class="text-lg font-semibold mb-1">{{ currentScenario.name }}</h2>
+                    <div class="flex items-start gap-1">
+                        <!-- Y-axis label + direction indicator -->
+                        <div class="flex flex-col items-center justify-center pt-2" style="min-width: 28px;">
+                            <span class="text-xs text-gray-400" style="writing-mode: vertical-rl; text-orientation: mixed;">rpm</span>
+                            <span v-if="rotationDirection" class="text-xs font-bold mt-0.5" :class="rotationDirection === 'CW' ? 'text-blue-400' : 'text-cyan-400'" :title="rotationDirection === 'CW' ? 'Uhrzeigersinn' : 'Gegenuhrzeigersinn'">
+                                {{ rotationDirection === 'CW' ? '⟳' : '⟲' }}
+                            </span>
+                        </div>
+                        <!-- Canvas für die visuelle Darstellung (Nearest-Neighbor für scharfe Pixel) -->
+                        <canvas ref="canvasEl" style="image-rendering: pixelated; border: 1px solid #4B5563;" class="mx-auto"></canvas>
+                    </div>
+                </div>
+
+                <!-- Scenario description below the BMP preview -->
+                <div v-if="currentScenario" class="bg-gray-800 p-4 rounded-lg shadow mb-4">
+                    <p class="text-sm text-gray-300 leading-relaxed">{{ currentScenario.description }}</p>
+                </div>
+
+                <div class="bg-gray-800 p-4 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold mb-3">Legende (Zustände)</h2>
+                    <div class="flex flex-wrap gap-4">
+                        <div v-for="(color, state) in stateColors" :key="state" class="flex items-center">
+                            <div class="w-4 h-4 mr-2 border border-gray-500" :style="{ backgroundColor: `rgb(${color.r},${color.g},${color.b})` }"></div>
+                            <span class="text-xs font-mono">{{ state }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 mr-2 border border-gray-500 bg-red-600"></div>
+                            <span class="text-xs">EVENT Trigger (Unterste Zeile)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  ES Module: imports from the docs project                          -->
+    <!--  All physics/timing values come from HoneyConfig.                  -->
+    <!--  The real HoneyStateMachine drives the simulation — no mock.       -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <script type="module">
+        import HoneyConfig from '../docs/honey_config.js';
+        import { SCENARIOS, STATE_COLORS, EVENT_COLOR, TIMING_PRESETS } from '../docs/js/lib/simulationScenarios.js';
+        import { generateBmpBuffer } from '../docs/js/lib/bmpWriter.js';
+        import { runHeadlessSimulation } from '../docs/js/composables/useBmpSimulation.js';
+
+        const { createApp, ref, onMounted, watch, computed } = Vue;
+
+        // ── Vue App ───────────────────────────────────────────────────
+        const app = createApp({
+            setup() {
+                const scenarios = ref(SCENARIOS);
+                const selectedScenarioId = ref('normal_cw');
+                const timingPresets = ref(TIMING_PRESETS);
+                const selectedTimingPreset = ref('scenario_default');
+                const displayScale = ref(6);
+                const canvasEl = ref(null);
+                const bmpBuffer = ref(null);
+                const currentMatrix = ref(null);
+                const simDimensions = ref({ w: 0, h: 0 });
+
+                const currentScenario = computed(() => {
+                    return scenarios.value.find(s => s.id === selectedScenarioId.value);
+                });
+
+                const currentTimingPreset = computed(() => {
+                    return timingPresets.value.find(tp => tp.id === selectedTimingPreset.value);
+                });
+
+                const rotationDirection = computed(() => {
+                    const scenario = currentScenario.value;
+                    if (!scenario || !scenario.events) return null;
+                    const dirEvent = scenario.events.find(e => e.type === 'dirRight' || e.type === 'dirLeft');
+                    return dirEvent ? (dirEvent.type === 'dirRight' ? 'CW' : 'CCW') : null;
+                });
+
+                const runSimulation = () => {
+                    const scenario = currentScenario.value;
+                    if (!scenario) return;
+
+                    // Apply timing preset override (non-default presets provide
+                    // their own totalTicks / tickDurationMs).  Event atTick
+                    // values (and hardware-fault durationTicks) are scaled so
+                    // they keep the same virtual-time offset they had under the
+                    // scenario's original tickDurationMs.
+                    const preset = currentTimingPreset.value;
+                    let effectiveScenario = scenario;
+                    if (preset && preset.totalTicks != null) {
+                        const scaleFactor = scenario.tickDurationMs / preset.tickDurationMs;
+
+                        const scaledEvents = scenario.events.map(ev => ({
+                            ...ev,
+                            atTick: Math.round(ev.atTick * scaleFactor)
+                        }));
+
+                        const scaledHwFaults = scenario.hardwareFaults
+                            ? scenario.hardwareFaults.map(f => ({
+                                ...f,
+                                durationTicks: f.durationTicks != null
+                                    ? Math.round(f.durationTicks * scaleFactor)
+                                    : f.durationTicks
+                              }))
+                            : scenario.hardwareFaults;
+
+                        effectiveScenario = {
+                            ...scenario,
+                            totalTicks: preset.totalTicks,
+                            tickDurationMs: preset.tickDurationMs,
+                            events: scaledEvents,
+                            hardwareFaults: scaledHwFaults
+                        };
+                    }
+
+                    // Y-resolution can be adjusted via the scenario or falls
+                    // back to the simulation module default (41).
+                    const opts = {};
+                    if (effectiveScenario.yResolution) {
+                        opts.yResolution = effectiveScenario.yResolution;
+                    }
+
+                    const { matrix, width, height } = runHeadlessSimulation(effectiveScenario, opts);
+                    currentMatrix.value = matrix;
+                    simDimensions.value = { w: width, h: height };
+
+                    bmpBuffer.value = generateBmpBuffer(matrix, width, height);
+                    renderToCanvas();
+                };
+
+                const renderToCanvas = () => {
+                    if (!canvasEl.value || !currentMatrix.value) return;
+
+                    const scale = parseInt(displayScale.value);
+                    const { w, h } = simDimensions.value;
+
+                    canvasEl.value.width = w * scale;
+                    canvasEl.value.height = h * scale;
+
+                    const ctx = canvasEl.value.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < w; x++) {
+                            const color = currentMatrix.value[y][x];
+                            ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+                            // BMP rows are bottom-up; flip Y for canvas (top-down)
+                            ctx.fillRect(x * scale, (h - 1 - y) * scale, scale, scale);
+                        }
+                    }
+                };
+
+                const downloadBMP = () => {
+                    if (!bmpBuffer.value) return;
+
+                    const blob = new Blob([bmpBuffer.value], { type: 'image/bmp' });
+                    const url = window.URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `diagnose_${selectedScenarioId.value}.bmp`;
+                    document.body.appendChild(a);
+                    a.click();
+
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                };
+
+                watch(selectedScenarioId, () => {
+                    runSimulation();
+                });
+
+                watch(selectedTimingPreset, () => {
+                    runSimulation();
+                });
+
+                watch(displayScale, () => {
+                    if (currentMatrix.value) renderToCanvas();
+                });
+
+                onMounted(() => {
+                    runSimulation();
+                });
+
+                return {
+                    scenarios,
+                    selectedScenarioId,
+                    currentScenario,
+                    timingPresets,
+                    selectedTimingPreset,
+                    currentTimingPreset,
+                    rotationDirection,
+                    displayScale,
+                    canvasEl,
+                    bmpBuffer,
+                    stateColors: STATE_COLORS,
+                    runSimulation,
+                    downloadBMP
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
  * @file basic-control/main.cpp
  * @brief Honigschleuder – Basic-Control
  *
- * Referenz-Verdrahtungsplan : docs/ErsteInbetriebnahmeMotorundSteuerung.html
+ * Referenz-Verdrahtungsplan : docs/InteractiveDocumentation.html
  * PlatformIO-Umgebung       : r4wifi_basic_control
  * Flash-Befehl              : npm run basic-control:build  (Compile-Check)
  *                             npm run basic-control:flash  (Upload via auto-detected USB port)
@@ -33,7 +33,7 @@ static void printBootBanner() {
     Serial.println(F(""));
     Serial.println(F("============================================================"));
     Serial.println(F("  honey_please - BASIC-CONTROL / Wiring Verification Sketch"));
-    Serial.println(F("  Referenz: ErsteInbetriebnahmeMotorundSteuerung.html"));
+    Serial.println(F("  Referenz: InteractiveDocumentation.html"));
     Serial.println(F("============================================================"));
     Serial.println(F("  Pin-Belegung (aus config.h):"));
 

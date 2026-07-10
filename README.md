@@ -46,6 +46,16 @@ node basic_control_flash.js COM5
 pio device monitor -e r4wifi_basic_control --baud 115200
 ```
 
+### 6. Interactive Documentation + BMP Snapshots
+
+```bash
+npm run docs          # Serve interactive docs (wiring, state machine, snapshots)
+npm run snapshot      # Generate versioned BMP snapshots of all 41 simulation scenarios
+```
+
+- **`npm run docs`** — serves the tabbed documentation app (⚡ wiring schematic, 📊 state machine visualizer, 📋 snapshot viewer).
+- **`npm run snapshot`** — headless batch simulation → versioned BMP folder. See [ImplementationQuestions.md](basic-control/VisualizeStateTransitions/ImplementationQuestions.md#10-snapshot-system) for details.
+
 ---
 
 ## USB Serial Commands
@@ -76,21 +86,18 @@ Connect with `pio device monitor -e r4wifi_basic_control --baud 115200` and type
 
 ```
 honey_please/
-├── basic-control/
-│   ├── main.cpp                  # Firmware entry point + state machine
-│   ├── config.h                  # Pin assignment + timing constants
-│   ├── controller_state.h/.cpp   # State model + transition API
-│   ├── controller_logic.h/.cpp   # State machine transitions
-│   └── docs/
-│       └── ErsteInbetriebnahmeMotorundSteuerung.html
-├── verify_sketch/
-│   └── main.cpp                  # Standalone board health check
+├── basic-control/                # Active firmware (C++ source + interactive docs)
+│   ├── *.cpp / *.h               # Firmware: main, state machine, config, I/O
+│   ├── VisualizeStateTransitions/ # BMP snapshot generator + viewer
+│   └── docs/                     # Interactive documentation (Vue 3, zero-build)
+├── verify_sketch/                # Standalone board health check
 ├── basic_control_flash.js        # Build/flash helper
 ├── platformio.ini                # Board config, build flags, library deps
-├── package.json                  # npm scripts
+├── package.json                  # npm scripts (build, flash, docs, snapshot)
 ├── AGENTS.md                     # Copilot agent instructions
 └── ARCHITECTURE.md               # Central architecture map
 ```
+> Full directory trees: [ARCHITECTURE.md](ARCHITECTURE.md) (project map) · [ARCHITECTURE_ANALYSIS.md](basic-control/docs/ARCHITECTURE_ANALYSIS.md) (docs subsystem)
 
 ---
 

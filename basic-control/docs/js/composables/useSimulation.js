@@ -41,6 +41,7 @@ const RAMPING_STATES = ['ACCELERATING','DECELERATING','WAITING'];
 export default function useSimulation(config) {
     var sm = new HoneyStateMachine(config);
     var uiLocked = Vue.ref(true);
+    var simSpeed = Vue.ref(config.simSpeed);
 
     var simState = Vue.reactive({
         // -- Status display --
@@ -98,9 +99,9 @@ export default function useSimulation(config) {
         simState.m2RelayOn = ds ? ds.m2 : false;
 
         if (s.id === 'ACCELERATING') {
-            simState.rampLabel = 'Anlauframpe (' + s.selectedRunDataset + ')';
+            simState.rampLabel = `Anlauframpe (${s.selectedRunDataset})`;
         } else if (s.id === 'DECELERATING') {
-            simState.rampLabel = 'Bremsrampe (von ' + s.activeDataset + ')';
+            simState.rampLabel = `Bremsrampe (von ${s.activeDataset})`;
         } else if (s.id === 'WAITING') {
             simState.rampLabel = 'Sicherheitspause';
         } else {
@@ -175,14 +176,29 @@ export default function useSimulation(config) {
         syncFromSM(Date.now());
     }
 
+    function toggleSpeed() {
+        // Toggle between fast demo (0.2×) and real-time (1.0×)
+        var newSpeed = config.simSpeed === 1.0 ? 0.2 : 1.0;
+        config.simSpeed = newSpeed;
+        simSpeed.value = newSpeed;
+    }
+
+    function setSpeed(multiplier) {
+        config.simSpeed = multiplier;
+        simSpeed.value = multiplier;
+    }
+
     // initial paint
     syncFromSM(Date.now());
 
     return {
         simState: simState,
         uiLocked: uiLocked,
+        simSpeed: simSpeed,
         handleInput: handleInput,
         toggleLock: toggleLock,
+        toggleSpeed: toggleSpeed,
+        setSpeed: setSpeed,
         startPolling: startPolling,
         stopPolling: stopPolling
     };

@@ -6,6 +6,8 @@
 
 *.zip
 
+basic-control/VisualizeStateTransitions/bmp_snapshots/
+
 tests/node_modules
 
 node_modules

@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node basic_control_flash.js --build-only",
     "flash": "node basic_control_flash.js",
-    "docs": "npx serve basic-control/docs"
+    "snapshot": "node basic-control/VisualizeStateTransitions/generate_all_bmps.js",
+    "docs": "npx serve basic-control"
   }
 }

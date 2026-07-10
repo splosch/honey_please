@@ -9,6 +9,7 @@
  *   sm.getState(nowMs)  → read-only state snapshot (incl. ramp progress)
  *   sm.tick(inputs, nowMs) → process input + advance state if timers expired
  *   sm.reset()          → return to initial STANDBY
+ *   sm.setCurrentTick(n) → set tick counter (for hardware fault injector timing)
  *
  * The state machine uses the same 6 states as the C++ controller:
  *   STANDBY → ACCELERATING → RUNNING_CW/CCW → DECELERATING → WAITING → …
@@ -18,6 +19,13 @@
  *
  * All timing values are scaled by cfg.simSpeed so the same config can drive
  * real-time verification (simSpeed=1.0) and fast interactive demos (simSpeed=0.2).
+ *
+ * ── Hardware Fault Injection ────────────────────────────────────────────
+ * Accepts an optional HardwareFaultInjector via constructor. When present,
+ * software-commanded relay states pass through the fault injector before
+ * affecting the motor. This models real-world hardware failures (stuck
+ * relays, glitches, crosstalk, drift, delay) independently of the software
+ * state machine — the software is blind to faults, just like real firmware.
  */
 
 // ── Constants ─────────────────────────────────────────────────────────
@@ -33,17 +41,41 @@ const STATE = {
 const DIR = { CW: 'CW', CCW: 'CCW' };
 const INTENT = { NONE: 'NONE', AUTO_RESTART: 'AUTO_RESTART' };
 
+// ── Relay-bit → dataset lookup (mirrors speed_dataset.cpp:56-61) ──────
+
+function datasetFromRelayBits(m1, m2) {
+    if (!m1 && !m2) { return 'DATASET_0'; }
+    if ( m1 && !m2) { return 'DATASET_2'; }
+    if (!m1 &&  m2) { return 'DATASET_4'; }
+    return 'DATASET_6';
+}
+
 // ── Constructor ───────────────────────────────────────────────────────
 
 /**
  * @param {object} cfg - HoneyConfig object (from honey_config.js)
+ * @param {object} [faultInjector] - optional HardwareFaultInjector instance
  */
-function HoneyStateMachine(cfg) {
+function HoneyStateMachine(cfg, faultInjector) {
     this._cfg = cfg;
+    this._faultInjector = faultInjector || null;
     this._state = null;
     this._startRelayOn = false;
     this._dirRelayCCW = false;
-    this._activeDataset = cfg.presets.standby;   // what relay M1/M2 pins show
+
+    // Two-layer dataset tracking for hardware fault injection.
+    // _commandedDataset = what software intends (used for state transitions).
+    // _actualDataset    = what relays actually output (used for RPM computation).
+    // Without a fault injector, these are always identical.
+    this._commandedDataset = cfg.presets.standby;
+    this._actualDataset    = cfg.presets.standby;
+
+    // Tick counter for fault injector timing (set via setCurrentTick).
+    this._currentTick = 0;
+
+    // Per-tick fault activity (populated by _applyDatasetCommand).
+    this._faultsActive = [];
+
     this._lastTickMs = 0;
     this.reset();
 }
@@ -63,8 +95,20 @@ HoneyStateMachine.prototype.reset = function() {
     };
     this._startRelayOn = false;
     this._dirRelayCCW = false;
-    this._activeDataset = this._cfg.presets.standby;
+    this._commandedDataset = this._cfg.presets.standby;
+    this._actualDataset    = this._cfg.presets.standby;
+    this._faultsActive = [];
     this._lastTickMs = 0;
+};
+
+/**
+ * Set the simulation tick counter. Called by the BMP batch simulator before
+ * each tick() so the fault injector can use tick-based timing windows.
+ *
+ * @param {number} tick — current simulation tick (0, 1, 2, …)
+ */
+HoneyStateMachine.prototype.setCurrentTick = function(tick) {
+    this._currentTick = tick;
 };
 
 /**
@@ -77,10 +121,15 @@ HoneyStateMachine.prototype.reset = function() {
  * @param {number} nowMs  - current wall-clock time (Date.now())
  */
 HoneyStateMachine.prototype.tick = function(inputs, nowMs) {
-    // Basic debounce: ignore ticks within 40ms of each other.
-    // This prevents DOM event cascading from causing double-transitions
-    // while being short enough to not affect ramp timer accuracy.
-    if (nowMs - this._lastTickMs < 40) { return; }
+    // Debounce only empty polling ticks (no user input).
+    // User-initiated clicks must always be processed immediately.
+    // Polling ticks are already rate-limited by setInterval (100 ms);
+    // this additional guard prevents the polling tick from stepping on
+    // a user click that arrived within the same ~40 ms window.
+    var hasUserInput = inputs.dirLeftPressed || inputs.dirRightPressed ||
+                       inputs.stopPressed || inputs.startPressed ||
+                       inputs.preset1Pressed || inputs.preset2Pressed;
+    if (!hasUserInput && (nowMs - this._lastTickMs < 40)) { return; }
     this._lastTickMs = nowMs;
 
     // Check for timer-based state transitions BEFORE processing inputs.
@@ -113,10 +162,15 @@ HoneyStateMachine.prototype.tick = function(inputs, nowMs) {
  * Return a read-only snapshot of the current state.
  * Safe to call from requestAnimationFrame for smooth progress-bar updates.
  *
+ * When a fault injector is active, `activeDataset` reflects the ACTUAL relay
+ * state (post-fault), while `commandedDataset` shows what the software intended.
+ * The `faultsActive` array lists any faults currently affecting the output.
+ *
  * @param {number} nowMs - current wall-clock time
  * @returns {object} { id, targetDirection, runningDirection,
- *                     selectedRunDataset, activeDataset, progress,
- *                     startRelayOn, dirRelayCCW, restartIntent }
+ *                     selectedRunDataset, activeDataset, commandedDataset,
+ *                     progress, startRelayOn, dirRelayCCW, restartIntent,
+ *                     faultsActive }
  */
 HoneyStateMachine.prototype.getState = function(nowMs) {
     return {
@@ -124,11 +178,13 @@ HoneyStateMachine.prototype.getState = function(nowMs) {
         targetDirection:    this._state.targetDirection,
         runningDirection:   this._state.runningDirection,
         selectedRunDataset: this._state.selectedRunDataset,
-        activeDataset:      this._activeDataset,
+        activeDataset:      this._actualDataset,       // what the motor actually sees
+        commandedDataset:   this._commandedDataset,    // what software commanded
         progress:           this._computeProgress(nowMs),
         startRelayOn:       this._startRelayOn,
         dirRelayCCW:        this._dirRelayCCW,
-        restartIntent:      this._state.restartIntent
+        restartIntent:      this._state.restartIntent,
+        faultsActive:       this._faultsActive.slice() // per-tick snapshot
     };
 };
 
@@ -242,14 +298,14 @@ HoneyStateMachine.prototype._completeWaitingPeriod = function(nowMs) {
     if (self._state.restartIntent === INTENT.AUTO_RESTART) {
         // Set direction relay → apply dataset → enable start relay → begin acceleration
         self._dirRelayCCW = (self._state.targetDirection === DIR.CCW);
-        self._activeDataset = self._state.selectedRunDataset;
+        self._applyDatasetCommand(self._state.selectedRunDataset);
         // relaySettleMs delay is a hardware concern; skip in simulation
         self._startRelayOn = true;
         self._beginAcceleration(nowMs, 0.0);
         self._state.restartIntent = INTENT.NONE;
     } else {
         self._state.id = STATE.STANDBY;
-        self._activeDataset = self._cfg.presets.standby;
+        self._applyDatasetCommand(self._cfg.presets.standby);
     }
 };
 
@@ -264,6 +320,37 @@ HoneyStateMachine.prototype._flipTargetDirection = function() {
         ? DIR.CW : DIR.CCW;
 };
 
+// ── Hardware fault injection bridge ───────────────────────────────────
+
+/**
+ * Apply a dataset command through the fault injector (if present).
+ *
+ * Commands the relay bits for `datasetKey`, runs them through the fault
+ * injector, and records both the commanded dataset and the actual (post-fault)
+ * dataset. If no fault injector is active, _actualDataset === _commandedDataset.
+ *
+ * @param {string} datasetKey — e.g. 'DATASET_0', 'DATASET_4'
+ */
+HoneyStateMachine.prototype._applyDatasetCommand = function(datasetKey) {
+    this._commandedDataset = datasetKey;
+    this._faultsActive = [];
+
+    if (!this._faultInjector) {
+        this._actualDataset = datasetKey;
+        return;
+    }
+
+    var ds = this._cfg.datasets[datasetKey];
+    if (!ds) {
+        this._actualDataset = datasetKey;
+        return;
+    }
+
+    var result = this._faultInjector.apply(ds.m1, ds.m2, this._currentTick);
+    this._actualDataset = datasetFromRelayBits(result.actualM1, result.actualM2);
+    this._faultsActive = result.faultsActive;
+};
+
 // ── State handlers (mirrors controller_logic.cpp handle* functions) ───
 
 /**
@@ -276,7 +363,7 @@ HoneyStateMachine.prototype._handleStandby = function(inputs, nowMs) {
     if (inputs.preset1Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset1;
         // In C++: applySpeedDataset only if startRelayOn.
-        // In standby, start relay is off → activeDataset stays at standby.
+        // In standby, start relay is off → actualDataset stays at standby.
     }
     else if (inputs.preset2Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset2;
@@ -294,7 +381,7 @@ HoneyStateMachine.prototype._handleStandby = function(inputs, nowMs) {
 
     // Start
     if (inputs.startPressed) {
-        this._activeDataset = st.selectedRunDataset;
+        this._applyDatasetCommand(st.selectedRunDataset);
         this._startRelayOn = true;
         this._beginAcceleration(nowMs, 0.0);
     }
@@ -310,11 +397,11 @@ HoneyStateMachine.prototype._handleAccelerating = function(inputs, nowMs) {
     // Preset changes during acceleration
     if (inputs.preset1Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset1;
-        this._activeDataset = st.selectedRunDataset;
+        this._applyDatasetCommand(st.selectedRunDataset);
     }
     else if (inputs.preset2Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset2;
-        this._activeDataset = st.selectedRunDataset;
+        this._applyDatasetCommand(st.selectedRunDataset);
     }
 
     // Direction change: pressing the OPPOSITE direction triggers proportional brake + auto-restart
@@ -327,10 +414,10 @@ HoneyStateMachine.prototype._handleAccelerating = function(inputs, nowMs) {
         if (dirChange) {
             var runningDirection = st.targetDirection;
             this._flipTargetDirection();
-            this._beginDeceleration(nowMs, currentProgress, this._activeDataset,
+            this._beginDeceleration(nowMs, currentProgress, this._actualDataset,
                                     runningDirection, INTENT.AUTO_RESTART);
         } else {
-            this._beginDeceleration(nowMs, currentProgress, this._activeDataset,
+            this._beginDeceleration(nowMs, currentProgress, this._actualDataset,
                                     st.targetDirection, INTENT.NONE);
         }
         return;
@@ -348,31 +435,30 @@ HoneyStateMachine.prototype._handleAccelerating = function(inputs, nowMs) {
  */
 HoneyStateMachine.prototype._handleRunning = function(inputs, nowMs, runningDir) {
     var st = this._state;
-    var self = this;
 
     // Preset changes while running
     if (inputs.preset1Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset1;
-        this._activeDataset = st.selectedRunDataset;
+        this._applyDatasetCommand(st.selectedRunDataset);
         return;
     }
     else if (inputs.preset2Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset2;
-        this._activeDataset = st.selectedRunDataset;
+        this._applyDatasetCommand(st.selectedRunDataset);
         return;
     }
 
     // Stop
     if (inputs.stopPressed) {
         this._startRelayOn = false;
-        this._beginDeceleration(nowMs, 1.0, this._activeDataset, runningDir, INTENT.NONE);
+        this._beginDeceleration(nowMs, 1.0, this._actualDataset, runningDir, INTENT.NONE);
         return;
     }
 
     // Re-pressing START falls back to preset1 (slower) — mirrors C++ line 261-268
     if (inputs.startPressed) {
         st.selectedRunDataset = this._cfg.presets.preset1;
-        this._activeDataset = st.selectedRunDataset;
+        this._applyDatasetCommand(st.selectedRunDataset);
         return;
     }
 
@@ -384,7 +470,7 @@ HoneyStateMachine.prototype._handleRunning = function(inputs, nowMs, runningDir)
         var newDir = changeToCCW ? DIR.CCW : DIR.CW;
         st.targetDirection = newDir;
         this._startRelayOn = false;
-        this._beginDeceleration(nowMs, 1.0, this._activeDataset, runningDir, INTENT.AUTO_RESTART);
+        this._beginDeceleration(nowMs, 1.0, this._actualDataset, runningDir, INTENT.AUTO_RESTART);
     }
 };
 

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szenario Snapshot Vergleich</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* Crisp 1:1 pixel rendering for BMP images */
+        .bmp-img {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            display: block;
+        }
+        /* Sticky scenario name column */
+        .sticky-name {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+        }
+        /* Scrollable table wrapper */
+        .table-wrapper {
+            max-height: calc(100vh - 180px);
+            overflow: auto;
+        }
+        /* Zebra striping for readability */
+        .snapshot-row:nth-child(even) {
+            background: rgba(55, 65, 81, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+
+    <div id="app" class="h-screen flex flex-col">
+        <!-- ── Header ─────────────────────────────────────────────────── -->
+        <header class="bg-gray-800 border-b border-gray-700 py-3 px-6 flex-shrink-0">
+            <div class="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                    <h1 class="text-lg font-bold text-amber-500">Szenario Snapshots</h1>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        Dichte 1:1-Pixelansicht aller Szenarien aus einem Snapshot.
+                        Später: Vergleich zweier Snapshots (Version A ↔ Version B).
+                    </p>
+                </div>
+
+                <!-- Snapshot selector -->
+                <div class="flex items-center gap-3" v-if="snapshots.length > 0">
+                    <label class="text-xs text-gray-400">Snapshot:</label>
+                    <select v-model="selectedSha"
+                            class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white">
+                        <option v-for="snap in snapshots" :key="snap.sha" :value="snap.sha">
+                            {{ snap.sha }} — {{ snap.scenarioCount }} Szenarien ({{ formatDate(snap.generatedAt) }})
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Loading / error state in header -->
+                <div v-if="loading" class="text-sm text-amber-400">Lade Index…</div>
+                <div v-if="error" class="text-sm text-red-400">{{ error }}</div>
+            </div>
+        </header>
+
+        <!-- ── Main content: scrollable table ──────────────────────────── -->
+        <main class="flex-grow overflow-hidden" v-if="!loading && currentManifest">
+            <!-- Snapshot info bar -->
+            <div class="px-6 py-2 bg-gray-850 border-b border-gray-700 flex items-center gap-4 text-xs text-gray-400 flex-shrink-0">
+                <span>SHA: <code class="text-amber-400">{{ currentManifest.sha }}</code></span>
+                <span>{{ currentManifest.scenarioCount }} Szenarien</span>
+                <span>Generiert: {{ formatDate(currentManifest.generatedAt) }}</span>
+                <a :href="'bmp_snapshots/' + currentManifest.sha + '/manifest.json'"
+                   target="_blank"
+                   class="text-blue-400 hover:underline ml-auto">manifest.json</a>
+            </div>
+
+            <!-- Table -->
+            <div class="table-wrapper">
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 sticky top-0 z-10">
+                            <th class="sticky-name bg-gray-800 px-4 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700 whitespace-nowrap">
+                                Szenario
+                            </th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700 whitespace-nowrap">
+                                BMP (1:1 Pixel, ▲ = oben = spätere Ticks)
+                            </th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700 whitespace-nowrap">
+                                Auflösung
+                            </th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700 whitespace-nowrap">
+                                Typ
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="scn in currentManifest.scenarios" :key="scn.id"
+                            class="snapshot-row border-b border-gray-800 hover:bg-gray-750 transition-colors">
+                            <!-- Scenario name (sticky) -->
+                            <td class="sticky-name bg-gray-900 px-4 py-2 whitespace-nowrap">
+                                <div class="font-medium text-gray-200">{{ scn.name }}</div>
+                                <div class="text-[10px] text-gray-500 font-mono">{{ scn.id }}</div>
+                            </td>
+                            <!-- BMP image -->
+                            <td class="px-4 py-1">
+                                <img :src="bmpUrl(scn.file)"
+                                     :alt="scn.name"
+                                     class="bmp-img"
+                                     :style="{ width: scn.bmpWidth + 'px', height: scn.bmpHeight + 'px' }"
+                                     loading="lazy">
+                            </td>
+                            <!-- Resolution -->
+                            <td class="px-4 py-2 text-xs text-gray-400 font-mono whitespace-nowrap">
+                                {{ scn.bmpWidth }}×{{ scn.bmpHeight }} px
+                            </td>
+                            <!-- Type tag -->
+                            <td class="px-4 py-2">
+                                <span v-if="scn.hasHardwareFaults"
+                                      class="text-[10px] bg-red-900 text-red-300 px-1.5 py-0.5 rounded">
+                                    HW-Fehler
+                                </span>
+                                <span v-else
+                                      class="text-[10px] bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">
+                                    Normal
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- ── No data state ───────────────────────────────────────────── -->
+        <main class="flex-grow flex items-center justify-center" v-if="!loading && !currentManifest && !error">
+            <div class="text-center text-gray-500">
+                <p class="text-lg mb-2">Keine Snapshots gefunden</p>
+                <p class="text-sm">
+                    Führe <code class="bg-gray-800 px-2 py-0.5 rounded text-amber-400">npm run snapshot</code> aus,
+                    um den ersten Snapshot zu generieren.
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Vue App                                                          -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <script type="module">
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        const app = createApp({
+            setup() {
+                const BASE = '../VisualizeStateTransitions/bmp_snapshots/';
+
+                const snapshots = ref([]);
+                const selectedSha = ref(null);
+                const currentManifest = ref(null);
+                const loading = ref(true);
+                const error = ref(null);
+
+                // ── Fetch index.json ────────────────────────────────────
+                async function loadIndex() {
+                    loading.value = true;
+                    error.value = null;
+                    try {
+                        const resp = await fetch(BASE + 'index.json');
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const data = await resp.json();
+                        snapshots.value = (data && data.snapshots) ? data.snapshots : [];
+                    } catch (err) {
+                        error.value = 'Index nicht ladbar: ' + err.message
+                            + ' — Bitte führe "npm run snapshot" aus.';
+                        snapshots.value = [];
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                // ── Load selected snapshot manifest ─────────────────────
+                async function loadManifest(sha) {
+                    if (!sha) { currentManifest.value = null; return; }
+                    loading.value = true;
+                    error.value = null;
+                    try {
+                        const resp = await fetch(`${BASE}${sha}/manifest.json`);
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const data = await resp.json();
+                        currentManifest.value = data;
+                    } catch (err) {
+                        error.value = `Snapshot "${sha}" nicht ladbar: ${err.message}`;
+                        currentManifest.value = null;
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                // ── Auto-select latest snapshot on load ─────────────────
+                onMounted(async () => {
+                    await loadIndex();
+                    if (snapshots.value.length > 0) {
+                        selectedSha.value = snapshots.value[0].sha;
+                    }
+                });
+
+                // ── React to SHA selection changes ──────────────────────
+                watch(selectedSha, (sha) => {
+                    loadManifest(sha);
+                });
+
+                // ── Helpers ─────────────────────────────────────────────
+                function bmpUrl(filename) {
+                    return `${BASE}${selectedSha.value}/${filename}`;
+                }
+
+                function formatDate(iso) {
+                    if (!iso) return '?';
+                    const d = new Date(iso);
+                    return d.toLocaleString('de-DE', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                }
+
+                return {
+                    snapshots,
+                    selectedSha,
+                    currentManifest,
+                    loading,
+                    error,
+                    bmpUrl,
+                    formatDate
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

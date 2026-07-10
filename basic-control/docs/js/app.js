@@ -28,6 +28,9 @@ const RootComponent = {
         // Create the simulation bridge
         var sim = useSimulation(HoneyConfig);
 
+        // ── Tab state ───────────────────────────────────────────
+        var currentTab = Vue.ref('wiring');
+
         // ── Button event handlers ─────────────────────────────────
         function onDirLeft()   { sim.handleInput({ dirLeftPressed: true }); }
         function onDirRight()  { sim.handleInput({ dirRightPressed: true }); }
@@ -36,6 +39,7 @@ const RootComponent = {
         function onPreset1()   { sim.handleInput({ preset1Pressed: true }); }
         function onPreset2()   { sim.handleInput({ preset2Pressed: true }); }
         function onToggleLock(){ sim.toggleLock(); }
+        function onToggleSpeed(){ sim.toggleSpeed(); }
 
         // ── Lifecycle: start / stop polling & animation ───────────
         Vue.onMounted(function() {
@@ -48,15 +52,19 @@ const RootComponent = {
 
         // ── Expose to template ────────────────────────────────────
         return {
+            currentTab: currentTab,
             simState:  sim.simState,
             uiLocked:  sim.uiLocked,
+            simSpeed:  sim.simSpeed,
+            presets:   HoneyConfig.presets,
             onDirLeft: onDirLeft,
             onDirRight: onDirRight,
             onStop: onStop,
             onStart: onStart,
             onPreset1: onPreset1,
             onPreset2: onPreset2,
-            onToggleLock: onToggleLock
+            onToggleLock: onToggleLock,
+            onToggleSpeed: onToggleSpeed
         };
     }
 };

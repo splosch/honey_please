@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktive Dokumentation – Honigschleuder</title>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Wire animation CSS (unchanged from original) -->
+    <style>
+        .wire {
+            stroke-dasharray: 4, 4;
+            animation: dash 0.8s linear infinite;
+            animation-play-state: paused;
+        }
+        .wire-active {
+            animation-play-state: running;
+            stroke-width: 2.5;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -8;
+            }
+        }
+    </style>
+
+    <!-- Vue 3 runtime (global build) — needs to load before our module -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col w-full overflow-x-hidden">
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: Root component (app.js)                                -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="root-tpl">
+        <div>
+            <!-- Header -->
+            <header class="bg-gray-800 border-b border-gray-700 py-3 px-6 shadow-md w-full">
+                <div class="w-full flex justify-between items-center gap-3">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-xl font-bold text-amber-500">Honigschleuder</h1>
+                        <nav class="flex gap-1">
+                            <button @click="currentTab = 'wiring'"
+                                :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap',
+                                    currentTab === 'wiring' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600']">
+                                ⚡ Verdrahtungsplan
+                            </button>
+                            <button @click="currentTab = 'visualizer'"
+                                :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap',
+                                    currentTab === 'visualizer' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600']">
+                                📊 State Machine
+                            </button>
+                            <button @click="currentTab = 'snapshots'"
+                                :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap',
+                                    currentTab === 'snapshots' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600']">
+                                📋 Szenario Snapshots
+                            </button>
+                        </nav>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="text-right">
+                            <span class="text-xs font-semibold block text-gray-200">Simulations-Geschwindigkeit</span>
+                            <span class="text-[10px]" :class="simSpeed < 1.0 ? 'text-amber-400' : 'text-green-400'">
+                                {{ simSpeed < 1.0 ? '5× Speed (Demo)' : 'Echtzeit (1×) — wie Arduino' }}
+                            </span>
+                        </div>
+                        <button @click="onToggleSpeed"
+                            :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition',
+                                simSpeed < 1.0 ? 'bg-amber-600 text-white hover:bg-amber-500' : 'bg-green-600 text-white hover:bg-green-500']">
+                            {{ simSpeed < 1.0 ? '→ Echtzeit' : '→ 5× Speed' }}</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <!--  TAB: Verdrahtungsplan                                    -->
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <div v-show="currentTab === 'wiring'">
+                <!-- Main Grid: 1/4 zu 3/4 Aufteilung -->
+                <main class="flex-grow w-full p-4 grid grid-cols-1 xl:grid-cols-4 gap-6">
+
+                    <!-- Left Column (Interactive Controls) -->
+                    <div class="xl:col-span-1 flex flex-col gap-5 h-fit">
+                        <control-panel
+                            :ui-locked="uiLocked"
+                            :selected-run-dataset="simState.selectedRunDataset"
+                            :presets="presets"
+                            @dir-left="onDirLeft"
+                            @dir-right="onDirRight"
+                            @stop="onStop"
+                            @start="onStart"
+                            @preset1="onPreset1"
+                            @preset2="onPreset2"
+                            @toggle-lock="onToggleLock"></control-panel>
+
+                        <status-display
+                            :state-id="simState.id"
+                            :color-box="simState.colorBox"
+                            :color-ping="simState.colorPing"
+                            :color-dot="simState.colorDot"
+                            :color-bar="simState.colorBar"
+                            :show-ping="simState.showPing"
+                            :status-text="simState.statusText"
+                            :status-desc="simState.statusDesc"
+                            :is-ramping="simState.isRamping"
+                            :progress="simState.progress"
+                            :ramp-label="simState.rampLabel"
+                            :selected-run-dataset="simState.selectedRunDataset"
+                            :preset1-dataset="presets.preset1"
+                            :preset2-dataset="presets.preset2"></status-display>
+
+                        <state-machine-legend :state-id="simState.id" :running-c-c-w="simState.dirRelayCCW"></state-machine-legend>
+                    </div>
+
+                    <!-- Right Column: Schematic -->
+                    <schematic-canvas
+                        :sim-state="simState"
+                        :ui-locked="uiLocked"
+                        @toggle-lock="onToggleLock"></schematic-canvas>
+
+                </main>
+
+                <!-- Pin Out table -->
+                <section class="w-full px-4 pb-8">
+                    <wiring-table></wiring-table>
+                </section>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <!--  TAB: State Machine Visualizer                              -->
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <div v-show="currentTab === 'visualizer'" class="w-full" style="height: calc(100vh - 64px);">
+                <iframe src="../VisualizeStateTransitions/SequenzeVisualizer.html"
+                    class="w-full border-0"
+                    style="height: 100%;"
+                    title="State Machine Visualizer">
+                </iframe>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <!--  TAB: Szenario Snapshots                                   -->
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <div v-show="currentTab === 'snapshots'" class="w-full" style="height: calc(100vh - 64px);">
+                <iframe src="../VisualizeStateTransitions/CompareAllSzenarios.html"
+                    class="w-full border-0"
+                    style="height: 100%;"
+                    title="Szenario Snapshots">
+                </iframe>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: StatusDisplay                                          -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="status-display-tpl">
+        <div class="bg-gray-950 p-3.5 rounded-lg border border-gray-800">
+            <!-- Section label -->
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Motor-Zustand</span>
+
+            <!-- State indicator row -->
+            <div :class="['flex items-center gap-2', colorBox]">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span v-if="showPing" :class="['animate-ping absolute inline-flex h-full w-full rounded-full', colorPing]" style="opacity:0.75"></span>
+                    <span :class="['relative inline-flex rounded-full h-2.5 w-2.5', colorDot]"></span>
+                </span>
+                <span class="text-xs font-bold">{{ statusText }}</span>
+            </div>
+
+            <!-- Description -->
+            <p class="text-[11px] text-gray-400 mt-1.5">{{ statusDesc }}</p>
+
+            <!-- Preset indicator (always visible when unlocked) -->
+            <div v-if="stateId !== 'LOCKED'" class="mt-2 flex items-center gap-2 text-[10px]">
+                <span class="text-gray-500">Preset:</span>
+                <span :class="['px-1.5 py-0.5 rounded font-bold',
+                    activePreset === 'preset1' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' : 'bg-gray-800 text-gray-500']">
+                    P1 ({{ preset1Label }})
+                </span>
+                <span :class="['px-1.5 py-0.5 rounded font-bold',
+                    activePreset === 'preset2' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' : 'bg-gray-800 text-gray-500']">
+                    P2 ({{ preset2Label }})
+                </span>
+            </div>
+
+            <!-- Ramp progress bar (conditional) -->
+            <div v-if="isRamping" class="mt-2">
+                <div class="flex justify-between text-[10px] mb-1">
+                    <span class="text-gray-400">{{ rampLabel }}</span>
+                    <span class="text-gray-400">{{ pct }}%</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-1.5">
+                    <div :class="['h-1.5 rounded-full', colorBar]" :style="{ width: pct + '%' }"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: ControlPanel                                           -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="control-panel-tpl">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg flex flex-col gap-5 h-fit">
+            <!-- Section header -->
+            <div>
+                <h2 class="text-md font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Folienschalter</h2>
+
+                <div class="space-y-3">
+                    <!-- Folientaster 1: Richtung -->
+                    <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider block mb-1">Richtung</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button @click="$emit('dir-left')"
+                                class="bg-gray-800 hover:bg-purple-900/40 border border-gray-700 py-1.5 rounded text-xs font-semibold transition">
+                                ◀ Links (CCW)</button>
+                            <button @click="$emit('dir-right')"
+                                class="bg-gray-800 hover:bg-purple-900/40 border border-gray-700 py-1.5 rounded text-xs font-semibold transition">
+                                Rechts (CW) ▶</button>
+                        </div>
+                    </div>
+
+                    <!-- Folientaster 2: Steuerung -->
+                    <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1.5">Steuerung</span>
+                        <div class="grid grid-cols-4 gap-1">
+                            <button @click="$emit('stop')"
+                                class="bg-red-950 hover:bg-red-900/50 border border-red-800 py-2 rounded text-[10px] font-bold text-red-200">
+                                ROT<br>(Stop)</button>
+                            <button @click="$emit('preset1')"
+                                :class="['bg-amber-950 border py-2 rounded text-[10px] font-bold text-amber-200 transition',
+                                    preset1Active ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
+                                GELB 1<br>(P1)</button>
+                            <button @click="$emit('preset2')"
+                                :class="['bg-amber-950 border py-2 rounded text-[10px] font-bold text-amber-200 transition',
+                                    preset2Active ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
+                                GELB 2<br>(P2)</button>
+                            <button @click="$emit('start')"
+                                class="bg-emerald-950 hover:bg-emerald-900/50 border border-emerald-800 py-2 rounded text-[10px] font-bold text-emerald-200">
+                                GRÜN<br>(Start)</button>
+                        </div>
+                    </div>
+
+                    <!-- Hardware Wippschalter -->
+                    <div class="bg-gray-900 p-3 rounded-lg border border-gray-800">
+                        <div class="flex justify-between items-center gap-2">
+                            <div>
+                                <span class="text-xs font-semibold block text-gray-200">Wippschalter (X2)</span>
+                                <span class="text-[10px] text-gray-500">Hardware Betriebs-Sperre</span>
+                            </div>
+                            <button @click="$emit('toggle-lock')"
+                                :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition',
+                                    uiLocked ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-green-600 text-white hover:bg-green-500']">
+                                {{ uiLocked ? 'SPERRE (OFF)' : 'FREIGABE (ON)' }}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: SchematicCanvas (SVG wiring diagram)                   -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="schematic-canvas-tpl">
+        <div class="xl:col-span-3 bg-gray-800 rounded-xl shadow-lg flex flex-col justify-between overflow-x-auto">
+            <!-- SVG Canvas -->
+            <div class="relative w-full bg-gray-950 rounded-lg p-2 overflow-x-auto">
+                <svg id="schematic" viewBox="0 0 1200 820" class="w-full h-auto min-w-[1000px]">
+
+                    <!-- ====== GRID BACKDROP ====== -->
+                    <g opacity="0.02">
+                        <path d="M 0,50 L 1200,50 M 0,100 L 1200,100 M 0,150 L 1200,150 M 0,200 L 1200,200 M 0,250 L 1200,250 M 0,300 L 1200,300 M 0,350 L 1200,350 M 0,400 L 1200,400 M 0,450 L 1200,450 M 0,500 L 1200,500 M 0,550 L 1200,550 M 0,600 L 1200,600 M 0,650 L 1200,650 M 0,700 L 1200,700 M 0,750 L 1200,750 M 0,800 L 1200,800" stroke="#FFF" stroke-width="1"></path>
+                        <path d="M 50,0 L 50,820 M 100,0 L 100,820 M 150,0 L 150,820 M 200,0 L 200,820 M 250,0 L 250,820 M 300,0 L 300,820 M 350,0 L 350,820 M 400,0 L 400,820 M 450,0 L 450,820 M 500,0 L 500,820 M 550,0 L 550,820 M 600,0 L 600,820 M 650,0 L 650,820 M 700,0 L 700,820 M 750,0 L 750,820 M 800,0 L 800,820 M 850,0 L 850,820 M 900,0 L 900,820 M 950,0 L 950,820 M 1000,0 L 1000,820 M 1050,0 L 1050,820 M 1100,0 L 1100,820 M 1150,0 L 1150,820" stroke="#FFF" stroke-width="1"></path>
+                    </g>
+
+                    <!-- ====== SCHEMATIC SUB-COMPONENTS (SVG templates co-located in js/schematic/) ====== -->
+                    <arduino-uno       :origin="origin.ARDUINO"      :left-pins="arduinoLeftPins"   :right-pins="arduinoRightPins"></arduino-uno>
+                    <relay-bank        :origin="origin.RELAIS_BANK"  :power-pins="relayPowerPins"   :channels="relayChannels"></relay-bank>
+                    <keypad-direction  :origin="origin.FT1"          :contact-pins="ft1ContactPins"></keypad-direction>
+                    <keypad-control    :origin="origin.FT2"          :contact-pins="ft2ContactPins"></keypad-control>
+                    <wago-bus          :origin="origin.WAGO"         :contacts="wagoContacts"></wago-bus>
+                    <manual-switch     :origin="origin.SWITCH"       :contacts="switchContacts"     :ui-locked="uiLocked" @toggle-lock="$emit('toggle-lock')"></manual-switch>
+                    <motor-driver      :origin="origin.DRIVER"       :ports="driverPorts"></motor-driver>
+
+                    <!-- ====== WIRES (DATA-DRIVEN) ====== -->
+                    <g v-for="w in wireDefs" :key="w.id">
+                        <path :id="w.id" :d="w.path" fill="none"
+                            :class="['wire', { 'wire-active': wireStates[w.id].active }]"
+                            :stroke="wireStates[w.id].color"
+                            :stroke-width="w.strokeWidth"></path>
+                    </g>
+
+                    <!-- Junction dots -->
+                    <circle v-for="j in junctions" :key="j.cx + ',' + j.cy" :cx="j.cx" :cy="j.cy" :r="j.r" :fill="j.fill"></circle>
+
+                </svg>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="mt-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-[11px] space-y-1.5 text-gray-300">
+                <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen:</strong> Rampenzeiten werden aus den dAtA-Profilen (honey_config.js → speed_dataset.cpp) berechnet. Die Rampendauer skaliert proportional zur Zieldrehzahl (targetRpm / 3000). simSpeed = 0.2 für Demo, 1.0 für Echtzeit-Verifikation.</p>
+                <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (150 ms) → neues Richtungsrelais (REL2/X3) → Anlauframpe (dAtA-proportional, max. 15 s bei 3000 rpm).</p>
+                <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig. D4/D5 steuern die M1/M2 Speed-Relais.</p>
+                <p><strong class="text-amber-500">Geometrische Entflechtung:</strong> Die Leitungen der Folientaster wurden komplett nach unten aus den Gehäusen herausgeleitet. Spannungsversorgungen fließen über die Oberseite des Controllers hinweg. Keine Überschneidungen mit Beschriftungen oder aktiven Bauteilen!</p>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: StateMachineLegend                                     -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="state-machine-legend-tpl">
+        <div class="bg-gray-950 rounded-lg border border-gray-800 p-3">
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Zustandsmaschine</span>
+            <div class="space-y-1 text-[10px]">
+                <div v-for="s in states" :key="s.id" class="flex items-center gap-1.5"
+                    :class="{ 'opacity-100': isActive(s.id), 'opacity-70': !isActive(s.id) }">
+                    <span :class="['w-2 h-2 rounded-full flex-shrink-0', s.color,
+                        { 'ring-1 ring-white ring-offset-1 ring-offset-gray-950': isActive(s.id) }]"></span>
+                    <span :class="isActive(s.id) ? 'text-white' : 'text-gray-400'">
+                        <b :class="isActive(s.id) ? 'text-white' : 'text-gray-300'">{{ s.label }}</b>
+                        <template v-if="s.id === 'RUNNING' && isActive('RUNNING')">
+                            – Stop / Richtungswechsel / Preset (<span class="font-bold" :class="runningCCW ? 'text-purple-400' : 'text-blue-400'">{{ runningCCW ? 'CCW' : 'CW' }}</span>)
+                        </template>
+                        <template v-else> – {{ s.desc }}</template>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: WiringTable                                            -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="wiring-table-tpl">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg">
+            <h2 class="text-sm font-bold text-gray-200 border-b border-gray-700 pb-2 mb-3">Verkabelungsliste mit den neuen Keypads</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-gray-300">
+                    <thead class="bg-gray-900 uppercase text-gray-400">
+                        <tr>
+                            <th class="p-2">Quelle (Arduino / Bauteil)</th>
+                            <th class="p-2">Schnittstelle (Pin)</th>
+                            <th class="p-2">Zielort</th>
+                            <th class="p-2">Zweck / Logik</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <tr v-for="(row, i) in rows" :key="i" :class="{ 'bg-gray-900/30': row.muted }">
+                            <td class="p-2 font-semibold" :class="row.color">{{ row.quelle }}</td>
+                            <td class="p-2">{{ row.pin }}</td>
+                            <td class="p-2" v-html="row.ziel"></td>
+                            <td class="p-2" v-html="row.zweck"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Vue Mount Point                                                   -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div id="app"></div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  Single ES module entry point (replaces 11 script tags)            -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

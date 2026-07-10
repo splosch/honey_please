@@ -9,7 +9,7 @@
  * Zweck : Verdrahtungscheck OHNE angeschlossenen Motor-Treiber.
  *         Relais klicken, Serial-Monitor zeigt alle Zustandsübergänge.
  *
- * Referenz-Verdrahtungsplan : docs/ErsteInbetriebnahmeMotorundSteuerung.html
+ * Referenz-Verdrahtungsplan : docs/InteractiveDocumentation.html
  * PlatformIO-Umgebung       : r4wifi_basic_control
  * Flash-Befehl              : npm run basic-control:build  (Compile-Check)
  *                             npm run basic-control:flash  (Upload via auto-detected USB port)

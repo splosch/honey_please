@@ -1,6 +1,6 @@
 # ARCHITECTURE.md – honey_please Project Map
 
-**Version:** 1.7.0 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-07-08
+**Version:** 1.7.0 | **Board:** Arduino Uno R4 WiFi | **Last updated:** 2026-07-10
 
 This is the central architecture map for the repository.
 AI agents: read this file first and keep scope small.
@@ -53,8 +53,17 @@ honey_please/
     controller_state.cpp         <- controller state transitions and ramp timing logic
     controller_logic.h           <- controller tick interface (state machine extraction)
     controller_logic.cpp         <- state machine transitions operating on input snapshots
+    VisualizeStateTransitions/
+      SequenzeVisualizer.html           <- individual BMP scenario generator (Vue 3)
+      CompareAllSzenarios.html          ← snapshot viewer: dense 1:1 table, multi-version
+      generate_all_bmps.js              ← npm run snapshot: headless batch → bmp_snapshots/
+      bmp_snapshots/<sha>/              ← generated BMPs + manifest.json (gitignored)
     docs/
-      ErsteInbetriebnahmeMotorundSteuerung.html
+      InteractiveDocumentation.html     ← tabbed docs: wiring + state machine + snapshots
+      honey_config.js                   ← JS mirror of C++ config.h + speed_dataset.cpp
+      honey_state_machine.js            ← pure JS state machine (6 states, no DOM deps)
+      js/                               ← Vue components, composables, lib, schematic/
+      ARCHITECTURE_ANALYSIS.md          ← full docs/ subsystem tree + data flow
 
   verify_sketch/                 <- board health verification sketch
 ```
@@ -76,7 +85,13 @@ Use only the smallest relevant documentation set.
 | [basic-control/controller_state.cpp](basic-control/controller_state.cpp) | Ramp progress and effective ramp durations |
 | [basic-control/controller_logic.h](basic-control/controller_logic.h) | Controller tick API for state machine execution |
 | [basic-control/controller_logic.cpp](basic-control/controller_logic.cpp) | State machine transition flow and transition helper orchestration |
-| [basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html](basic-control/docs/ErsteInbetriebnahmeMotorundSteuerung.html) | Wiring validation |
+| [basic-control/docs/InteractiveDocumentation.html](basic-control/docs/InteractiveDocumentation.html) | Wiring validation, state machine visualization, snapshot comparison |
+| [basic-control/VisualizeStateTransitions/SequenzeVisualizer.html](basic-control/VisualizeStateTransitions/SequenzeVisualizer.html) | Single-scenario BMP pixel diagnosis |
+| [basic-control/VisualizeStateTransitions/CompareAllSzenarios.html](basic-control/VisualizeStateTransitions/CompareAllSzenarios.html) | Dense 1:1 snapshot table, multi-version comparison |
+| [basic-control/VisualizeStateTransitions/generate_all_bmps.js](basic-control/VisualizeStateTransitions/generate_all_bmps.js) | Headless snapshot generator (npm run snapshot) |
+| [basic-control/docs/js/lib/simulationScenarios.js](basic-control/docs/js/lib/simulationScenarios.js) | 41 scenario definitions + BMP color palette |
+| [basic-control/docs/js/lib/bmpWriter.js](basic-control/docs/js/lib/bmpWriter.js) | Pure BMP byte-stream writer (browser + Node.js) |
+| [basic-control/docs/js/composables/useBmpSimulation.js](basic-control/docs/js/composables/useBmpSimulation.js) | Headless batch simulator for BMP export |
 
 ---
 
