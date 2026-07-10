@@ -43,9 +43,12 @@ export default {
     },
     props: {
         simState:  { type: Object, required: true },
-        uiLocked:  { type: Boolean, required: true }
+        uiLocked:  { type: Boolean, required: true },
+        bmpDataUrl: { type: String, default: null },
+        bmpWidth:   { type: Number, default: 0 },
+        bmpHeight:  { type: Number, default: 0 }
     },
-    emits: ['toggle-lock'],
+    emits: ['toggle-lock', 'clear-bmp'],
     data: function() {
         return {
             wireDefs: WIRE_DEFS,

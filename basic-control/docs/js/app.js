@@ -14,6 +14,7 @@
 
 import HoneyConfig from '../honey_config.js';
 import useSimulation from './composables/useSimulation.js';
+import useRecording from './composables/useRecording.js';
 import StatusDisplay from './components/StatusDisplay.js';
 import ControlPanel from './components/ControlPanel.js';
 import SchematicCanvas from './components/SchematicCanvas.js';
@@ -31,15 +32,23 @@ const RootComponent = {
         // ── Tab state ───────────────────────────────────────────
         var currentTab = Vue.ref('wiring');
 
-        // ── Button event handlers ─────────────────────────────────
-        function onDirLeft()   { sim.handleInput({ dirLeftPressed: true }); }
-        function onDirRight()  { sim.handleInput({ dirRightPressed: true }); }
-        function onStop()      { sim.handleInput({ stopPressed: true }); }
-        function onStart()     { sim.handleInput({ startPressed: true }); }
-        function onPreset1()   { sim.handleInput({ preset1Pressed: true }); }
-        function onPreset2()   { sim.handleInput({ preset2Pressed: true }); }
+        // ── Recording composable ──────────────────────────────────
+        var rec = useRecording();
+
+        // ── Button event handlers (wrapped with recording) ──────
+        function onDirLeft()   { rec.recordEvent('dirLeft');   sim.handleInput({ dirLeftPressed: true }); }
+        function onDirRight()  { rec.recordEvent('dirRight');  sim.handleInput({ dirRightPressed: true }); }
+        function onStop()      { rec.recordEvent('stop');      sim.handleInput({ stopPressed: true }); }
+        function onStart()     { rec.recordEvent('start');     sim.handleInput({ startPressed: true }); }
+        function onPreset1()   { rec.recordEvent('preset1');   sim.handleInput({ preset1Pressed: true }); }
+        function onPreset2()   { rec.recordEvent('preset2');   sim.handleInput({ preset2Pressed: true }); }
         function onToggleLock(){ sim.toggleLock(); }
         function onToggleSpeed(){ sim.toggleSpeed(); }
+
+        // ── Recording control handlers ──────────────────────────
+        function onStartRecording() { rec.startRecording(); }
+        function onStopRecording()  { rec.stopRecording(); }
+        function onClearBmp()       { rec.clearBmp(); }
 
         // ── Lifecycle: start / stop polling & animation ───────────
         Vue.onMounted(function() {
@@ -64,7 +73,17 @@ const RootComponent = {
             onPreset1: onPreset1,
             onPreset2: onPreset2,
             onToggleLock: onToggleLock,
-            onToggleSpeed: onToggleSpeed
+            onToggleSpeed: onToggleSpeed,
+            // Recording
+            isRecording: rec.isRecording,
+            isGenerating: rec.isGenerating,
+            bmpDataUrl: rec.bmpDataUrl,
+            bmpWidth: rec.bmpWidth,
+            bmpHeight: rec.bmpHeight,
+            recordedEventCount: rec.recordedEvents,
+            onStartRecording: onStartRecording,
+            onStopRecording: onStopRecording,
+            onClearBmp: onClearBmp
         };
     }
 };

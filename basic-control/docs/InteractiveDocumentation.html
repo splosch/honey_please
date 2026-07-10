@@ -24,6 +24,15 @@
                 stroke-dashoffset: -8;
             }
         }
+
+        /* BMP overlay image: pixel-perfect rendering */
+        .bmp-overlay-img {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            max-width: 600px;
+            max-height: 200px;
+            display: block;
+        }
     </style>
 
     <!-- Vue 3 runtime (global build) — needs to load before our module -->
@@ -60,6 +69,26 @@
                         </nav>
                     </div>
                     <div class="flex items-center gap-3 flex-shrink-0">
+                        <!-- Recording Controls -->
+                        <div class="flex items-center gap-2 border-r border-gray-700 pr-3">
+                            <button v-if="!isRecording && !bmpDataUrl"
+                                @click="onStartRecording"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition bg-red-700 text-white hover:bg-red-600 border border-red-600">
+                                ⏺ Record
+                            </button>
+                            <button v-if="isRecording"
+                                @click="onStopRecording"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition bg-gray-700 text-red-400 hover:bg-gray-600 border border-red-500 animate-pulse">
+                                ⏹ Stop ({{ recordedEventCount.length }})
+                            </button>
+                            <button v-if="bmpDataUrl"
+                                @click="onClearBmp"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600">
+                                ✕ Clear BMP
+                            </button>
+                            <span v-if="isGenerating" class="text-xs text-amber-400 font-medium">Generating BMP…</span>
+                        </div>
+
                         <div class="text-right">
                             <span class="text-xs font-semibold block text-gray-200">Simulations-Geschwindigkeit</span>
                             <span class="text-[10px]" :class="simSpeed < 1.0 ? 'text-amber-400' : 'text-green-400'">
@@ -118,7 +147,11 @@
                     <schematic-canvas
                         :sim-state="simState"
                         :ui-locked="uiLocked"
-                        @toggle-lock="onToggleLock"></schematic-canvas>
+                        :bmp-data-url="bmpDataUrl"
+                        :bmp-width="bmpWidth"
+                        :bmp-height="bmpHeight"
+                        @toggle-lock="onToggleLock"
+                        @clear-bmp="onClearBmp"></schematic-canvas>
 
                 </main>
 
@@ -296,6 +329,18 @@
                     <circle v-for="j in junctions" :key="j.cx + ',' + j.cy" :cx="j.cx" :cy="j.cy" :r="j.r" :fill="j.fill"></circle>
 
                 </svg>
+
+                <!-- BMP Overlay (displayed on top of SVG when recording result exists) -->
+                <div v-if="bmpDataUrl" class="absolute top-2 right-2 z-10 bg-gray-950/90 border border-amber-600 rounded-lg p-2 shadow-2xl">
+                    <div class="flex items-center justify-between mb-1 gap-2">
+                        <span class="text-[10px] font-bold text-amber-400 uppercase">Recording BMP</span>
+                        <button @click="$emit('clear-bmp')" class="text-gray-500 hover:text-red-400 text-xs leading-none font-bold">&times;</button>
+                    </div>
+                    <img :src="bmpDataUrl"
+                         class="bmp-overlay-img"
+                         :style="{ width: bmpWidth + 'px', height: bmpHeight + 'px' }"
+                         alt="Recording BMP">
+                </div>
             </div>
 
             <!-- Notes Section -->
