@@ -34,6 +34,15 @@ export const EVENT_COLOR = { r: 255, g: 0, b: 0 };
  */
 export const HW_FAULT_COLOR = { r: 255, g: 60, b: 60 };
 
+/**
+ * Color for motor speed overlay line (pink).
+ * Drawn with 70% transparency (30% opacity blend) over the state-colored
+ * fill area to trace the physically accurate VFD motor RPM, which may
+ * diverge from the state machine's abstract progress during preset changes
+ * and other transitions where the VFD's internal ramp is not instant.
+ */
+export const OVERLAY_COLOR = { r: 255, g: 105, b: 180 };
+
 /** Background / empty cell color. */
 export const BG_COLOR = { r: 15, g: 15, b: 15 };
 

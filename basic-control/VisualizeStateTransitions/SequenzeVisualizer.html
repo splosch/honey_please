@@ -79,6 +79,10 @@
                             <div class="w-4 h-4 mr-2 border border-gray-500 bg-red-600"></div>
                             <span class="text-xs">EVENT Trigger (Unterste Zeile)</span>
                         </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 mr-2 border border-gray-500" :style="{ backgroundColor: `rgb(${overlayColor.r},${overlayColor.g},${overlayColor.b})` }"></div>
+                            <span class="text-xs">Motor-Drehzahl (Overlay, 70% Transparenz)</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,7 +96,7 @@
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <script type="module">
         import HoneyConfig from '../docs/honey_config.js';
-        import { SCENARIOS, STATE_COLORS, EVENT_COLOR, TIMING_PRESETS } from '../docs/js/lib/simulationScenarios.js';
+        import { SCENARIOS, STATE_COLORS, EVENT_COLOR, OVERLAY_COLOR, TIMING_PRESETS } from '../docs/js/lib/simulationScenarios.js';
         import { generateBmpBuffer } from '../docs/js/lib/bmpWriter.js';
         import { runHeadlessSimulation } from '../docs/js/composables/useBmpSimulation.js';
 
@@ -245,6 +249,7 @@
                     canvasEl,
                     bmpBuffer,
                     stateColors: STATE_COLORS,
+                    overlayColor: OVERLAY_COLOR,
                     runSimulation,
                     downloadBMP
                 };

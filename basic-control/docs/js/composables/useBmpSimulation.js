@@ -34,7 +34,7 @@
 import HoneyStateMachine from '../../honey_state_machine.js';
 import HoneyConfig from '../../honey_config.js';
 import HardwareFaultInjector from '../lib/hardware_fault_injector.js';
-import { STATE_COLORS, EVENT_COLOR, HW_FAULT_COLOR, BG_COLOR } from '../lib/simulationScenarios.js';
+import { STATE_COLORS, EVENT_COLOR, HW_FAULT_COLOR, BG_COLOR, OVERLAY_COLOR } from '../lib/simulationScenarios.js';
 
 // ── Visualization defaults (not hardware parameters) ──────────────────
 
@@ -114,6 +114,88 @@ function mapRpmToY(rpm, maxRpm, yResolution, yOffset) {
     return Math.max(minRow, Math.min(maxRow, yPos));
 }
 
+// ── Motor physics (VFD ramp model) ──────────────────────────────────────
+
+/**
+ * Determine the commanded target RPM from a state machine snapshot.
+ *
+ * This is the speed the VFD is being instructed to reach — not the speed
+ * it is currently at. The VFD ramps toward this target at a constant rate
+ * (see stepMotorRpm).
+ *
+ * @param {object} state — sm.getState() return value
+ * @param {object} cfg   — HoneyConfig (for dataset targetRpm lookup)
+ * @returns {number} signed target RPM
+ */
+function getCommandedTargetRpm(state, cfg) {
+    // Zero-RPM states — motor is commanded to stop
+    if (state.id === 'STANDBY' || state.id === 'WAITING') {
+        return 0;
+    }
+
+    // DECELERATING always targets 0 RPM (braking ramp)
+    if (state.id === 'DECELERATING') {
+        return 0;
+    }
+
+    var ds = cfg.datasets[state.activeDataset];
+    var targetRpm = ds ? ds.targetRpm : 0;
+
+    // Constant-speed states — VFD holds target speed
+    if (state.id === 'RUNNING_CW')  return targetRpm;
+    if (state.id === 'RUNNING_CCW') return -targetRpm;
+
+    // ACCELERATING — heading toward targetDirection
+    var sign = (state.targetDirection === 'CCW') ? -1 : 1;
+    return sign * targetRpm;
+}
+
+/**
+ * Step the actual motor RPM toward a commanded target using VFD ramp physics.
+ *
+ * The VFD accelerates and decelerates at a constant rate derived from the
+ * dataset profiles: rampReferenceMaxRpm / accelerationMs (e.g. 3000/15000 =
+ * 0.2 RPM/ms). This rate is identical for all datasets — only the total
+ * ramp duration differs (longer for higher target speeds).
+ *
+ * @param {number} currentRpm    — current actual RPM (signed)
+ * @param {number} targetRpm     — commanded target RPM (signed)
+ * @param {number} dtMs          — time delta in milliseconds
+ * @param {number} rampRefMaxRpm — reference max RPM (e.g. 3000)
+ * @param {number} rampRefMs     — reference ramp time in ms (e.g. 15000)
+ * @returns {number} new actual RPM after this time step
+ */
+function stepMotorRpm(currentRpm, targetRpm, dtMs, rampRefMaxRpm, rampRefMs) {
+    var rate = rampRefMaxRpm / rampRefMs;  // RPM per ms
+    var maxStep = rate * dtMs;
+    if (currentRpm < targetRpm) {
+        return Math.min(currentRpm + maxStep, targetRpm);
+    } else if (currentRpm > targetRpm) {
+        return Math.max(currentRpm - maxStep, targetRpm);
+    }
+    return currentRpm;
+}
+
+/**
+ * Blend a foreground color over a background color at the given opacity.
+ *
+ * Used to draw the overlay line at 70% transparency (alpha = 0.3) so the
+ * state-colored fill area remains visible through the pink speed line.
+ *
+ * @param {{r:number,g:number,b:number}} fg     — foreground color
+ * @param {{r:number,g:number,b:number}} bg     — background color
+ * @param {number} alpha — foreground opacity (0..1, where 0 = fully transparent)
+ * @returns {{r:number,g:number,b:number}} blended color
+ */
+function blendColor(fg, bg, alpha) {
+    var invAlpha = 1.0 - alpha;
+    return {
+        r: Math.round(alpha * fg.r + invAlpha * bg.r),
+        g: Math.round(alpha * fg.g + invAlpha * bg.g),
+        b: Math.round(alpha * fg.b + invAlpha * bg.b)
+    };
+}
+
 // ── Main simulation entry point ────────────────────────────────────────
 
 /**
@@ -183,6 +265,17 @@ export function runHeadlessSimulation(scenario, opts) {
     // edge cases in the state machine's debounce guard (_lastTickMs init = 0).
     var virtualNow = 1000;
 
+    // Motor physics tracking for overlay line.
+    // The VFD ramps at a constant rate: rampReferenceMaxRpm / accelerationMs
+    // (e.g. 3000 / 15000 = 0.2 RPM per virtual millisecond).
+    // This tracks the physically accurate RPM independently of the state
+    // machine's abstract progress, so preset changes during RUNNING show
+    // a smooth ramp instead of an instantaneous RPM jump.
+    var actualRpm = 0.0;
+    var motorRampRate = cfg.rampReferenceMaxRpm / 15000;  // 0.2 RPM/ms
+    // 70% transparency = 30% opacity for the overlay line
+    var OVERLAY_ALPHA = 0.8;
+
     for (var tick = 0; tick < width; tick++) {
         // 1. Build input snapshot for this tick
         var tickEvents = eventsByTick[tick];
@@ -230,9 +323,18 @@ export function runHeadlessSimulation(scenario, opts) {
         // 5. Read current state
         var state = sm.getState(virtualNow);
 
-        // 6. Compute RPM and map to Y
+        // 6. Compute state-machine RPM and map to Y (for filled area chart)
         var rpm = computeRpm(state, cfg);
         var yPos = mapRpmToY(rpm, maxRpm, yResolution, yOffset);
+
+        // 6b. Update actual motor RPM (VFD physics) for overlay line.
+        // The commanded target is derived from the state AFTER this tick's
+        // events have been processed. actualRpm then moves toward that
+        // target at the constant VFD ramp rate, producing a smooth curve
+        // that lags behind instant state-machine target changes.
+        var commandedTarget = getCommandedTargetRpm(state, cfg);
+        actualRpm = stepMotorRpm(actualRpm, commandedTarget, tickDurationMs,
+                                  cfg.rampReferenceMaxRpm, 15000);
 
         // 7. Write into matrix
         var color = STATE_COLORS[state.id] || STATE_COLORS.STANDBY;
@@ -263,6 +365,13 @@ export function runHeadlessSimulation(scenario, opts) {
         if (hasHwFaults && state.commandedDataset !== state.activeDataset) {
             matrix[mismatchRow][tick] = HW_FAULT_COLOR;
         }
+
+        // 7b. Draw motor speed overlay line (pink, 70% transparency).
+        // Blended on top of the state-colored fill area so the physically
+        // accurate VFD RPM is visible as a distinct line overlaying the
+        // state machine's abstract progress visualization.
+        var overlayY = mapRpmToY(actualRpm, maxRpm, yResolution, yOffset);
+        matrix[overlayY][tick] = blendColor(OVERLAY_COLOR, matrix[overlayY][tick], OVERLAY_ALPHA);
 
         // 8. Advance virtual clock
         virtualNow += tickDurationMs;
