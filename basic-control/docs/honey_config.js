@@ -15,10 +15,10 @@
 // All Ac/dc values are relative to kRampReferenceMaxRpm = 3000 (speed_dataset.h:26).
 // Real ramp time for a given dataset = (Ac|dc)Ms × targetRpm / 3000.
 const DATASETS = {
-    DATASET_0: { targetRpm: 1250, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: false },
-    DATASET_2: { targetRpm:  750, accelerationMs: 15000, decelerationMs: 15000, m1: true,  m2: false },
-    DATASET_4: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: true  },
-    DATASET_6: { targetRpm:    0, accelerationMs: 15000, decelerationMs: 15000, m1: true,  m2: true  }
+    DATASET_0: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: false }, // Speed Slow
+    DATASET_2: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: true,  m2: false }, // Speed Slow / 2
+    DATASET_4: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: true  }, // Speed Fast
+    DATASET_6: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: true,  m2: true  }  // Speed Stop
 };
 
 // ── Public config object ──────────────────────────────────────────────
@@ -59,8 +59,8 @@ const HoneyConfig = {
 
     // -- Preset dataset assignments (config.h:109-110) -----------------
     presets: {
-        preset1: 'DATASET_0',   // Gelb-1 → dAtA 0 (1250 rpm, M1=0,M2=0)
-        preset2: 'DATASET_4',   // Gelb-2 → dAtA 4 (2500 rpm, M1=0,M2=1)
+        preset1: 'DATASET_0',   // Gelb-1 → dAtA 0 (2500 rpm, M1=0,M2=0)  Speed Slow
+        preset2: 'DATASET_4',   // Gelb-2 → dAtA 4 (2500 rpm, M1=0,M2=1)  Speed Fast
         standby: 'DATASET_0'    // controller_logic.cpp:3  kStandbyDataset
     },
 

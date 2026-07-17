@@ -16,11 +16,11 @@ static constexpr BinarySpeedDynamicsProfile kDynamicsProfiles[] = {
     // Row format: {     dataset,   targetRpm,  accelerationMs, decelerationMs}
 
     // Speed Datasets
-    {BinarySpeedDataset::DATASET_0, 1250UL,     15000UL,        15000UL},
-    {BinarySpeedDataset::DATASET_4, 2500UL,     15000UL,        15000UL},
+    {BinarySpeedDataset::DATASET_0, 2500UL, 15000UL, 15000UL}, // Speed Slow
+    {BinarySpeedDataset::DATASET_4, 2500UL, 15000UL, 15000UL}, // Speed Fast
     // Breaking Datasets
-    {BinarySpeedDataset::DATASET_2, 750UL,      15000UL,        15000UL},
-    {BinarySpeedDataset::DATASET_6, 0UL,        15000UL,         15000UL}
+    {BinarySpeedDataset::DATASET_2, 2500UL, 15000UL, 15000UL}, // Speed Slow / 2
+    {BinarySpeedDataset::DATASET_6, 2500UL, 15000UL, 15000UL} // Speed Stop
 };
 
 const BinarySpeedRelayProfile& relayProfileForDataset(BinarySpeedDataset dataset) {
