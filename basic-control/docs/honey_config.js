@@ -15,7 +15,7 @@
 // All Ac/dc values are relative to kRampReferenceMaxRpm = 3000 (speed_dataset.h:26).
 // Real ramp time for a given dataset = (Ac|dc)Ms × targetRpm / 3000.
 const DATASETS = {
-    DATASET_0: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: false }, // Speed Slow
+    DATASET_0: { targetRpm: 1250, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: false }, // Speed Slow
     DATASET_2: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: true,  m2: false }, // Speed Slow / 2
     DATASET_4: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: false, m2: true  }, // Speed Fast
     DATASET_6: { targetRpm: 2500, accelerationMs: 15000, decelerationMs: 15000, m1: true,  m2: true  }  // Speed Stop

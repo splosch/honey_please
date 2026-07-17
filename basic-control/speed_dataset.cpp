@@ -1,10 +1,11 @@
 #include "speed_dataset.h"
 
 static constexpr BinarySpeedRelayProfile kDatasetProfiles[] = {
-    {BinarySpeedDataset::DATASET_0, false, false},
-    {BinarySpeedDataset::DATASET_2, true,  false},
-    {BinarySpeedDataset::DATASET_4, false, true },
-    {BinarySpeedDataset::DATASET_6, true,  true }
+    // Format: { Dataset-ID, Relais_M1, Relais_M2 }
+    {BinarySpeedDataset::DATASET_0, false, false}, // Binär [0,0,1] -> Dezimal 1 -> Treiber: P.no 2 (Speed Slow)
+    {BinarySpeedDataset::DATASET_2, true,  false}, // Binär [0,1,1] -> Dezimal 3 -> Treiber: P.no 4 (Bremsstufe 1)
+    {BinarySpeedDataset::DATASET_4, false, true }, // Binär [1,0,1] -> Dezimal 5 -> Treiber: P.no 6 (Speed Fast)
+    {BinarySpeedDataset::DATASET_6, true,  true }  // Binär [1,1,1] -> Dezimal 7 -> Treiber: P.no 8 (Speed Stop)
 };
 
 static constexpr BinarySpeedDynamicsProfile kDynamicsProfiles[] = {
@@ -16,11 +17,11 @@ static constexpr BinarySpeedDynamicsProfile kDynamicsProfiles[] = {
     // Row format: {     dataset,   targetRpm,  accelerationMs, decelerationMs}
 
     // Speed Datasets
-    {BinarySpeedDataset::DATASET_0, 2500UL, 15000UL, 15000UL}, // Speed Slow
-    {BinarySpeedDataset::DATASET_4, 2500UL, 15000UL, 15000UL}, // Speed Fast
+    {BinarySpeedDataset::DATASET_0, 1250UL, 15000UL, 15000UL}, // Speed Slow [P.no 2]
+    {BinarySpeedDataset::DATASET_4, 2500UL, 15000UL, 15000UL}, // Speed Fast [P.no 6]
     // Breaking Datasets
-    {BinarySpeedDataset::DATASET_2, 2500UL, 15000UL, 15000UL}, // Speed Slow / 2
-    {BinarySpeedDataset::DATASET_6, 2500UL, 15000UL, 15000UL} // Speed Stop
+    {BinarySpeedDataset::DATASET_2, 2500UL, 15000UL, 15000UL}, // Speed Slow / 2 [P.no 4]
+    {BinarySpeedDataset::DATASET_6, 2500UL, 15000UL, 15000UL}  // Speed Stop [P.no 8]
 };
 
 const BinarySpeedRelayProfile& relayProfileForDataset(BinarySpeedDataset dataset) {
