@@ -28,6 +28,19 @@
         .snapshot-row:nth-child(even) {
             background: rgba(55, 65, 81, 0.3);
         }
+        /* Comparison: left column border */
+        .compare-col-left {
+            border-right: 2px solid rgba(251, 191, 36, 0.3);
+        }
+        /* Placeholder for missing scenario */
+        .placeholder-cell {
+            min-width: 100px;
+            min-height: 42px;
+        }
+        /* Comparison diff highlight: row where scenarios differ in presence */
+        .diff-row {
+            background: rgba(251, 191, 36, 0.08) !important;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans">
@@ -39,24 +52,52 @@
                 <div>
                     <h1 class="text-lg font-bold text-amber-500">Szenario Snapshots</h1>
                     <p class="text-xs text-gray-400 mt-0.5">
-                        Dichte 1:1-Pixelansicht aller Szenarien aus einem Snapshot.
-                        Später: Vergleich zweier Snapshots (Version A ↔ Version B).
+                        <template v-if="!cmp.compareMode.value">
+                            Einzelansicht: Dichte 1:1-Pixelansicht aller Szenarien eines Snapshots.
+                        </template>
+                        <template v-else>
+                            Vergleichsmodus: Zwei Snapshots nebeneinander (Basis ↔ Vergleich).
+                        </template>
                     </p>
                 </div>
 
-                <!-- Snapshot selector -->
-                <div class="flex items-center gap-3" v-if="snapshots.length > 0">
-                    <label class="text-xs text-gray-400">Snapshot:</label>
-                    <select v-model="selectedSha"
-                            class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white">
-                        <option v-for="snap in snapshots" :key="snap.sha" :value="snap.sha">
-                            {{ snap.sha }} — {{ snap.scenarioCount }} Szenarien ({{ formatDate(snap.generatedAt) }})
-                        </option>
-                    </select>
+                <!-- Controls -->
+                <div class="flex items-center gap-3 flex-wrap" v-if="snapshots.length > 0">
+                    <!-- Compare mode toggle -->
+                    <button @click="cmp.toggleCompareMode()"
+                            :class="['px-3 py-1.5 rounded-lg text-xs font-medium transition border',
+                                cmp.compareMode.value
+                                    ? 'bg-amber-600 text-white border-amber-500'
+                                    : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600']">
+                        {{ cmp.compareMode.value ? '⟷ Vergleich aktiv' : '⟷ Vergleichen' }}
+                    </button>
+
+                    <!-- Single / Base snapshot selector -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs text-gray-400">{{ cmp.compareMode.value ? 'Basis:' : 'Snapshot:' }}</label>
+                        <select v-model="selectedSha"
+                                class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white">
+                            <option v-for="snap in snapshots" :key="snap.sha" :value="snap.sha">
+                                {{ snap.sha }} — {{ snap.scenarioCount }} Szenarien ({{ formatDate(snap.generatedAt) }})
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Compare snapshot selector (only in compare mode) -->
+                    <div class="flex items-center gap-2" v-if="cmp.compareMode.value">
+                        <label class="text-xs text-amber-400">Vergleich:</label>
+                        <select v-model="cmp.compareSha.value"
+                                class="bg-gray-700 border border-amber-600 rounded px-3 py-1.5 text-sm text-white">
+                            <option :value="null">— Bitte wählen —</option>
+                            <option v-for="snap in cmp.comparisonCandidates.value" :key="snap.sha" :value="snap.sha">
+                                {{ snap.sha }} — {{ snap.scenarioCount }} Szenarien ({{ formatDate(snap.generatedAt) }})
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Loading / error state in header -->
-                <div v-if="loading" class="text-sm text-amber-400">Lade Index…</div>
+                <div v-if="loading" class="text-sm text-amber-400">Lade…</div>
                 <div v-if="error" class="text-sm text-red-400">{{ error }}</div>
             </div>
         </header>
@@ -64,17 +105,28 @@
         <!-- ── Main content: scrollable table ──────────────────────────── -->
         <main class="flex-grow overflow-hidden" v-if="!loading && currentManifest">
             <!-- Snapshot info bar -->
-            <div class="px-6 py-2 bg-gray-850 border-b border-gray-700 flex items-center gap-4 text-xs text-gray-400 flex-shrink-0">
-                <span>SHA: <code class="text-amber-400">{{ currentManifest.sha }}</code></span>
+            <div class="px-6 py-2 bg-gray-850 border-b border-gray-700 flex items-center gap-4 text-xs text-gray-400 flex-shrink-0 flex-wrap">
+                <!-- Base snapshot info -->
+                <span>Basis: <code class="text-amber-400">{{ currentManifest.sha }}</code></span>
                 <span>{{ currentManifest.scenarioCount }} Szenarien</span>
-                <span>Generiert: {{ formatDate(currentManifest.generatedAt) }}</span>
+                <span>{{ formatDate(currentManifest.generatedAt) }}</span>
+
+                <template v-if="cmp.compareMode.value && cmp.compareManifest.value">
+                    <span class="text-gray-600">|</span>
+                    <span>Vergleich: <code class="text-amber-400">{{ cmp.compareManifest.value.sha }}</code></span>
+                    <span>{{ cmp.compareManifest.value.scenarioCount }} Szenarien</span>
+                    <span>{{ formatDate(cmp.compareManifest.value.generatedAt) }}</span>
+                </template>
+
                 <a :href="'bmp_snapshots/' + currentManifest.sha + '/manifest.json'"
                    target="_blank"
                    class="text-blue-400 hover:underline ml-auto">manifest.json</a>
             </div>
 
-            <!-- Table -->
-            <div class="table-wrapper">
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <!--  Single-snapshot table (no comparison)                       -->
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <div class="table-wrapper" v-if="!cmp.compareMode.value || !cmp.compareManifest.value">
                 <table class="w-full text-sm border-collapse">
                     <thead>
                         <tr class="bg-gray-800 sticky top-0 z-10">
@@ -127,6 +179,89 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <!--  Comparison table (two snapshots side-by-side)               -->
+            <!-- ════════════════════════════════════════════════════════════ -->
+            <div class="table-wrapper" v-if="cmp.compareMode.value && cmp.compareManifest.value">
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 sticky top-0 z-10">
+                            <th class="sticky-name bg-gray-800 px-4 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700 whitespace-nowrap">
+                                Szenario
+                            </th>
+                            <!-- Left / Base column header -->
+                            <th class="px-4 py-2 text-center text-xs font-semibold border-b border-gray-700 whitespace-nowrap compare-col-left"
+                                style="background: rgba(30, 58, 138, 0.4);">
+                                <code class="text-blue-300">{{ currentManifest.sha }}</code>
+                                <span class="text-gray-500 block text-[10px]">Basis</span>
+                            </th>
+                            <!-- Right / Compare column header -->
+                            <th class="px-4 py-2 text-center text-xs font-semibold border-b border-gray-700 whitespace-nowrap"
+                                style="background: rgba(180, 83, 9, 0.3);">
+                                <code class="text-amber-300">{{ cmp.compareManifest.value.sha }}</code>
+                                <span class="text-gray-500 block text-[10px]">Vergleich</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="scn in cmp.mergedScenarios.value" :key="scn.id"
+                            :class="['snapshot-row border-b border-gray-800 hover:bg-gray-750 transition-colors',
+                                     scn.onlyOneSide ? 'diff-row' : '']">
+                            <!-- Scenario name (sticky) -->
+                            <td class="sticky-name bg-gray-900 px-4 py-2 whitespace-nowrap">
+                                <div class="font-medium text-gray-200">{{ scn.name }}</div>
+                                <div class="text-[10px] text-gray-500 font-mono">{{ scn.id }}</div>
+                                <!-- Only-one-side indicator -->
+                                <span v-if="scn.onlyOneSide"
+                                      class="text-[10px] text-amber-400 mt-0.5 block">
+                                    {{ scn.left ? 'Nur in Basis' : 'Nur in Vergleich' }}
+                                </span>
+                            </td>
+
+                            <!-- Left BMP (Base) -->
+                            <td class="px-4 py-1 compare-col-left">
+                                <template v-if="scn.left">
+                                    <img :src="cmp.bmpUrl(scn.left.file, selectedSha)"
+                                         :alt="scn.name"
+                                         class="bmp-img"
+                                         :style="{ width: scn.left.bmpWidth + 'px', height: scn.left.bmpHeight + 'px' }"
+                                         loading="lazy">
+                                    <div class="text-[10px] text-gray-500 font-mono mt-0.5">
+                                        {{ scn.left.bmpWidth }}×{{ scn.left.bmpHeight }}
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="placeholder-cell flex items-center justify-center bg-gray-800/50 rounded border border-gray-700 border-dashed"
+                                         style="min-width: 120px; min-height: 42px;">
+                                        <span class="text-xs text-gray-600">— nicht vorhanden —</span>
+                                    </div>
+                                </template>
+                            </td>
+
+                            <!-- Right BMP (Compare) -->
+                            <td class="px-4 py-1">
+                                <template v-if="scn.right">
+                                    <img :src="cmp.bmpUrl(scn.right.file, cmp.compareSha.value)"
+                                         :alt="scn.name"
+                                         class="bmp-img"
+                                         :style="{ width: scn.right.bmpWidth + 'px', height: scn.right.bmpHeight + 'px' }"
+                                         loading="lazy">
+                                    <div class="text-[10px] text-gray-500 font-mono mt-0.5">
+                                        {{ scn.right.bmpWidth }}×{{ scn.right.bmpHeight }}
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="placeholder-cell flex items-center justify-center bg-gray-800/50 rounded border border-gray-700 border-dashed"
+                                         style="min-width: 120px; min-height: 42px;">
+                                        <span class="text-xs text-gray-600">— nicht vorhanden —</span>
+                                    </div>
+                                </template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </main>
 
         <!-- ── No data state ───────────────────────────────────────────── -->
@@ -145,6 +280,8 @@
     <!--  Vue App                                                          -->
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <script type="module">
+        import { useSnapshotComparison } from '../docs/js/composables/useSnapshotComparison.js';
+
         const { createApp, ref, computed, onMounted, watch } = Vue;
 
         const app = createApp({
@@ -157,13 +294,25 @@
                 const loading = ref(true);
                 const error = ref(null);
 
+                // ── Comparison composable (watchers self-register) ──────
+                const cmp = useSnapshotComparison(
+                    { ref, computed, watch },
+                    {
+                        baseUrl:         BASE,
+                        snapshots:       snapshots,
+                        selectedSha:     selectedSha,
+                        currentManifest: currentManifest,
+                        onError:         function (msg) { error.value = msg; }
+                    }
+                );
+
                 // ── Fetch index.json ────────────────────────────────────
                 async function loadIndex() {
                     loading.value = true;
                     error.value = null;
                     try {
                         const resp = await fetch(BASE + 'index.json');
-                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
                         const data = await resp.json();
                         snapshots.value = (data && data.snapshots) ? data.snapshots : [];
                     } catch (err) {
@@ -181,12 +330,12 @@
                     loading.value = true;
                     error.value = null;
                     try {
-                        const resp = await fetch(`${BASE}${sha}/manifest.json`);
-                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const resp = await fetch(BASE + sha + '/manifest.json');
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
                         const data = await resp.json();
                         currentManifest.value = data;
                     } catch (err) {
-                        error.value = `Snapshot "${sha}" nicht ladbar: ${err.message}`;
+                        error.value = 'Snapshot "' + sha + '" nicht ladbar: ' + err.message;
                         currentManifest.value = null;
                     } finally {
                         loading.value = false;
@@ -202,18 +351,18 @@
                 });
 
                 // ── React to SHA selection changes ──────────────────────
-                watch(selectedSha, (sha) => {
+                watch(selectedSha, function (sha) {
                     loadManifest(sha);
                 });
 
                 // ── Helpers ─────────────────────────────────────────────
                 function bmpUrl(filename) {
-                    return `${BASE}${selectedSha.value}/${filename}`;
+                    return BASE + selectedSha.value + '/' + filename;
                 }
 
                 function formatDate(iso) {
                     if (!iso) return '?';
-                    const d = new Date(iso);
+                    var d = new Date(iso);
                     return d.toLocaleString('de-DE', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
@@ -221,13 +370,14 @@
                 }
 
                 return {
-                    snapshots,
-                    selectedSha,
-                    currentManifest,
-                    loading,
-                    error,
-                    bmpUrl,
-                    formatDate
+                    snapshots:       snapshots,
+                    selectedSha:     selectedSha,
+                    currentManifest: currentManifest,
+                    loading:         loading,
+                    error:           error,
+                    cmp:             cmp,
+                    bmpUrl:          bmpUrl,
+                    formatDate:      formatDate
                 };
             }
         });
