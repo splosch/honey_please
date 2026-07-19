@@ -45,6 +45,21 @@ jobs:
           mkdir -p _site
           cp -R basic-control/docs _site/docs
           cp -R basic-control/VisualizeStateTransitions _site/VisualizeStateTransitions
+          cat > _site/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=./docs/">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Redirecting to docs</title>
+            <script>location.replace('./docs/');</script>
+          </head>
+          <body>
+            <p>If you are not redirected automatically, open <a href="./docs/">documentation</a>.</p>
+          </body>
+          </html>
+          EOF
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
