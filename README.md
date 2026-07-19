@@ -3,7 +3,7 @@
 Motor control system for a honey extractor. Built with PlatformIO + Arduino framework for the Arduino Uno R4 WiFi.
 
 > **Hardware:** Arduino Uno R4 WiFi (RA4M1 @ 48 MHz) · Firmware v1.6.0  
-> **Status:** Phase 0–2 fully verified on R4. Phase 3–4 board-side verified.
+> **Status:** Phase 0–2 fully verified on R4.
 
 ---
 
@@ -125,3 +125,42 @@ honey_please/
 - **Single-threaded** — no FreeRTOS, no mutexes. Everything runs in `loop()`.
 - **USB Serial is the debug channel** — no WebSerial, no network stack at runtime.
 - **EEPROM layout** — `MotorParams` at offset 0, magic byte at offset 16, program steps at offset 32.
+
+---
+
+## Publish Documentation with GitHub Pages
+
+This repository includes a ready-to-use workflow:
+
+- `.github/workflows/deploy-docs-pages.yml`
+
+### What it deploys
+
+The workflow publishes a static site containing:
+
+- `basic-control/docs` (entry UI)
+- `basic-control/VisualizeStateTransitions` (embedded visualizers + snapshot data)
+
+This preserves the required relative paths between docs, iframe pages, and BMP snapshots.
+
+### How to enable
+
+1. Push to the `main` branch.
+2. In GitHub: **Settings → Pages → Source = GitHub Actions**.
+3. Wait for workflow **Deploy Documentation to GitHub Pages** to finish.
+
+### URL
+
+Open:
+
+- `https://<your-user>.github.io/<your-repo>/docs/`
+
+### Update behavior
+
+Deployment runs automatically when relevant files change in:
+
+- `basic-control/**`
+- `package.json`
+- `package-lock.json`
+
+You can also run it manually via **Actions → Deploy Documentation to GitHub Pages → Run workflow**.
