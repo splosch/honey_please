@@ -265,7 +265,8 @@ change) — see Q8.
   debounce delays — not recommended).
 Also: which button opens the window — START only, or any of the two?
 
-- [ANSWER] while in "STANDBY"-Mode the Motor is still, keeping the a SPEED-Button button pressed is safe in this state (confirm this Assumption), then pressing the "PLAY" Button, while one "SPEED"-Button is pressed, will trigger selection of the Programm. The Option of pressing the Play-Button first is to be added as a later Option.
+- [ANSWER] while in "STANDBY"-Mode the Motor is still, keeping the a SPEED-Button button pressed is safe in this state (confirm this Assumption), then pressing the "PLAY" Button, while one "SPEED"-Button is pressed, will trigger selection of the "Programm" and enters "Programm-Mode". before the Programm Starts - Arduino/Controller waits for release of pressend buttons - only if they are released - start with the Programm-Execution. WHile Pressed enter a STATE of "Programm-SELECTion" that is then switchiung over to "Programm-1" or "Programm-2" 
+- The Option of pressing the Play-Button first is to be added as a later Option.
 
 **Q2 — Where is the combo valid?** Recommended: `STANDBY` only.
 Variations: also allow combo while running (abort current run and start program?),
@@ -310,11 +311,13 @@ until STOP. Also: should the P1/P2 indicator stay lit briefly after completion
 Decide also: solid vs. blinking P1/P2, and whether WAIT steps show a distinct
 indication (e.g. blink, Q7).
 
-  - [ANSWER] 
+  - [ANSWER] Optional, dont implement, Keep requirement for end
 
 **Q7 — Step-level feedback.** Should the display (or serial log) show *which*
 step is running (e.g. step number "1."–"9.", or sub-glyphs), or is the coarse
 "P1/P2 running" indicator enough?
+
+  - [ANSWER] Optional, dont implement, Keep requirement for end
 
 **Q8 — Runner architecture.** Options:
 - (a) Sequencer overlay in the existing states / `STANDBY` (smaller change,
@@ -323,16 +326,22 @@ step is running (e.g. step number "1."–"9.", or sub-glyphs), or is the coarse
   of manual vs. program operation, larger refactor, affects the JS mirror more).
 Which fits the project's "small, safe changes" rule better?
 
-**Q9 — Abort semantics.** ROT during program: (a) hard abort → normal stop flow
+  - [ANSWER] a) selecting a valid Programm whitch has steps enters "PROGRAMM" Mode. 
+
+**Q9 — Abort semantics.** ROT during program-mode: (a) hard abort → normal stop flow
 → `STANDBY`, discard program (recommended); (b) pause/resume via Play (needs a
 paused state + resume bookkeeping); (c) abort only during WAIT steps, ignore
 during motor phases? Also: do other buttons (LINKS/RECHTS, GELB 1/2) during a
 program abort, get ignored, or fall through to their normal actions?
 
+  - [ANSWER] any Button-Press will exit the Programm-Mode and than will execute the Action triggered by the pressed Button  
+
 **Q10 — Single-button behavior during program.** START re-press currently falls
 back to preset 1 while running (`controller_logic.cpp:261-268`) — should this
 legacy quirk also apply during program runs, or are all non-STOP presses ignored
 while a program is active (recommended)?
+
+  - [ANSWER] see Answer for Q9
 
 **Q11 — Program step vocabulary.** Which steps do the real programs need?
 Supply the actual P1/P2 step lists (direction, dataset, run duration, wait
@@ -341,12 +350,18 @@ duration, repetitions). Do the configs need loop/repeat support (e.g.
 enough? Is a `RUN_FOR` convenience step (START → wait → STOP) desired, or should
 programs spell out START/WAIT/STOP explicitly?
 
+  - [ANSWER] run, stop, direction, dataset, wait duration --> no repetition
+
 **Q12 — Naming & log language.** Keep "P1"/"P2" as indicator text and `[P1]`/`[P2]`
 as serial tags? German logs for program events consistent with the existing
 logs? File/type names: `program_config.h`, `SchleuderProgram`, `ProgramStep` —
 or something else (e.g. `PROG1`, "Schleuderprog")? Doc filename keeps
 "schleuder" (matches Honigschleuder)?
 
+  - [ANSWER] use PROG_1 / PROG_2
+
 **Q13 — Simulation coverage.** Add combo + program scenarios to the 41-scenario
 BMP set (combo start, step transitions, WAIT, abort mid-run, completion)?
 Any of these worth hardware fault-injection scenarios?
+  - [ANSWER] yes add - a simple dataset, cw, start, wait, ccw, wait, cw, speed change, ccw, stop
+    - and add a variation where after ccw, wait  - the stop button is pressed
