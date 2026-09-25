@@ -68,7 +68,12 @@ export default function useSimulation(config) {
 
         // -- Dataset labels for ramp --
         selectedRunDataset: config.presets.preset1,
-        activeDataset:      config.presets.standby
+        activeDataset:      config.presets.standby,
+
+        // -- LED matrix snapshot fields (lib/led_matrix.js) --
+        targetDirection:  'CW',
+        runningDirection: 'CW',
+        restartIntent:    'NONE'
     });
 
     // ── Internal helpers ────────────────────────────────────────────
@@ -92,6 +97,9 @@ export default function useSimulation(config) {
         simState.startRelayOn = s.startRelayOn;
         simState.selectedRunDataset = s.selectedRunDataset;
         simState.activeDataset = s.activeDataset;
+        simState.targetDirection = s.targetDirection;
+        simState.runningDirection = s.runningDirection;
+        simState.restartIntent = s.restartIntent;
 
         // M1/M2 relay states derived from active dataset
         var ds = config.datasets[s.activeDataset];
@@ -127,6 +135,9 @@ export default function useSimulation(config) {
         simState.startRelayOn = false;
         simState.m1RelayOn = false;
         simState.m2RelayOn = false;
+        simState.targetDirection = 'CW';
+        simState.runningDirection = 'CW';
+        simState.restartIntent = 'NONE';
     }
 
     function syncFromSM(nowMs) {

@@ -19,6 +19,7 @@ import StatusDisplay from './components/StatusDisplay.js';
 import ControlPanel from './components/ControlPanel.js';
 import SchematicCanvas from './components/SchematicCanvas.js';
 import StateMachineLegend from './components/StateMachineLegend.js';
+import LedMatrixDisplay from './components/LedMatrixDisplay.js';
 import WiringTable from './components/WiringTable.js';
 
 // ── Root component ──────────────────────────────────────────────────
@@ -96,6 +97,7 @@ app.component('StatusDisplay',      StatusDisplay);
 app.component('ControlPanel',       ControlPanel);
 app.component('SchematicCanvas',    SchematicCanvas);
 app.component('StateMachineLegend', StateMachineLegend);
+app.component('LedMatrixDisplay',   LedMatrixDisplay);
 app.component('WiringTable',        WiringTable);
 
 app.mount('#app');

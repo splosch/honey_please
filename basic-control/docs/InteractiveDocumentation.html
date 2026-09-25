@@ -33,6 +33,12 @@
             max-height: 200px;
             display: block;
         }
+
+        /* LED matrix mirror canvas: pixel-perfect rendering */
+        .led-matrix-canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
     </style>
 
     <!-- Vue 3 runtime (global build) — needs to load before our module -->
@@ -140,6 +146,8 @@
                             :preset1-dataset="presets.preset1"
                             :preset2-dataset="presets.preset2"></status-display>
 
+                        <led-matrix-display :sim-state="simState"></led-matrix-display>
+
                         <state-machine-legend :state-id="simState.id" :running-c-c-w="simState.dirRelayCCW"></state-machine-legend>
                     </div>
 
@@ -228,6 +236,20 @@
                     <div :class="['h-1.5 rounded-full', colorBar]" :style="{ width: pct + '%' }"></div>
                 </div>
             </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  TEMPLATE: LedMatrixDisplay (Arduino LED matrix mirror)            -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <template id="led-matrix-tpl">
+        <div class="bg-gray-950 p-3.5 rounded-lg border border-gray-800">
+            <!-- Section label -->
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">LED Matrix (Arduino)</span>
+
+            <!-- 120×80 logical px (12×8 LEDs × 10 px), upscaled via CSS -->
+            <canvas ref="ledCanvas" width="120" height="80"
+                class="led-matrix-canvas w-full max-w-[200px] block mx-auto"></canvas>
         </div>
     </template>
 

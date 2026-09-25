@@ -63,7 +63,13 @@ honey_please/
       honey_config.js                   ← JS mirror of C++ config.h + speed_dataset.cpp
       honey_state_machine.js            ← pure JS state machine (6 states, no DOM deps)
       js/                               ← Vue components, composables, lib, schematic/
+        js/lib/led_matrix.js            ← pure JS mirror of led_animation.cpp (8×12 frames)
+        js/components/LedMatrixDisplay.js ← canvas renderer for the LED matrix (left column)
+      feature_matrix_simulation.md      ← matrix-mirror analysis/plan + sync strategy
       ARCHITECTURE_ANALYSIS.md          ← full docs/ subsystem tree + data flow
+
+  tests/
+    led_matrix_smoke.mjs                <- headless LED-matrix port validation
 
   verify_sketch/                 <- board health verification sketch
 ```
@@ -91,6 +97,8 @@ Use only the smallest relevant documentation set.
 | [basic-control/VisualizeStateTransitions/generate_all_bmps.js](basic-control/VisualizeStateTransitions/generate_all_bmps.js) | Headless snapshot generator (npm run snapshot) |
 | [basic-control/docs/js/lib/simulationScenarios.js](basic-control/docs/js/lib/simulationScenarios.js) | 41 scenario definitions + BMP color palette |
 | [basic-control/docs/js/lib/bmpWriter.js](basic-control/docs/js/lib/bmpWriter.js) | Pure BMP byte-stream writer (browser + Node.js) |
+| [basic-control/docs/js/lib/led_matrix.js](basic-control/docs/js/lib/led_matrix.js) | JS mirror of led_animation.cpp — LED matrix frames |
+| [basic-control/docs/feature_matrix_simulation.md](basic-control/docs/feature_matrix_simulation.md) | Matrix simulation plan + C++↔JS sync strategy |
 | [basic-control/docs/js/composables/useBmpSimulation.js](basic-control/docs/js/composables/useBmpSimulation.js) | Headless batch simulator for BMP export |
 
 ---
