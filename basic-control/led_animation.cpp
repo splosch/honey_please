@@ -42,6 +42,34 @@ static const LedPos ICON_PLAY_CCW[] = {  // ◀  tip left (counter-clockwise)
 };
 static constexpr int ICON_PLAY_N = 9;
 
+// ── Programm-Indikator "P1"/"P2" (R5, Feature-Doc) ───────────────────────────
+// 3x5 Mini-Font, je Zeile eine 3-Bit-Maske (MSB links).
+static const uint8_t GLYPH_P[5] = {0b111, 0b101, 0b111, 0b100, 0b100};
+static const uint8_t GLYPH_1[5] = {0b010, 0b110, 0b010, 0b010, 0b111};
+static const uint8_t GLYPH_2[5] = {0b111, 0b001, 0b111, 0b100, 0b111};
+
+static void drawProgramIndicator(byte frame[8][12], SchleuderProgramId programId) {
+    const uint8_t* secondGlyph =
+        (programId == SchleuderProgramId::PROG_2) ? GLYPH_2 : GLYPH_1;
+
+    const uint8_t baseRow = 2;   // 5 Zeilen (2..6), wie die normalen Icons
+    const uint8_t colP = 2;      // "P"  bei Spalten 2..4
+    const uint8_t colN = 6;      // "1"/"2" bei Spalten 6..8 (1 px Luecke)
+
+    for (uint8_t r = 0; r < 5; ++r) {
+        uint8_t mask = 0b100;
+        for (uint8_t c = 0; c < 3; ++c) {
+            if (GLYPH_P[r] & mask) {
+                frame[baseRow + r][colP + c] = 1;
+            }
+            if (secondGlyph[r] & mask) {
+                frame[baseRow + r][colN + c] = 1;
+            }
+            mask >>= 1;
+        }
+    }
+}
+
 static void drawProfileMarkerDots(
     byte frame[8][12],
     BinarySpeedDataset dataset,
@@ -120,8 +148,13 @@ void updateLedAnimationFrame(
     }
 
     if (drawRing) {
-        unsigned long stepMs = (unsigned long)(
-            250.0f - 220.0f * getRampProgress(controller, nowMs, config));
+        float progress = getRampProgress(controller, nowMs, config);
+        // R12: Bei einer Absenk-Rampe (Profilwechsel nach unten) wird der
+        // Ring langsamer statt schneller.
+        if (controller.rampIsSlowdown) {
+            progress = 1.0f - progress;
+        }
+        unsigned long stepMs = (unsigned long)(250.0f - 220.0f * progress);
         if (nowMs - animState.lastLedStep >= stepMs) {
             animState.ringPos = (dir > 0)
                 ? (animState.ringPos + 1) % 36
@@ -178,7 +211,12 @@ void updateLedAnimationFrame(
             break;
     }
 
-    if (iconPts != nullptr) {
+    // R5: Waehrend Programm-Auswahl/-Lauf ersetzt "P1"/"P2" das normale Icon.
+    // Der Ring behaelt sein normales Verhalten je Zustand bei.
+    if (controller.programId != SchleuderProgramId::NONE) {
+        drawProgramIndicator(animState.frame, controller.programId);
+    }
+    else if (iconPts != nullptr) {
         bool show = !iconBlink || ((nowMs / 400) % 2 == 0);
         if (show) {
             for (int i = 0; i < iconCount; i++) {

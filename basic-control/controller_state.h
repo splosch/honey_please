@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "program_config.h"
 #include "speed_dataset.h"
 
 enum class ControllerStateId {
@@ -10,7 +11,8 @@ enum class ControllerStateId {
     RUNNING_CW,
     RUNNING_CCW,
     DECELERATING,
-    WAITING
+    WAITING,
+    PROGRAM_SELECTION
 };
 
 enum class SpinDirection {
@@ -32,6 +34,19 @@ struct ControllerState {
     RestartIntent restartIntent;
     unsigned long stateTimerStartMs;
     float rampStartProgress;
+
+    // Schleuder-Programm (Feature-Doc docs/btn_press_schleuder_programm.md)
+    SchleuderProgramId programId;        // NONE = kein Programm aktiv
+    uint8_t programStepIndex;            // Index in die Flash-Schrittliste
+    bool programStepDispatched;          // Trigger-Aktion des Schritts ausgeloest?
+    unsigned long programStepStartMs;    // Startzeitpunkt des WAIT-Schritts
+
+    // R12: Rampe beim Profilwechsel im Lauf.
+    // rampOverrideDurationMs != 0 ersetzt die normale Anlaufdauer-Berechnung
+    // (computeSwitchDurationMs). rampIsSlowdown dreht die Ring-Animation um
+    // (Ring wird langsamer statt schneller, z. B. bei Absenkung der Drehzahl).
+    unsigned long rampOverrideDurationMs;
+    bool rampIsSlowdown;
 };
 
 ControllerState makeInitialControllerState();
@@ -69,3 +84,10 @@ void beginDeceleration(
 void beginWaiting(ControllerState& state, unsigned long nowMs);
 void completeWaitingToStandby(ControllerState& state);
 void consumeAutoRestart(ControllerState& state);
+
+// R12: Rampe fuer Profilwechsel im Lauf (Richtung/Zeit aus den dAtA-Profilen).
+void beginSpeedSwitchRamp(
+    ControllerState& state,
+    unsigned long nowMs,
+    BinarySpeedDataset fromDataset,
+    BinarySpeedDataset toDataset);

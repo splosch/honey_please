@@ -13,7 +13,7 @@
  * Input is a state snapshot like the one returned by
  * HoneyStateMachine.getState(nowMs) (honey_state_machine.js:175-189):
  *   { id, targetDirection, runningDirection, selectedRunDataset,
- *     restartIntent, progress }
+ *     restartIntent, progress, programId, rampIsSlowdown }
  *
  * Timing notes (deliberate, feature_matrix_simulation.md R8):
  *   - Ring speed derives from snapshot.progress, which already respects
@@ -103,6 +103,35 @@ function isDirectionCCW(direction) {
 // Mirrors hasAutoRestart (controller_state.cpp:20-22)
 function hasAutoRestart(snap) {
     return snap.restartIntent === 'AUTO_RESTART';
+}
+
+// ── Programm-Indikator "P1"/"P2" (R5, Feature-Doc) ───────────────────────────
+// Mirrors led_animation.cpp:45-71
+// 3x5 Mini-Font, je Zeile eine 3-Bit-Maske (MSB links).
+
+const GLYPH_P = [0b111, 0b101, 0b111, 0b100, 0b100];
+const GLYPH_1 = [0b010, 0b110, 0b010, 0b010, 0b111];
+const GLYPH_2 = [0b111, 0b001, 0b111, 0b100, 0b111];
+
+function drawProgramIndicator(frame, programId) {
+    const secondGlyph = (programId === 'PROG_2') ? GLYPH_2 : GLYPH_1;
+
+    const baseRow = 2;   // 5 Zeilen (2..6), wie die normalen Icons
+    const colP = 2;      // "P"  bei Spalten 2..4
+    const colN = 6;      // "1"/"2" bei Spalten 6..8 (1 px Luecke)
+
+    for (let r = 0; r < 5; r++) {
+        let mask = 0b100;
+        for (let c = 0; c < 3; c++) {
+            if (GLYPH_P[r] & mask) {
+                frame[baseRow + r][colP + c] = 1;
+            }
+            if (secondGlyph[r] & mask) {
+                frame[baseRow + r][colN + c] = 1;
+            }
+            mask >>= 1;
+        }
+    }
 }
 
 // ── Profile marker dots ──────────────────────────────────────────────────────
@@ -195,7 +224,13 @@ export function updateLedAnimationFrame(animState, snap, nowMs) {
     if (drawRing) {
         // getRampProgress → snap.progress (same value, mirrored in
         // honey_state_machine.js:_computeProgress)
-        const stepMs = 250.0 - 220.0 * snap.progress;
+        // R12 (mirrors led_animation.cpp:150-156): Bei einer Absenk-Rampe
+        // (Profilwechsel nach unten) wird der Ring langsamer statt schneller.
+        let progress = snap.progress;
+        if (snap.rampIsSlowdown) {
+            progress = 1.0 - progress;
+        }
+        const stepMs = 250.0 - 220.0 * progress;
         if (nowMs - animState.lastLedStep >= stepMs) {
             animState.ringPos = (dir > 0)
                 ? (animState.ringPos + 1) % 36
@@ -253,7 +288,12 @@ export function updateLedAnimationFrame(animState, snap, nowMs) {
             break;
     }
 
-    if (iconPts !== null) {
+    // R5 (mirrors led_animation.cpp:214-227): Waehrend Programm-Auswahl/-Lauf
+    // ersetzt "P1"/"P2" das normale Icon. Der Ring behaelt sein normales
+    // Verhalten je Zustand bei.
+    if (snap.programId !== null && snap.programId !== undefined) {
+        drawProgramIndicator(animState.frame, snap.programId);
+    } else if (iconPts !== null) {
         // Math.floor: C++ (nowMs / 400) is unsigned-long integer division;
         // JS % on a float would break the blink phase (1000/400 = 2.5 → 0.5 ≠ 0).
         const show = !iconBlink || (Math.floor(nowMs / 400) % 2 === 0);

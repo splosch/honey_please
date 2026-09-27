@@ -64,6 +64,45 @@ const HoneyConfig = {
         standby: 'DATASET_0'    // controller_logic.cpp:3  kStandbyDataset
     },
 
+    // -- Schleuder-Programme (program_config.h) -------------------------
+    // Mirror of PROG_1_STEPS / PROG_2_STEPS + startDirectionCcw.
+    // Combo: GELB 1 + START -> PROG_1, GELB 2 + START -> PROG_2 (nur STANDBY).
+    // Start erst nach Loslassen aller Tasten. Richtungen sind absolut (D1).
+    // WAIT-Zeiten in echten ms (wie C++), skaliert ueber simSpeed.
+    // TODO-1: WAIT-Zeiten sind Platzhalter bis zur Bestaetigung.
+    programs: [
+        {
+            id: 'PROG_1',
+            startDirection: 'CW',
+            steps: [
+                { action: 'SPEED',     dataset: 'DATASET_0' },
+                { action: 'START' },
+                { action: 'WAIT',      waitMs: 2000 },   // TODO-1 Platzhalter
+                { action: 'DIRECTION', direction: 'CCW' },
+                { action: 'WAIT',      waitMs: 2000 },   // TODO-1 Platzhalter
+                { action: 'DIRECTION', direction: 'CW' },
+                { action: 'SPEED',     dataset: 'DATASET_4' },
+                { action: 'DIRECTION', direction: 'CCW' },
+                { action: 'STOP' }
+            ]
+        },
+        {
+            id: 'PROG_2',
+            startDirection: 'CCW',
+            steps: [
+                { action: 'SPEED',     dataset: 'DATASET_4' },
+                { action: 'START' },
+                { action: 'WAIT',      waitMs: 3000 },   // TODO-1 Platzhalter
+                { action: 'DIRECTION', direction: 'CW' },
+                { action: 'WAIT',      waitMs: 3000 },   // TODO-1 Platzhalter
+                { action: 'DIRECTION', direction: 'CCW' },
+                { action: 'SPEED',     dataset: 'DATASET_0' },
+                { action: 'DIRECTION', direction: 'CW' },
+                { action: 'STOP' }
+            ]
+        }
+    ],
+
     // -- Dataset lookup ------------------------------------------------
     datasets: DATASETS,
 

@@ -39,6 +39,15 @@
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
+
+        /* Combo connector lines (Steuerung panel): dimmed until the combo is held */
+        .combo-wire {
+            opacity: 0.45;
+            transition: opacity 0.15s ease;
+        }
+        .combo-wire.wire-active {
+            opacity: 1;
+        }
     </style>
 
     <!-- Vue 3 runtime (global build) — needs to load before our module -->
@@ -122,13 +131,18 @@
                             :ui-locked="uiLocked"
                             :selected-run-dataset="simState.selectedRunDataset"
                             :presets="presets"
+                            :held-combo="heldCombo"
                             @dir-left="onDirLeft"
                             @dir-right="onDirRight"
                             @stop="onStop"
                             @start="onStart"
                             @preset1="onPreset1"
                             @preset2="onPreset2"
-                            @toggle-lock="onToggleLock"></control-panel>
+                            @toggle-lock="onToggleLock"
+                            @combo-1-press="onCombo1Press"
+                            @combo-1-release="onComboRelease"
+                            @combo-2-press="onCombo2Press"
+                            @combo-2-release="onComboRelease"></control-panel>
 
                         <status-display
                             :state-id="simState.id"
@@ -285,15 +299,64 @@
                                 ROT<br>(Stop)</button>
                             <button @click="$emit('preset1')"
                                 :class="['bg-amber-950 border py-2 rounded text-[10px] font-bold text-amber-200 transition',
-                                    preset1Active ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
+                                    gelb1Active ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
                                 GELB 1<br>(P1)</button>
                             <button @click="$emit('preset2')"
                                 :class="['bg-amber-950 border py-2 rounded text-[10px] font-bold text-amber-200 transition',
-                                    preset2Active ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
+                                    gelb2Active ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
                                 GELB 2<br>(P2)</button>
                             <button @click="$emit('start')"
-                                class="bg-emerald-950 hover:bg-emerald-900/50 border border-emerald-800 py-2 rounded text-[10px] font-bold text-emerald-200">
+                                :class="['bg-emerald-950 border py-2 rounded text-[10px] font-bold text-emerald-200 transition',
+                                    gruenActive ? 'border-emerald-400 ring-1 ring-emerald-400 bg-emerald-900/60' : 'border-emerald-800 hover:bg-emerald-900/50']">
                                 GRÜN<br>(Start)</button>
+                        </div>
+
+                        <!-- Kombi-Reihe: GELB x + GRÜN gleichzeitig (Schleuder-Programme) -->
+                        <div class="mt-2">
+                            <!-- Verbindungslinien: zeigen, welche Tasten kombiniert werden.
+                                 GRÜN speist beide Kombis; die Kreuzung mit GELB 2 ist
+                                 schaltplanüblich ohne Verbindungspunkt. -->
+                            <svg viewBox="0 0 100 30" preserveAspectRatio="none"
+                                class="w-full h-11 block" aria-hidden="true">
+                                <!-- GELB 1 → PROG_1 -->
+                                <path d="M 37.5,0 C 37.5,14 25,14 25,29" fill="none" stroke="#F59E0B" stroke-width="1.25"
+                                    class="wire combo-wire" :class="{ 'wire-active': heldCombo === 'PROG_1' }"></path>
+                                <!-- GELB 2 → PROG_2 -->
+                                <path d="M 62.5,0 C 62.5,14 75,14 75,29" fill="none" stroke="#F59E0B" stroke-width="1.25"
+                                    class="wire combo-wire" :class="{ 'wire-active': heldCombo === 'PROG_2' }"></path>
+                                <!-- GRÜN → PROG_2 -->
+                                <path d="M 87.5,0 C 87.5,16 75,20 75,29" fill="none" stroke="#10B981" stroke-width="1.25"
+                                    class="wire combo-wire" :class="{ 'wire-active': heldCombo === 'PROG_2' }"></path>
+                                <!-- GRÜN → PROG_1 -->
+                                <path d="M 87.5,0 C 87.5,24 37.5,24 25,29" fill="none" stroke="#10B981" stroke-width="1.25"
+                                    class="wire combo-wire" :class="{ 'wire-active': heldCombo === 'PROG_1' }"></path>
+                                <!-- Abgriffpunkte an den Tasten darüber -->
+                                <circle cx="37.5" cy="0" r="1.8" fill="#F59E0B"></circle>
+                                <circle cx="62.5" cy="0" r="1.8" fill="#F59E0B"></circle>
+                                <circle cx="87.5" cy="0" r="1.8" fill="#10B981"></circle>
+                            </svg>
+
+                            <div class="grid grid-cols-4 gap-1">
+                                <button @pointerdown="$emit('combo-1-press')"
+                                    @pointerup="$emit('combo-1-release')"
+                                    @pointerleave="$emit('combo-1-release')"
+                                    @pointercancel="$emit('combo-1-release')"
+                                    @contextmenu.prevent
+                                    :class="['col-span-2 bg-amber-950/60 border py-1.5 rounded text-[10px] font-bold text-amber-200 transition select-none',
+                                        heldCombo === 'PROG_1' ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
+                                    GELB 1 + GRÜN<br>(PROG_1 · halten)</button>
+                                <button @pointerdown="$emit('combo-2-press')"
+                                    @pointerup="$emit('combo-2-release')"
+                                    @pointerleave="$emit('combo-2-release')"
+                                    @pointercancel="$emit('combo-2-release')"
+                                    @contextmenu.prevent
+                                    :class="['col-span-2 bg-amber-950/60 border py-1.5 rounded text-[10px] font-bold text-amber-200 transition select-none',
+                                        heldCombo === 'PROG_2' ? 'border-amber-400 ring-1 ring-amber-400 bg-amber-900/60' : 'border-amber-800 hover:bg-amber-900/50']">
+                                    GELB 2 + GRÜN<br>(PROG_2 · halten)</button>
+                            </div>
+                            <p class="text-[9px] text-gray-500 mt-1 leading-tight">
+                                Kombi gedrückt halten → Programm-Auswahl (LED zeigt „P1“/„P2“) · loslassen → Programm startet · beliebige Taste bricht das laufende Programm ab
+                            </p>
                         </div>
                     </div>
 
@@ -370,6 +433,7 @@
                 <p><strong class="text-amber-500">Anlauf- &amp; Bremsrampen:</strong> Rampenzeiten werden aus den dAtA-Profilen (honey_config.js → speed_dataset.cpp) berechnet. Die Rampendauer skaliert proportional zur Zieldrehzahl (targetRpm / 3000). simSpeed = 0.2 für Demo, 1.0 für Echtzeit-Verifikation.</p>
                 <p><strong class="text-green-400">↺ Richtungswechsel im Betrieb:</strong> LINKS im Zustand LÄUFT-CW / ANLAUFEN-CW bzw. RECHTS im Zustand LÄUFT-CCW / ANLAUFEN-CCW lösen automatisch aus: proportionale Bremsrampe → Sicherheitspause (150 ms) → neues Richtungsrelais (REL2/X3) → Anlauframpe (dAtA-proportional, max. 15 s bei 3000 rpm).</p>
                 <p><strong class="text-amber-500">Info (Folientaster):</strong> Pins D6–D11 als INPUT_PULLUP – aktiv LOW, keine externen Widerstände nötig. D4/D5 steuern die M1/M2 Speed-Relais.</p>
+                <p><strong class="text-yellow-300">▶ Schleuder-Programme (P1/P2):</strong> GELB 1 + GRÜN halten = PROG_1, GELB 2 + GRÜN halten = PROG_2 (nur im STANDBY). Ausführung startet erst nach dem Loslassen aller Tasten; die LED-Matrix zeigt „P1"/„P2". Jede Taste beendet das Programm und löst die normale Tasten-Aktion aus. Siehe BMP-Szenarien 29/30.</p>
                 <p><strong class="text-amber-500">Geometrische Entflechtung:</strong> Die Leitungen der Folientaster wurden komplett nach unten aus den Gehäusen herausgeleitet. Spannungsversorgungen fließen über die Oberseite des Controllers hinweg. Keine Überschneidungen mit Beschriftungen oder aktiven Bauteilen!</p>
             </div>
         </div>

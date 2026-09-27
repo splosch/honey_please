@@ -10,6 +10,12 @@ ControllerState makeInitialControllerState() {
     state.restartIntent = RestartIntent::NONE;
     state.stateTimerStartMs = 0;
     state.rampStartProgress = 0.0f;
+    state.programId = SchleuderProgramId::NONE;
+    state.programStepIndex = 0;
+    state.programStepDispatched = false;
+    state.programStepStartMs = 0;
+    state.rampOverrideDurationMs = 0;
+    state.rampIsSlowdown = false;
     return state;
 }
 
@@ -39,12 +45,12 @@ float getRampProgress(
 
     switch (state.id) {
         case ControllerStateId::ACCELERATING: {
-            const unsigned long accelFromStopMs =
-                computeAccelerationDurationFromStopMs(state.selectedRunDataset);
-            float effDur = max(
-                100.0f,
-                (1.0f - state.rampStartProgress)
-                    * (float)accelFromStopMs);
+            // R12: Profilwechsel-Rampe hat eine eigene Dauer (Override).
+            float effDur = state.rampOverrideDurationMs != 0
+                ? (float)state.rampOverrideDurationMs
+                : (1.0f - state.rampStartProgress)
+                    * (float)computeAccelerationDurationFromStopMs(state.selectedRunDataset);
+            effDur = max(100.0f, effDur);
             return state.rampStartProgress
                 + min(1.0f, elapsed / effDur) * (1.0f - state.rampStartProgress);
         }
@@ -69,6 +75,10 @@ unsigned long getEffectiveAccelerationDurationMs(
     const ControllerState& state,
     const BasicControlConfig& config) {
     (void)config;
+    // R12: Profilwechsel-Rampe hat eine eigene Dauer (Override).
+    if (state.rampOverrideDurationMs != 0) {
+        return state.rampOverrideDurationMs;
+    }
     const unsigned long accelFromStopMs =
         computeAccelerationDurationFromStopMs(state.selectedRunDataset);
     return (unsigned long)max(
@@ -100,6 +110,8 @@ void completeAcceleration(ControllerState& state) {
     state.id = isDirectionCCW(state.targetDirection)
         ? ControllerStateId::RUNNING_CCW
         : ControllerStateId::RUNNING_CW;
+    state.rampOverrideDurationMs = 0;
+    state.rampIsSlowdown = false;
 }
 
 void beginDeceleration(
@@ -114,6 +126,10 @@ void beginDeceleration(
     state.runningDirection = runningDirection;
     state.stateTimerStartMs = nowMs;
     state.restartIntent = intent;
+    // Jede Bremsung beendet eine laufende Wechsel-Rampe (R12): ein spaeterer
+    // Auto-Neustart/RE-START rechnet wieder mit der normalen Rampenformel.
+    state.rampOverrideDurationMs = 0;
+    state.rampIsSlowdown = false;
     state.id = ControllerStateId::DECELERATING;
 }
 
@@ -128,4 +144,16 @@ void completeWaitingToStandby(ControllerState& state) {
 
 void consumeAutoRestart(ControllerState& state) {
     state.restartIntent = RestartIntent::NONE;
+}
+
+void beginSpeedSwitchRamp(
+    ControllerState& state,
+    unsigned long nowMs,
+    BinarySpeedDataset fromDataset,
+    BinarySpeedDataset toDataset) {
+    state.rampOverrideDurationMs = computeSwitchDurationMs(fromDataset, toDataset);
+    state.rampIsSlowdown =
+        dynamicsProfileForDataset(toDataset).targetRpm
+        < dynamicsProfileForDataset(fromDataset).targetRpm;
+    beginAcceleration(state, nowMs, 0.0f);
 }

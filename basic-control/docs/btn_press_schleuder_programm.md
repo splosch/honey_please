@@ -1,8 +1,9 @@
 # Feature Doc: Combo-Button Schleuder-Programs (PROG_1 / PROG_2)
 
-**Status:** READY FOR IMPLEMENTATION — Q1–Q13 answered, decisions folded into the
-requirements (§8 Decisions Log). Open human input: concrete step lists/durations
-for PROG_1 & PROG_2 (TODO 1).
+**Status:** IMPLEMENTED (firmware + docs mirrors + BMP scenarios) — Q1–Q13 answered,
+decisions folded into the requirements (§8 Decisions Log). Open human input:
+concrete step lists/durations for PROG_1 & PROG_2 (TODO 1, placeholders in
+`program_config.h`/`honey_config.js`).
 **Target:** `basic-control` firmware (env `r4wifi_basic_control`, Arduino Uno R4 WiFi / RA4M1)
 **Date:** 2026-09-25
 
@@ -304,27 +305,29 @@ Step completion:
 ## 7. Todos
 
 - [ ] **Human input:** confirm PROG_1/PROG_2 step lists + WAIT durations
-      (PROG_1 skeleton from Q13, see below; PROG_2 still open)
-- [ ] **R12 fix:** speed-mode switch while `RUNNING` must ramp
+      (PROG_1 skeleton from Q13, see below; PROG_2 still open) — TODO-1
+- [x] **R12 fix:** speed-mode switch while `RUNNING` must ramp
       (accelerate/decelerate) instead of instant dataset apply
-- [ ] `program_config.h`: step types + two program definitions (flash)
-- [ ] `ControllerState`: `PROGRAM_SELECTION` state + program context fields
-- [ ] Combo detection + `PROGRAM_SELECTION` handler (suppression, release-to-run)
-- [ ] Step sequencer overlay in `controller_logic.cpp` (dispatch, state-based
+- [x] `program_config.h`: step types + two program definitions (flash)
+- [x] `ControllerState`: `PROGRAM_SELECTION` state + program context fields
+- [x] Combo detection + `PROGRAM_SELECTION` handler (suppression, release-to-run)
+- [x] Step sequencer overlay in `controller_logic.cpp` (dispatch, state-based
       completion, WAIT timer, finish path)
-- [ ] Program exit on any button press (fall-through to normal handlers)
-- [ ] `led_animation`: "P1"/"P2" glyphs + display branch
-- [ ] Serial logs: `[PROG_1]`/`[PROG_2]` lifecycle messages
-- [ ] Build check: `npm run build` (env `r4wifi_basic_control`)
-- [ ] Update mirrors: `honey_config.js`, `honey_state_machine.js`,
+- [x] Program exit on any button press (fall-through to normal handlers)
+- [x] `led_animation`: "P1"/"P2" glyphs + display branch
+- [x] Serial logs: `[PROG_1]`/`[PROG_2]` lifecycle messages
+- [x] Build check: `npm run build` (env `r4wifi_basic_control`)
+- [x] Update mirrors: `honey_config.js`, `honey_state_machine.js`,
       `simulationScenarios.js` (2 scenarios per Q13)
-- [ ] Regenerate BMP snapshots (`npm run snapshot`) + verify scenarios
-- [ ] Update `InteractiveDocumentation.html`, `ARCHITECTURE.md`
+- [x] Regenerate BMP snapshots (`npm run snapshot`) + verify scenarios
+- [x] Update `InteractiveDocumentation.html`, `ARCHITECTURE.md`
       (and `README.md` if needed)
 - [ ] Flash + manual hardware verification (combo timing, release-to-run, step
       flow, WAIT, exit on any button, abort mid-run, indicator)
-- [ ] Safety review of every program step sequence (brake-before-reverse,
-      terminal state)
+- [x] Safety review of every program step sequence (brake-before-reverse,
+      terminal state) — both programs reverse mid-run only via
+      `requestDirectionChange` (brake → safety pause → auto-restart) and end
+      with `STOP` → `STANDBY`
 
 **PROG_1 skeleton (from Q13 scenario, initial direction per config):**
 `startDirection = CW`, then `SPEED dAtA 0 → START → WAIT <t1> → DIRECTION CCW →
@@ -350,3 +353,109 @@ brake → safety pause → auto-restart pattern — absolute values, no toggles)
 | Q12 | Naming: PROG_1 / PROG_2 (LED keeps "P1"/"P2" short form) | §2, R8 |
 | Q13 | Yes: full-run scenario + STOP-after-CCW-wait variation | R10, §7 |
 | D1 | Initial direction is absolute & per program: `startDirection` in the program config (key-selected program ⇒ deterministic direction). No relative/toggle direction steps; leftover manual direction is overwritten at program start | R2, R3, R4 |
+
+## 9. Implementation Status & Session Handoff (2026-09-26)
+
+Implementation complete and verified by build + headless simulation — **not yet
+committed**. Start here when resuming.
+
+**Implemented (working tree, uncommitted):**
+
+| File | Change |
+|---|---|
+| `basic-control/program_config.h/.cpp` | new — step types, PROG_1/PROG_2 (flash) |
+| `basic-control/controller_state.h/.cpp` | `PROGRAM_SELECTION` state, program context, R12 `beginSpeedSwitchRamp` + `rampOverrideDurationMs`/`rampIsSlowdown` |
+| `basic-control/controller_logic.cpp` | combo detection, `PROGRAM_SELECTION` handler, sequencer overlay, WAIT timer, exit-on-press, R12 ramp in `handleRunning`/`handleAccelerating`, `[PROG_x]` logs |
+| `basic-control/led_animation.cpp` | P1/P2 mini-font glyphs, program-indicator branch, R12 slowdown ring |
+| `basic-control/main.cpp`, `controller_logic.h`, `hardware_io.*` | **unchanged** (state passed through by value; all new logic static) |
+| `basic-control/docs/honey_config.js` | mirror: `programs` array (PROG_1/PROG_2) |
+| `basic-control/docs/honey_state_machine.js` | mirror: 7th state, program context, sequencer, R12 ramp |
+| `basic-control/docs/js/lib/led_matrix.js` | mirror: P1/P2 glyphs + indicator branch + slowdown ring |
+| `basic-control/docs/js/composables/useSimulation.js`, `js/components/StateMachineLegend.js` | `PROGRAM_SELECTION` UI state + `programId`/`rampIsSlowdown` passthrough |
+| `basic-control/docs/js/lib/simulationScenarios.js` | scenarios 29 (`program_full_run`) + 30 (`program_exit_stop_during_wait`) with new `holdTicks` event field (Q13) |
+| `basic-control/docs/js/composables/useBmpSimulation.js` | `holdTicks` expansion; `PROGRAM_SELECTION` = zero RPM |
+| `basic-control/docs/InteractiveDocumentation.html`, `ARCHITECTURE.md`, this doc | notes, folder map, domain index, status |
+| `tests/led_matrix_smoke.mjs` | new assertions: P1/P2 pixels, slowdown ring |
+
+**Verified 2026-09-26:**
+- `npm run build` → SUCCESS (env `r4wifi_basic_control`, RAM 8.4 %, Flash 17.6 %)
+- `npm run verify:matrix` → all assertions pass
+- `npm run snapshot` → 43/43 BMPs, 0 failed
+- Headless scenario check: #29 combo ticks 7–10 → release tick 11 → full PROG_1
+  run (START ramp, WAITs, direction changes via brake→pause→auto-restart, R12
+  speed-switch ramp at tick 90 as `ACCELERATING`) → `STANDBY` + context cleared
+  at tick 183. #30: STOP at tick 60 (during CCW WAIT) → program exited, normal
+  stop flow → `STANDBY` tick 74.
+
+**Remaining:**
+1. **TODO-1 (human input):** confirm PROG_1/PROG_2 step lists + WAIT durations.
+   Placeholders marked `TODO-1` in `program_config.h` and `honey_config.js`
+   (scenarios 29/30 assume the 2000/3000 ms values — adjust both sides together).
+2. **Commit** the working tree — `/code-review` (max effort) ran 2026-09-26; findings + resume point in §10.
+3. **After commit:** re-run `npm run snapshot` — the current BMPs live under
+   `bmp_snapshots/91bd226` (pre-change HEAD), so the folder must be regenerated
+   to match the new commit SHA.
+4. **Flash + manual hardware verification** (see §7 checklist).
+
+## 10. Code-Review Session Handoff (2026-09-26)
+
+`/code-review` at max effort on the uncommitted working tree. Resume point for a
+new session — this section is the durable record.
+
+**Review pipeline state:**
+
+- Phase 1 done: 10 finder angles (line scan, removed-behavior, cross-file, language
+  pitfalls, C++↔JS mirror fidelity, reuse, simplification, efficiency, altitude,
+  conventions) → 74 raw candidates, deduplicated to 36 findings (V1–V36).
+- Phase 2 (1-vote verification) done for V1–V25, V29–V36.
+- **Pending:** verifier for **V26/V27/V28** (efficiency trio: per-TU flash copies
+  of `static constexpr` arrays in `program_config.h`; 16-byte `ProgramStep` with
+  ~9 B padding, map-verified; double `computeSwitchDurationMs` per switch event).
+  Collect verdict, then Phase 3: one fresh gap-sweep finder over the diff.
+- Then: rank all non-REFUTED findings, cap at 15, present to user, agree fix list,
+  apply, re-run `npm run build` + `npm run verify:matrix` + `npm run snapshot`,
+  commit (task #2), regenerate snapshots post-commit (task #3).
+
+**Verdicts so far (file:line = anchor):**
+
+| ID | Verdict | Finding |
+|---|---|---|
+| V1 | CONFIRMED | `controller_state.cpp:158` — R12 switch ramp starts with `beginAcceleration(..., 0.0f)` though motor is at speed → STOP during switch feeds progress ≈0.16 into the brake: **2.0 s instead of 12.5 s safety brake** (scenario 26 repro: STANDBY tick 87 vs 108 pre-diff); BMP rpm dips to 0 mid-switch. Fix: start switch ramp at current-speed fraction (`fromRpm/toRpm`), or keep 1.0 |
+| V2 | CONFIRMED | `controller_logic.cpp:416` — level-based input: the same held GELB press persists into `ACCELERATING`, whose handler clears the just-set override → switch takes full 12.5 s from-stop ramp instead of 6.25 s; slowdown ring lost; progress regresses. Fix: only clear/re-anchor when the pressed preset actually differs; re-base the ramp clock |
+| V3 | CONFIRMED | `controller_logic.cpp:139` — `PROGRAM_SELECTION` early-returns while combo keys held → ROT/LINKS/RECHTS abort is **unreachable** during selection; program starts on release despite ROT (violates R1). Fix: check dir/stop buttons before the held-combo early return |
+| V6 | CONFIRMED | `controller_logic.cpp:123` — `selectedRunDataset` leaks after program finish/abort (PROG_1 leaves dAtA 4) → next manual START runs 2500 rpm unselected (repro'd in JS mirror). Fix: restore standby/pre-program dataset in `clearProgramContext` |
+| V8 | CONFIRMED | `controller_logic.cpp:235` — program START step: `delay(relaySettleMs)` sits BEFORE `applySpeedDataset`/start-relay → settle window covers nothing; established order is apply → delay → start (completeWaitingPeriod). Fix: reorder |
+| V9 | CONFIRMED | `docs/js/app.js:43` — combo unreachable in the interactive docs: `handleInput` sends exactly one button flag per click; HTML note (line 373) advertises an impossible interaction; recording lacks holdTicks. Fix: track held buttons (mousedown/mouseup) + multi-flag snapshots |
+| V12 | CONFIRMED | `led_animation.cpp:157` — slowdown ring ends at slowest rate and snaps to fastest one frame later in RUNNING (LED only). Fix: dataset-dependent steady-state ring rate |
+| V18 | CONFIRMED | `controller_logic.cpp:540` — START re-press in RUNNING still instant-switches to preset 1 (no R12 ramp). R6 documents it as legacy quirk, R12 checklist wording covers it — **decide** bug vs. intent |
+| V22 | CONFIRMED | `VisualizeStateTransitions/SequenzeVisualizer.html:147` — timing presets scale `atTick` but not `holdTicks` → combo never overlaps under High-Res preset (executed repro; scenario 29 degrades to manual start). Fix: scale holdTicks like `hardwareFaults.durationTicks` |
+| V29 | CONFIRMED | STOP sequence duplicated 3× per language (program copy omits `debounceActionMs`). Fix: shared stop helper |
+| V30 | CONFIRMED | JS mirror has no `_requestDirectionChange()`; direction-change body inlined 3× while C++ calls the helper. Fix: mirror the helper |
+| V31 | CONFIRMED | Two-field override reset hand-copied at 8 sites (C++ 4, JS 4). Fix: `clearRampOverride()` helper |
+| V32 | CONFIRMED | P1/P2 glyphs use a new bitmask format + own blit loop vs existing LedPos-table convention. Fix: express as positions |
+| V33 | CONFIRMED | "Buttons that count" predicate exists in 3 shapes per language (anyButtonPressed, 3+3 split, hasUserInput, combo). Fix: one helper |
+| V34 | CONFIRMED | `tests/led_matrix_smoke.mjs:185` re-implements `expectPixels` inline. Fix: call the helper |
+| V35 | CONFIRMED | Sequencer: unused loop var `i`; `programStepDispatched` derivable state (4 reset sites); `beginProgramSelection` duplicates `clearProgramContext`. Fix: while-loop + dispatch-on-advance |
+| V36 | CONFIRMED | Stale C++↔JS line citations in `led_matrix.js`/`honey_state_machine.js` after the +28-line insertion; `feature_matrix_simulation.md` §2.1 table + §5 S6 not updated (violates its own mandatory S1/S6). Fix: re-pin citations, update the doc |
+| V4 | PLAUSIBLE | `rampOverrideDurationMs` 0-sentinel collides with legit 0-duration switches between equal-rpm datasets (dAtA 2/4/6 = 2500 rpm) → phantom 12.5 s ramp. Trigger needs a TODO-1 step list using dAtA 2/6. Fix: separate `hasRampOverride` bool |
+| V7 | PLAUSIBLE | Cancel path defers the triggering button's action to the next tick (sub-loop taps dropped); no debounce. |
+| V10 | PLAUSIBLE | `honey_state_machine.js:337` unguarded `datasets[...]` deref (C++ has default fallback); no invalid key exists today; snapshot runner catches per-scenario. |
+| V11 | PLAUSIBLE | `getEffectiveAccelerationDurationMs` returns override without the `max(100,...)` floor that `getRampProgress` applies → completion/progress divergence for <100 ms overrides; unreachable with shipped dataset table. |
+| V13 | PLAUSIBLE | SPEED-dispatch-during-ACCELERATING C++↔JS relay divergence (C++ applies when start relay on); brute-forced 32 768 step lists → unreachable with current completion rules. |
+| V14 | PLAUSIBLE | Program STOP guesses run direction from state id (wrong for non-RUNNING states); latent. |
+| V15 | PLAUSIBLE | `programTag` not total (NONE → `[PROG_2]`); latent. |
+| V16 | PLAUSIBLE | Ring `stepMs` float truncation drift JS vs C++ (firmware steps ~1 ms earlier at non-integral progress); direction of drift inverted vs. original claim. |
+| V17 | PLAUSIBLE | `holdTicks \|\| 1`: 0→1, negative→event silently dropped, no validation in snapshot pipeline. |
+| V19 | PLAUSIBLE | `beginAcceleration` doesn't reset the override (resets only on exit paths); latent window currently closed. |
+| V20 | PLAUSIBLE | WAIT timer 0-anchor depends on undocumented pairing with `programStepDispatched`; airtight today. |
+| V21 | PLAUSIBLE | `holdTicks` expansion applies to fault events → non-idempotent inject (DRIFT amplifies) / partial clear; no scenario uses it today. |
+| V24 | PLAUSIBLE | PROG id string literals hardcoded in 3 JS places; silent abort if renamed during TODO-1. |
+| V5 | REFUTED | Sequencer deadlock unreachable — dispatch only ever happens in stable states (STANDBY/RUNNING_*). |
+| V23 | REFUTED | Wrong dAtA-0 rpm comment in `honey_config.js` is pre-existing, out of scope. |
+| V25 | REFUTED | Two "program active" predicates are intentional (R5 vs. runner); no reachable wrong output. |
+
+**Suggested first-pass fix order (before commit):** V1, V2, V3, V6, V8 (C++ correctness
++ safety), V22, V9 (docs mirrors), V36 (conventions), then the cleanup group
+(V29–V35) — V18 needs a user decision (legacy quirk vs. R12). Re-run the full
+verification battery after fixes.
+

@@ -11,8 +11,9 @@
  *   sm.reset()          → return to initial STANDBY
  *   sm.setCurrentTick(n) → set tick counter (for hardware fault injector timing)
  *
- * The state machine uses the same 6 states as the C++ controller:
+ * The state machine uses the same 7 states as the C++ controller:
  *   STANDBY → ACCELERATING → RUNNING_CW/CCW → DECELERATING → WAITING → …
+ *   PROGRAM_SELECTION — Schleuder-Programm-Auswahl (Combo GELB x + START)
  *
  * Inputs shape (mirrors InputSnapshot in hardware_io.h):
  *   { dirLeftPressed, dirRightPressed, stopPressed, preset1Pressed, preset2Pressed, startPressed }
@@ -35,7 +36,8 @@ const STATE = {
     RUNNING_CW:    'RUNNING_CW',
     RUNNING_CCW:   'RUNNING_CCW',
     DECELERATING:  'DECELERATING',
-    WAITING:       'WAITING'
+    WAITING:       'WAITING',
+    PROGRAM_SELECTION: 'PROGRAM_SELECTION'
 };
 
 const DIR = { CW: 'CW', CCW: 'CCW' };
@@ -91,7 +93,15 @@ HoneyStateMachine.prototype.reset = function() {
         decelFromDataset:   this._cfg.presets.preset1,
         restartIntent:      INTENT.NONE,
         stateTimerStartMs:  0,
-        rampStartProgress:  0.0
+        rampStartProgress:  0.0,
+        // Schleuder-Programm (mirrors controller_state.h ProgramContext)
+        programId:            null,
+        programStepIndex:     0,
+        programStepDispatched: false,
+        programStepStartMs:   0,
+        // R12: Rampe beim Profilwechsel im Lauf
+        rampOverrideDurationMs: 0,
+        rampIsSlowdown:         false
     };
     this._startRelayOn = false;
     this._dirRelayCCW = false;
@@ -132,6 +142,17 @@ HoneyStateMachine.prototype.tick = function(inputs, nowMs) {
     if (!hasUserInput && (nowMs - this._lastTickMs < 40)) { return; }
     this._lastTickMs = nowMs;
 
+    // ── Programm-Runner Overlay (mirrors controller_logic.cpp tickController) ──
+    // Jede Taste beendet den Programm-Modus (R6/Q9); die Taste faellt danach
+    // an den normalen Handler des aktuellen Zustands durch.
+    if (this._state.programId !== null && this._state.id !== STATE.PROGRAM_SELECTION) {
+        if (hasUserInput) {
+            this._clearProgramContext();
+        } else {
+            this._runProgramSequencer(nowMs);
+        }
+    }
+
     // Check for timer-based state transitions BEFORE processing inputs.
     // This matches the C++ pattern where tickController is called in a
     // tight loop and timer expiry is checked at the top of each handler.
@@ -154,6 +175,9 @@ HoneyStateMachine.prototype.tick = function(inputs, nowMs) {
             break;
         case STATE.WAITING:
             this._handleWaiting(inputs, nowMs);
+            break;
+        case STATE.PROGRAM_SELECTION:
+            this._handleProgramSelection(inputs, nowMs);
             break;
     }
 };
@@ -184,6 +208,8 @@ HoneyStateMachine.prototype.getState = function(nowMs) {
         startRelayOn:       this._startRelayOn,
         dirRelayCCW:        this._dirRelayCCW,
         restartIntent:      this._state.restartIntent,
+        programId:          this._state.programId,
+        rampIsSlowdown:     this._state.rampIsSlowdown,
         faultsActive:       this._faultsActive.slice() // per-tick snapshot
     };
 };
@@ -233,8 +259,13 @@ HoneyStateMachine.prototype._computeProgress = function(nowMs) {
 
     switch (st.id) {
         case STATE.ACCELERATING:
-            accelFromStop = this._s(this._accelFromStopMs(st.selectedRunDataset));
-            effDur = Math.max(100, (1.0 - st.rampStartProgress) * accelFromStop);
+            // R12: Profilwechsel-Rampe hat eine eigene Dauer (Override).
+            if (st.rampOverrideDurationMs) {
+                effDur = Math.max(100, st.rampOverrideDurationMs);
+            } else {
+                accelFromStop = this._s(this._accelFromStopMs(st.selectedRunDataset));
+                effDur = Math.max(100, (1.0 - st.rampStartProgress) * accelFromStop);
+            }
             return st.rampStartProgress + Math.min(1.0, elapsed / effDur) * (1.0 - st.rampStartProgress);
 
         case STATE.RUNNING_CW:
@@ -254,6 +285,10 @@ HoneyStateMachine.prototype._computeProgress = function(nowMs) {
 // ── Effective durations (mirrors controller_state.cpp:68-90) ───────────
 
 HoneyStateMachine.prototype._effectiveAccelDurMs = function() {
+    // R12: Profilwechsel-Rampe hat eine eigene Dauer (Override).
+    if (this._state.rampOverrideDurationMs) {
+        return this._state.rampOverrideDurationMs;
+    }
     var accelFromStop = this._s(this._accelFromStopMs(this._state.selectedRunDataset));
     return Math.max(100, (1.0 - this._state.rampStartProgress) * accelFromStop);
 };
@@ -276,6 +311,8 @@ HoneyStateMachine.prototype._completeAcceleration = function() {
     this._state.id = (this._state.targetDirection === DIR.CCW)
         ? STATE.RUNNING_CCW
         : STATE.RUNNING_CW;
+    this._state.rampOverrideDurationMs = 0;
+    this._state.rampIsSlowdown = false;
 };
 
 HoneyStateMachine.prototype._beginDeceleration = function(nowMs, fromProgress,
@@ -285,7 +322,29 @@ HoneyStateMachine.prototype._beginDeceleration = function(nowMs, fromProgress,
     this._state.runningDirection = runningDir;
     this._state.stateTimerStartMs = nowMs;
     this._state.restartIntent = intent;
+    // Jede Bremsung beendet eine laufende Wechsel-Rampe (R12): ein spaeterer
+    // Auto-Neustart/RE-START rechnet wieder mit der normalen Rampenformel.
+    this._state.rampOverrideDurationMs = 0;
+    this._state.rampIsSlowdown = false;
     this._state.id = STATE.DECELERATING;
+};
+
+/**
+ * R12 — mirrors controller_state.cpp beginSpeedSwitchRamp.
+ * Profilwechsel im Lauf: ANLAUFEN-Zustand mit computeSwitchDurationMs.
+ */
+HoneyStateMachine.prototype._beginSpeedSwitchRamp = function(nowMs, fromDataset, toDataset) {
+    var from = this._cfg.datasets[fromDataset];
+    var to = this._cfg.datasets[toDataset];
+    var deltaRpm = (to.targetRpm > from.targetRpm)
+        ? (to.targetRpm - from.targetRpm)
+        : (from.targetRpm - to.targetRpm);
+    var switchMs = (to.targetRpm > from.targetRpm)
+        ? this._scaleTimeByDelta(to.accelerationMs, this._cfg.rampReferenceMaxRpm, deltaRpm)
+        : this._scaleTimeByDelta(from.decelerationMs, this._cfg.rampReferenceMaxRpm, deltaRpm);
+    this._state.rampOverrideDurationMs = this._s(switchMs);
+    this._state.rampIsSlowdown = (to.targetRpm < from.targetRpm);
+    this._beginAcceleration(nowMs, 0.0);
 };
 
 HoneyStateMachine.prototype._beginWaiting = function(nowMs) {
@@ -359,6 +418,14 @@ HoneyStateMachine.prototype._applyDatasetCommand = function(datasetKey) {
 HoneyStateMachine.prototype._handleStandby = function(inputs, nowMs) {
     var st = this._state;
 
+    // R1: Kombination GELB x + START -> Programm-Auswahl (nur im STANDBY).
+    // Muss VOR allen Einzeltasten-Aktionen laufen (Preset/Start unterdrueckt).
+    if (inputs.startPressed && (inputs.preset1Pressed || inputs.preset2Pressed)) {
+        this._beginProgramSelection(
+            inputs.preset1Pressed ? 'PROG_1' : 'PROG_2');
+        return;
+    }
+
     // Preset selection
     if (inputs.preset1Pressed) {
         st.selectedRunDataset = this._cfg.presets.preset1;
@@ -396,10 +463,15 @@ HoneyStateMachine.prototype._handleAccelerating = function(inputs, nowMs) {
 
     // Preset changes during acceleration
     if (inputs.preset1Pressed) {
+        // Waehrend einer (Wechsel-)Rampe: Override verwerfen (R12).
+        st.rampOverrideDurationMs = 0;
+        st.rampIsSlowdown = false;
         st.selectedRunDataset = this._cfg.presets.preset1;
         this._applyDatasetCommand(st.selectedRunDataset);
     }
     else if (inputs.preset2Pressed) {
+        st.rampOverrideDurationMs = 0;
+        st.rampIsSlowdown = false;
         st.selectedRunDataset = this._cfg.presets.preset2;
         this._applyDatasetCommand(st.selectedRunDataset);
     }
@@ -436,15 +508,23 @@ HoneyStateMachine.prototype._handleAccelerating = function(inputs, nowMs) {
 HoneyStateMachine.prototype._handleRunning = function(inputs, nowMs, runningDir) {
     var st = this._state;
 
-    // Preset changes while running
+    // Preset changes while running — R12: Wechsel-Rampe statt Sofort-Schaltung
     if (inputs.preset1Pressed) {
+        var prev1 = this._actualDataset;
         st.selectedRunDataset = this._cfg.presets.preset1;
         this._applyDatasetCommand(st.selectedRunDataset);
+        if (prev1 !== this._cfg.presets.preset1) {
+            this._beginSpeedSwitchRamp(nowMs, prev1, this._cfg.presets.preset1);
+        }
         return;
     }
     else if (inputs.preset2Pressed) {
+        var prev2 = this._actualDataset;
         st.selectedRunDataset = this._cfg.presets.preset2;
         this._applyDatasetCommand(st.selectedRunDataset);
+        if (prev2 !== this._cfg.presets.preset2) {
+            this._beginSpeedSwitchRamp(nowMs, prev2, this._cfg.presets.preset2);
+        }
         return;
     }
 
@@ -497,6 +577,174 @@ HoneyStateMachine.prototype._handleDecelerating = function(inputs, nowMs) {
     var effDecelDur = this._effectiveDecelDurMs();
     if (nowMs - st.stateTimerStartMs >= effDecelDur) {
         this._beginWaiting(nowMs);
+    }
+};
+
+// ── Schleuder-Programme (mirrors program_config.h + controller_logic.cpp) ──
+
+HoneyStateMachine.prototype._programById = function(id) {
+    var programs = this._cfg.programs || [];
+    for (var i = 0; i < programs.length; i++) {
+        if (programs[i].id === id) { return programs[i]; }
+    }
+    return null;
+};
+
+HoneyStateMachine.prototype._beginProgramSelection = function(id) {
+    this._state.programId = id;
+    this._state.programStepIndex = 0;
+    this._state.programStepDispatched = false;
+    this._state.programStepStartMs = 0;
+    this._state.id = STATE.PROGRAM_SELECTION;
+};
+
+HoneyStateMachine.prototype._clearProgramContext = function() {
+    this._state.programId = null;
+    this._state.programStepIndex = 0;
+    this._state.programStepDispatched = false;
+    this._state.programStepStartMs = 0;
+};
+
+/**
+ * PROGRAM_SELECTION handler — mirrors controller_logic.cpp handleProgramSelection.
+ * Wartet auf das Loslassen aller Tasten; dritte Taste bricht ab.
+ */
+HoneyStateMachine.prototype._handleProgramSelection = function(inputs, nowMs) {
+    var self = this;
+
+    // Solange eine Kombi-Taste gehalten wird: warten (Aktionen unterdruecken).
+    if (inputs.preset1Pressed || inputs.preset2Pressed || inputs.startPressed) {
+        return;
+    }
+
+    // Dritte Taste waehrend der Auswahl: abbrechen (normale Tasten-Aktion
+    // greift im naechsten Tick).
+    if (inputs.dirLeftPressed || inputs.dirRightPressed || inputs.stopPressed) {
+        self._clearProgramContext();
+        self._state.id = STATE.STANDBY;
+        return;
+    }
+
+    // Alle Tasten losgelassen -> Startrichtung anwenden (D1) und Schritt 0.
+    var program = self._programById(self._state.programId);
+    if (!program) {
+        self._clearProgramContext();
+        self._state.id = STATE.STANDBY;
+        return;
+    }
+    self._state.targetDirection = program.startDirection;
+    self._dirRelayCCW = (program.startDirection === DIR.CCW);
+    self._state.id = STATE.STANDBY;
+};
+
+HoneyStateMachine.prototype._dispatchProgramStep = function(program, nowMs) {
+    var st = this._state;
+    var step = program.steps[st.programStepIndex];
+
+    switch (step.action) {
+        case 'DIRECTION': {
+            var wantCcw = (step.direction === DIR.CCW);
+            if (st.id === STATE.STANDBY) {
+                st.targetDirection = step.direction;
+                this._dirRelayCCW = wantCcw;
+            }
+            else if ((st.id === STATE.RUNNING_CW && wantCcw) ||
+                     (st.id === STATE.RUNNING_CCW && !wantCcw)) {
+                // Richtungswechsel im Lauf: Bremsrampe -> Sicherheitspause ->
+                // Auto-Neustart (R7).
+                var runningDir = (st.id === STATE.RUNNING_CW) ? DIR.CW : DIR.CCW;
+                st.targetDirection = step.direction;
+                this._startRelayOn = false;
+                this._beginDeceleration(nowMs, 1.0, this._actualDataset,
+                                        runningDir, INTENT.AUTO_RESTART);
+            }
+            // Bereits in Zielrichtung: nichts zu tun.
+            break;
+        }
+        case 'SPEED': {
+            var prevDataset = this._actualDataset;
+            st.selectedRunDataset = step.dataset;
+            var running = (st.id === STATE.RUNNING_CW || st.id === STATE.RUNNING_CCW);
+            if (running) {
+                this._applyDatasetCommand(step.dataset);
+                if (prevDataset !== step.dataset) {
+                    this._beginSpeedSwitchRamp(nowMs, prevDataset, step.dataset);
+                }
+            }
+            break;
+        }
+        case 'START': {
+            this._applyDatasetCommand(st.selectedRunDataset);
+            this._startRelayOn = true;
+            this._beginAcceleration(nowMs, 0.0);
+            break;
+        }
+        case 'STOP': {
+            if (st.id !== STATE.STANDBY) {
+                this._startRelayOn = false;
+                var stopRunningDir = (st.id === STATE.RUNNING_CCW) ? DIR.CCW : DIR.CW;
+                this._beginDeceleration(nowMs, 1.0, this._actualDataset,
+                                        stopRunningDir, INTENT.NONE);
+            }
+            break;
+        }
+        case 'WAIT': {
+            st.programStepStartMs = nowMs;
+            break;
+        }
+    }
+};
+
+HoneyStateMachine.prototype._programStepDone = function(step, nowMs) {
+    var st = this._state;
+
+    switch (step.action) {
+        case 'DIRECTION':
+            if (st.id === STATE.STANDBY) { return true; }
+            return (st.id === STATE.RUNNING_CW && step.direction === DIR.CW) ||
+                   (st.id === STATE.RUNNING_CCW && step.direction === DIR.CCW);
+        case 'SPEED':
+            return st.id === STATE.STANDBY ||
+                   st.id === STATE.RUNNING_CW ||
+                   st.id === STATE.RUNNING_CCW;
+        case 'START':
+            return st.id === STATE.RUNNING_CW || st.id === STATE.RUNNING_CCW;
+        case 'STOP':
+            return st.id === STATE.STANDBY;
+        case 'WAIT':
+            return (nowMs - st.programStepStartMs) >= this._s(step.waitMs);
+    }
+    return true;
+};
+
+HoneyStateMachine.prototype._runProgramSequencer = function(nowMs) {
+    var program = this._programById(this._state.programId);
+    if (!program) {
+        this._clearProgramContext();
+        return;
+    }
+
+    // Pro Tick hoechstens alle Schritte einmal (sofort erledigte Schritte
+    // laufen ohne Zustandswechsel in Serie durch).
+    for (var i = 0; i < program.steps.length; i++) {
+        if (!this._state.programStepDispatched) {
+            this._state.programStepDispatched = true;
+            this._dispatchProgramStep(program, nowMs);
+        }
+
+        var step = program.steps[this._state.programStepIndex];
+        if (!this._programStepDone(step, nowMs)) {
+            return;  // Schritt laeuft — normale Zustandsmaschine uebernimmt.
+        }
+
+        this._state.programStepIndex++;
+        this._state.programStepDispatched = false;
+        this._state.programStepStartMs = 0;
+
+        if (this._state.programStepIndex >= program.steps.length) {
+            this._clearProgramContext();
+            return;
+        }
     }
 };
 

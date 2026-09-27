@@ -53,6 +53,7 @@ honey_please/
     controller_state.cpp         <- controller state transitions and ramp timing logic
     controller_logic.h           <- controller tick interface (state machine extraction)
     controller_logic.cpp         <- state machine transitions operating on input snapshots
+    program_config.h/.cpp        <- Schleuder-Programme PROG_1/PROG_2 (compile-time, Flash)
     VisualizeStateTransitions/
       SequenzeVisualizer.html           <- individual BMP scenario generator (Vue 3)
       CompareAllSzenarios.html          ← snapshot viewer: dense 1:1 table, multi-version
@@ -61,7 +62,7 @@ honey_please/
     docs/
       InteractiveDocumentation.html     ← tabbed docs: wiring + state machine + snapshots
       honey_config.js                   ← JS mirror of C++ config.h + speed_dataset.cpp
-      honey_state_machine.js            ← pure JS state machine (6 states, no DOM deps)
+      honey_state_machine.js            ← pure JS state machine (7 states, no DOM deps)
       js/                               ← Vue components, composables, lib, schematic/
         js/lib/led_matrix.js            ← pure JS mirror of led_animation.cpp (8×12 frames)
         js/components/LedMatrixDisplay.js ← canvas renderer for the LED matrix (left column)
@@ -91,11 +92,13 @@ Use only the smallest relevant documentation set.
 | [basic-control/controller_state.cpp](basic-control/controller_state.cpp) | Ramp progress and effective ramp durations |
 | [basic-control/controller_logic.h](basic-control/controller_logic.h) | Controller tick API for state machine execution |
 | [basic-control/controller_logic.cpp](basic-control/controller_logic.cpp) | State machine transition flow and transition helper orchestration |
+| [basic-control/program_config.h](basic-control/program_config.h) | PROG_1/PROG_2 step definitions (Schleuder-Programme, compile-time) |
+| [basic-control/docs/btn_press_schleuder_programm.md](basic-control/docs/btn_press_schleuder_programm.md) | Feature doc: combo selection, program runner, R1–R12 requirements |
 | [basic-control/docs/InteractiveDocumentation.html](basic-control/docs/InteractiveDocumentation.html) | Wiring validation, state machine visualization, snapshot comparison |
 | [basic-control/VisualizeStateTransitions/SequenzeVisualizer.html](basic-control/VisualizeStateTransitions/SequenzeVisualizer.html) | Single-scenario BMP pixel diagnosis |
 | [basic-control/VisualizeStateTransitions/CompareAllSzenarios.html](basic-control/VisualizeStateTransitions/CompareAllSzenarios.html) | Dense 1:1 snapshot table, multi-version comparison |
 | [basic-control/VisualizeStateTransitions/generate_all_bmps.js](basic-control/VisualizeStateTransitions/generate_all_bmps.js) | Headless snapshot generator (npm run snapshot) |
-| [basic-control/docs/js/lib/simulationScenarios.js](basic-control/docs/js/lib/simulationScenarios.js) | 41 scenario definitions + BMP color palette |
+| [basic-control/docs/js/lib/simulationScenarios.js](basic-control/docs/js/lib/simulationScenarios.js) | 43 scenario definitions + BMP color palette |
 | [basic-control/docs/js/lib/bmpWriter.js](basic-control/docs/js/lib/bmpWriter.js) | Pure BMP byte-stream writer (browser + Node.js) |
 | [basic-control/docs/js/lib/led_matrix.js](basic-control/docs/js/lib/led_matrix.js) | JS mirror of led_animation.cpp — LED matrix frames |
 | [basic-control/docs/feature_matrix_simulation.md](basic-control/docs/feature_matrix_simulation.md) | Matrix simulation plan + C++↔JS sync strategy |
