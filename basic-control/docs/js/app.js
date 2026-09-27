@@ -27,8 +27,16 @@ const RootComponent = {
     template: '#root-tpl',
 
     setup: function() {
-        // Create the simulation bridge
-        var sim = useSimulation(HoneyConfig);
+        // ── Kombi-Tasten (GELB x + GRÜN gleichzeitig) ──────────────
+        // Spiegelt die physische Folientaster-Interaktion: die Eingänge sind
+        // pegelgesteuert. Solange die Kombi-Taste gehalten wird, bleiben
+        // presetXPressed + startPressed aktiv (konstanter BTN-Press); erst
+        // beim Loslassen werden beide Pegel weggenommen → Programm startet.
+        var heldInputs = { preset1Pressed: false, preset2Pressed: false, startPressed: false };
+        var heldCombo  = Vue.ref(null);   // 'PROG_1' | 'PROG_2' | null
+
+        // Create the simulation bridge (poll ticks re-send heldInputs)
+        var sim = useSimulation(HoneyConfig, heldInputs);
 
         // ── Tab state ───────────────────────────────────────────
         var currentTab = Vue.ref('wiring');
@@ -45,6 +53,32 @@ const RootComponent = {
         function onPreset2()   { rec.recordEvent('preset2');   sim.handleInput({ preset2Pressed: true }); }
         function onToggleLock(){ sim.toggleLock(); }
         function onToggleSpeed(){ sim.toggleSpeed(); }
+
+        // ── Kombi-Tasten: konstanter BTN-Press bis zum Loslassen ──
+        function onComboPress(id) {
+            if (sim.uiLocked.value) return;
+            heldInputs.preset1Pressed = (id === 'PROG_1');
+            heldInputs.preset2Pressed = (id === 'PROG_2');
+            heldInputs.startPressed = true;
+            heldCombo.value = id;
+            // Zwei Events im selben elapsedMs-Tick → BMP-Replay legt beide
+            // Eingänge gleichzeitig an (Combo, wie Szenario 29/30).
+            rec.recordEvent(id === 'PROG_1' ? 'preset1' : 'preset2');
+            rec.recordEvent('start');
+            sim.handleInput({});
+        }
+
+        function onComboRelease() {
+            if (heldCombo.value === null) { return; }  // idempotent (pointerup + pointerleave)
+            heldInputs.preset1Pressed = false;
+            heldInputs.preset2Pressed = false;
+            heldInputs.startPressed = false;
+            heldCombo.value = null;
+            sim.handleInput({});   // alle Tasten losgelassen → Programm startet
+        }
+
+        function onCombo1Press() { onComboPress('PROG_1'); }
+        function onCombo2Press() { onComboPress('PROG_2'); }
 
         // ── Recording control handlers ──────────────────────────
         function onStartRecording() { rec.startRecording(); }
@@ -67,6 +101,7 @@ const RootComponent = {
             uiLocked:  sim.uiLocked,
             simSpeed:  sim.simSpeed,
             presets:   HoneyConfig.presets,
+            heldCombo: heldCombo,
             onDirLeft: onDirLeft,
             onDirRight: onDirRight,
             onStop: onStop,
@@ -75,6 +110,9 @@ const RootComponent = {
             onPreset2: onPreset2,
             onToggleLock: onToggleLock,
             onToggleSpeed: onToggleSpeed,
+            onCombo1Press: onCombo1Press,
+            onCombo2Press: onCombo2Press,
+            onComboRelease: onComboRelease,
             // Recording
             isRecording: rec.isRecording,
             isGenerating: rec.isGenerating,

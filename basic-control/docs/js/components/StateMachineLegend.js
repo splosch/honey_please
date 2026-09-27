@@ -1,7 +1,7 @@
 /**
- * StateMachineLegend.js — 6-state reference with active-state highlight
+ * StateMachineLegend.js — 7-state reference with active-state highlight
  * =====================================================================
- * Compact display of the 6 states in the state machine. Accepts the
+ * Compact display of the 7 states in the state machine. Accepts the
  * current stateId and running direction to highlight the active state.
  *
  * RUNNING_CW and RUNNING_CCW are merged into a single "LÄUFT" row that
@@ -22,7 +22,8 @@ export default {
                 { id: 'ACCELERATING', color: 'bg-yellow-400', label: 'ANLAUFEN',    desc: 'dAtA-gesteuert, Stop/Richtungswechsel möglich' },
                 { id: 'RUNNING',      color: 'bg-green-500',  label: 'LÄUFT',       desc: '' },
                 { id: 'DECELERATING', color: 'bg-orange-400', label: 'ABBREMSEN',   desc: 'proportional zur Rampe, Eingaben gesperrt' },
-                { id: 'WAITING',      color: 'bg-amber-400',  label: 'WARTEN',      desc: '150 ms Sicherheitspause (Hardware)' }
+                { id: 'WAITING',      color: 'bg-amber-400',  label: 'WARTEN',      desc: '150 ms Sicherheitspause (Hardware)' },
+                { id: 'PROGRAM_SELECTION', color: 'bg-yellow-300', label: 'PROGRAMM', desc: 'Combo GELB x + GRÜN — loslassen startet' }
             ]
         };
     },

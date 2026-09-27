@@ -17,7 +17,8 @@ const STATE_UI = {
     RUNNING_CW:   { color:'green',  ping:true,  text:'LÄUFT: RECHTS (CW)',    desc:'Motor dreht CW. LINKS-Taste → Richtungswechsel + Auto-Neustart CCW.' },
     RUNNING_CCW:  { color:'green',  ping:true,  text:'LÄUFT: LINKS (CCW)',    desc:'Motor dreht CCW. RECHTS-Taste → Richtungswechsel + Auto-Neustart CW.' },
     DECELERATING: { color:'orange', ping:true,  text:'⬇ ABBREMSEN …',         desc:'Bremsrampe läuft. Alle Eingaben gesperrt.' },
-    WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich.' }
+    WAITING:      { color:'amber',  ping:false, text:'Sicherheitspause …',     desc:'Motor steht still, Mechanik beruhigt sich.' },
+    PROGRAM_SELECTION: { color:'yellow', ping:false, text:'Programm-Auswahl …', desc:'Alle Tasten loslassen → Programm startet. Andere Taste → Abbruch.' }
 };
 
 const LOCKED_UI = { color:'red', ping:true, text:'Gesperrt (X2 aus)', desc:'Wippschalter X2 geöffnet – Motor blockiert sofort.' };
@@ -36,9 +37,15 @@ const RAMPING_STATES = ['ACCELERATING','DECELERATING','WAITING'];
 
 /**
  * @param {object} config - HoneyConfig object
+ * @param {object} [heldInputs] - plain object { preset1Pressed, preset2Pressed,
+ *        startPressed } owned by the caller. Kombi-Tasten (GELB x + GRÜN) sind
+ *        pegelgesteuert: solange sie gehalten werden, wiederholt jeder Poll-Tick
+ *        den Eingang — sonst würde PROGRAM_SELECTION den nächsten leeren Tick
+ *        als "Loslassen" werten und das Programm sofort starten.
  * @returns {{ simState, uiLocked, handleInput, toggleLock, startPolling, stopPolling }}
  */
-export default function useSimulation(config) {
+export default function useSimulation(config, heldInputs) {
+    heldInputs = heldInputs || {};
     var sm = new HoneyStateMachine(config);
     var uiLocked = Vue.ref(true);
     var simSpeed = Vue.ref(config.simSpeed);
@@ -73,7 +80,9 @@ export default function useSimulation(config) {
         // -- LED matrix snapshot fields (lib/led_matrix.js) --
         targetDirection:  'CW',
         runningDirection: 'CW',
-        restartIntent:    'NONE'
+        restartIntent:    'NONE',
+        programId:        null,
+        rampIsSlowdown:   false
     });
 
     // ── Internal helpers ────────────────────────────────────────────
@@ -100,6 +109,8 @@ export default function useSimulation(config) {
         simState.targetDirection = s.targetDirection;
         simState.runningDirection = s.runningDirection;
         simState.restartIntent = s.restartIntent;
+        simState.programId = s.programId;
+        simState.rampIsSlowdown = s.rampIsSlowdown;
 
         // M1/M2 relay states derived from active dataset
         var ds = config.datasets[s.activeDataset];
@@ -138,6 +149,8 @@ export default function useSimulation(config) {
         simState.targetDirection = 'CW';
         simState.runningDirection = 'CW';
         simState.restartIntent = 'NONE';
+        simState.programId = null;
+        simState.rampIsSlowdown = false;
     }
 
     function syncFromSM(nowMs) {
@@ -154,7 +167,10 @@ export default function useSimulation(config) {
     var rafId = null;
 
     function tick() {
-        sm.tick({}, Date.now());
+        // Gehaltene Kombi-Tasten bei jedem Poll-Tick erneut anlegen (Pegel).
+        // Im LOCKED-Zustand keine Eingänge durchreichen.
+        var inputs = uiLocked.value ? {} : heldInputs;
+        sm.tick(inputs, Date.now());
         syncFromSM(Date.now());
     }
 
@@ -177,7 +193,8 @@ export default function useSimulation(config) {
 
     function handleInput(inputs) {
         if (uiLocked.value) return;
-        sm.tick(inputs, Date.now());
+        // Einmalige Events (Klick) + aktuell gehaltene Kombi-Tasten zusammenlegen.
+        sm.tick(Object.assign({}, heldInputs, inputs), Date.now());
         syncFromSM(Date.now());
     }
 

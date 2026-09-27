@@ -58,8 +58,8 @@ const DEFAULT_Y_RESOLUTION = 41;
  * @returns {number} signed RPM (-maxRpm .. +maxRpm)
  */
 function computeRpm(state, config) {
-    // Zero-RPM states
-    if (state.id === 'STANDBY' || state.id === 'WAITING') {
+    // Zero-RPM states (PROGRAM_SELECTION: Motor steht, nur Auswahl aktiv)
+    if (state.id === 'STANDBY' || state.id === 'WAITING' || state.id === 'PROGRAM_SELECTION') {
         return 0;
     }
 
@@ -129,7 +129,8 @@ function mapRpmToY(rpm, maxRpm, yResolution, yOffset) {
  */
 function getCommandedTargetRpm(state, cfg) {
     // Zero-RPM states — motor is commanded to stop
-    if (state.id === 'STANDBY' || state.id === 'WAITING') {
+    // (PROGRAM_SELECTION: Start-Relais aus, kein Drehzahl-Befehl)
+    if (state.id === 'STANDBY' || state.id === 'WAITING' || state.id === 'PROGRAM_SELECTION') {
         return 0;
     }
 
@@ -248,15 +249,22 @@ export function runHeadlessSimulation(scenario, opts) {
         }
     }
 
-    // Pre-index events by tick for O(1) lookup
+    // Pre-index events by tick for O(1) lookup.
+    // `holdTicks` (default 1) keeps the button pressed across consecutive
+    // ticks — required for the level-based program combo (R1): the pressed
+    // state must persist over several ticks, not just one.
     var eventsByTick = new Array(width);
     for (var i = 0; i < width; i++) {
         eventsByTick[i] = [];
     }
     for (var e = 0; e < scenario.events.length; e++) {
         var ev = scenario.events[e];
-        if (ev.atTick < width) {
-            eventsByTick[ev.atTick].push(ev);
+        var holdTicks = ev.holdTicks || 1;
+        for (var h = 0; h < holdTicks; h++) {
+            var t = ev.atTick + h;
+            if (t < width) {
+                eventsByTick[t].push(ev);
+            }
         }
     }
 

@@ -22,6 +22,7 @@ export const STATE_COLORS = {
     RUNNING_CCW:  { r: 0,   g: 200, b: 255 },  // Light blue (constant CCW — distinguishable)
     DECELERATING: { r: 255, g: 128, b: 0   },  // Orange (ramp-down / braking)
     WAITING:      { r: 128, g: 0,   b: 128 },  // Purple (safety hold before direction reversal)
+    PROGRAM_SELECTION: { r: 255, g: 255, b: 0 }, // Yellow (Schleuder-Programm-Auswahl, Combo gehalten)
 };
 
 /** Color for event trigger markers (bottom row of BMP). */
@@ -57,6 +58,11 @@ export const BG_COLOR = { r: 15, g: 15, b: 15 };
 //   dirRight, dirLeft  — direction selection (CW / CCW)
 //   start, stop        — motor start / stop
 //   preset1, preset2   — speed preset selection (DATASET_0 / DATASET_4)
+//
+// Optional event field `holdTicks` (default 1) keeps the button pressed for
+// N consecutive ticks. Needed for the program combo (SPEED held + START):
+// level-based detection in honey_state_machine.js (R1) only fires while both
+// buttons are LOW across the same tick(s).
 //
 // Tick numbers encode WHEN events fire, not absolute time. Multiply by
 // tickDurationMs to get virtual time in milliseconds.
@@ -476,6 +482,35 @@ export const SCENARIOS = [
             { atTick: 8, type: 'preset2' },
             { atTick: 10, type: 'start' },
             { atTick: 25, type: 'dirLeft' }
+        ]
+    },
+
+    // ── Schleuder-Programme (29, 30) ────────────────────────────────────
+    // Feature btn_press_schleuder_programm.md Q13. Combo = GELB x gehalten
+    // + GRÜN (START) gedrückt (holdTicks!), Ausführung erst nach dem
+    // Loslassen aller Tasten (Release-to-run, R1).
+
+    {
+        id: 'program_full_run',
+        name: '29. Schleuder-Programm PROG_1 (Komplettlauf)',
+        description: 'Combo GELB 1 + GRÜN → PROG_1: dAtA 0 → Start CW → Wartezeit → Richtungswechsel CCW → Wartezeit → Richtungswechsel CW → Geschwindigkeitswechsel dAtA 4 → Richtungswechsel CCW → Stopp. Programm startet erst nach Loslassen aller Tasten.',
+        totalTicks: 220,
+        tickDurationMs: 500,
+        events: [
+            { atTick: 5, type: 'preset1', holdTicks: 6 },  // GELB 1 halten (Ticks 5–10)
+            { atTick: 7, type: 'start',   holdTicks: 4 }   // GRÜN dazu (Ticks 7–10) → Combo
+        ]
+    },
+    {
+        id: 'program_exit_stop_during_wait',
+        name: '30. Programm-Abbruch: ROT während CCW-Wartephase',
+        description: 'PROG_1 läuft → während der Wartezeit nach dem Richtungswechsel auf CCW wird ROT (Stop) gedrückt → Programm-Modus wird verlassen (R6), der normale Stop-Ablauf übernimmt bis STANDBY.',
+        totalTicks: 220,
+        tickDurationMs: 500,
+        events: [
+            { atTick: 5,  type: 'preset1', holdTicks: 6 },  // Combo wie Szenario 29
+            { atTick: 7,  type: 'start',   holdTicks: 4 },
+            { atTick: 60, type: 'stop' }                    // ROT in der CCW-Wartephase
         ]
     },
 
